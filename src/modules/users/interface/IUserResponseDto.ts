@@ -1,3 +1,4 @@
+import { OrderStatus } from 'src/modules/orders/Entities/order.entity';
 import { Users } from '../Entyties/users.entity';
 
 export interface IUserResponseDto {
@@ -6,7 +7,7 @@ export interface IUserResponseDto {
   email: string;
   birthdate: Date;
   phone: number;
-  address: string; // Cambiado de string | IAddress a solo string
+  address: string;
   username: string;
   isAdmin?: boolean;
   isSuperAdmin?: boolean;
@@ -19,21 +20,15 @@ export interface IUserResponseDto {
 export interface AuthenticatedRequest extends Request {
   user: {
     sub: string;
+    email: string;
+    isAdmin: boolean;
+    isSuperAdmin: boolean;
   };
 }
-
-export enum OrderStatus {
-  ACTIVE = 'active',
-  CANCELLED = 'cancelled',
-  PROCESSED = 'processed',
-  FINALIZED = 'finalized',
-}
-
 export interface IOrderResponseDto {
   id: string;
-  date: Date;
+  orderNumber: string;
   status: OrderStatus;
-  orderDetail: any; // Mantener como any por ahora
 }
 
 export interface ICartResponseDto {
@@ -41,7 +36,7 @@ export interface ICartResponseDto {
   total: number;
   createdAt: Date;
   updatedAt: Date;
-  items: any[]; // Mantener como any[] por ahora
+  items: unknown[];
 }
 
 export class ResponseUserDto {
@@ -52,7 +47,7 @@ export class ResponseUserDto {
       email: user.email,
       birthdate: user.birthdate,
       phone: user.phone,
-      address: user.address || '', // Manejar posibles valores null
+      address: user.address || '',
       username: user.username,
       isAdmin: user.isAdmin,
       isSuperAdmin: user.isSuperAdmin,
@@ -61,8 +56,8 @@ export class ResponseUserDto {
       orders:
         user.orders?.map((order) => ({
           id: order.id,
-          date: order.date,
-          status: order.status as OrderStatus,
+          orderNumber: order.orderNumber,
+          status: order.status,
           orderDetail: order.orderDetail,
         })) ?? [],
       cart: user.cart
@@ -73,7 +68,7 @@ export class ResponseUserDto {
             updatedAt: user.cart.updatedAt,
             items: user.cart.items ?? [],
           }
-        : undefined, // Cambiado a undefined en lugar de objeto vacío
+        : undefined,
     };
   }
 

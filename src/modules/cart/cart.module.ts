@@ -9,12 +9,14 @@ import { ProductVariant } from '../products/Entities/products_variant.entity';
 import { AuthsModule } from '../auths/auths.module';
 import { CartItem } from './entities/cart.item.entity';
 import { ProductsModule } from '../products/products.module';
+import { OrdersModule } from '../orders/orders.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Cart, CartItem, Users, Product, ProductVariant]),
     forwardRef(() => AuthsModule),
     forwardRef(() => ProductsModule),
+    forwardRef(() => OrdersModule),
   ],
   controllers: [CartController],
   providers: [CartService],

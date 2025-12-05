@@ -1,37 +1,44 @@
-import { IsInt, IsNumber, IsOptional, IsPositive, IsString, Length, Max, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsInt, IsNumber, IsOptional, IsPositive, IsString, IsBoolean, Length, Max, Min } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class PaginationQueryDto {
   @ApiProperty({
     example: 10,
     required: false,
-    description: 'The number of items to return per page',
+    description: 'Cantidad de items por página',
+    minimum: 1,
+    maximum: 100,
+    default: 10,
   })
   @IsOptional()
   @IsPositive()
   @IsInt()
   @Type(() => Number)
   @Max(100)
-  limit = 10;
+  limit: number = 10;
 
   @ApiProperty({
     example: 1,
     required: false,
-    description: 'The page number to retrive',
+    description: 'Número de página a obtener',
+    minimum: 1,
+    default: 1,
   })
   @IsOptional()
   @IsPositive()
   @IsInt()
   @Type(() => Number)
-  page = 1;
+  page: number = 1;
 }
 
 export class ProductsSearchQueryDto extends PaginationQueryDto {
   @ApiProperty({
-    example: 'ram',
+    example: 'Dell Inspiron',
     required: false,
-    description: 'name to search for products',
+    description: 'Buscar por nombre del producto',
+    minLength: 3,
+    maxLength: 80,
   })
   @IsOptional()
   @Length(3, 80)
@@ -41,10 +48,39 @@ export class ProductsSearchQueryDto extends PaginationQueryDto {
   @ApiProperty({
     example: 1000,
     required: false,
-    description: 'price to search for products',
+    description: 'Buscar productos en rango de precio (±10%)',
+    minimum: 0.01,
   })
   @IsOptional()
   @IsNumber()
+  @Type(() => Number)
   @Min(0.01)
   price?: number;
+
+  @ApiProperty({
+    example: 'Dell',
+    required: false,
+    description: 'Filtrar por marca del producto',
+    minLength: 2,
+    maxLength: 50,
+  })
+  @IsOptional()
+  @Length(2, 50)
+  @IsString()
+  brand?: string;
+
+  @ApiProperty({
+    example: true,
+    required: false,
+    description: 'Filtrar solo productos destacados',
+    type: Boolean,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return typeof value === 'boolean' ? value : undefined;
+  })
+  featured?: boolean;
 }

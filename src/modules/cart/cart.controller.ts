@@ -16,7 +16,10 @@ import { CartService } from './cart.service';
 import { AuthGuard } from 'src/guards/auth.guards';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedRequest } from '../users/interface/IUserResponseDto';
-import { AddToCartDTO, CartResponseDTO, UpdateCartItemDTO } from './dto/create-cart.dto';
+import { AddToCartDTO, UpdateCartItemDTO } from './dto/create-cart.dto';
+import { ICartResponseDTO, IResponseCartSummaryDTO, IStockValidationResult } from './interfaces/interface.cart';
+import { IShippingAddressDto } from '../orders/interfaces/orders.interface';
+import { ResponseOrderDto } from '../orders/Dto/order.Dto';
 
 @ApiTags('Cart')
 @Controller('cart')
@@ -25,18 +28,38 @@ import { AddToCartDTO, CartResponseDTO, UpdateCartItemDTO } from './dto/create-c
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 
-  @Get()
-  @HttpCode(HttpStatus.OK)
+  @Get('id')
   @ApiOperation({
-    summary: "Get the authenticated user's shopping cart",
+    summary: "Get the authenticated user's shopping cart with all details",
   })
   @ApiResponse({
     status: 200,
     description: 'User shopping cart retrieved successfully',
-    type: CartResponseDTO,
+    type: ICartResponseDTO,
   })
-  async getMyCart(@Req() req: AuthenticatedRequest): Promise<CartResponseDTO> {
-    return await this.cartService.getCart(req.user.sub);
+  async getMyCart(@Req() req: AuthenticatedRequest): Promise<ICartResponseDTO> {
+    return await this.cartService.getCartById(req.user.sub);
+  }
+
+  @Get('summary')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get cart summary (count and total only) - optimized for navbar',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Cart summary retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        itemCount: { type: 'number', example: 3 },
+        total: { type: 'number', example: 299.99 },
+        hasItems: { type: 'boolean', example: true },
+      },
+    },
+  })
+  async getCartSummary(@Req() req: AuthenticatedRequest): Promise<IResponseCartSummaryDTO> {
+    return await this.cartService.getCartSummary(req.user.sub);
   }
 
   @Post('add')
@@ -48,11 +71,11 @@ export class CartController {
   @ApiResponse({
     status: 200,
     description: 'Product added to cart successfully',
-    type: CartResponseDTO,
+    type: ICartResponseDTO,
   })
   @ApiResponse({
     status: 400,
-    description: 'Bad request - insufficient stock or invalid product',
+    description: 'Bad request - insufficient stock, invalid product, or product not available',
   })
   @ApiResponse({
     status: 404,
@@ -61,7 +84,7 @@ export class CartController {
   async addProductToCart(
     @Req() req: AuthenticatedRequest,
     @Body() addToCartDTO: AddToCartDTO,
-  ): Promise<CartResponseDTO> {
+  ): Promise<ICartResponseDTO> {
     return await this.cartService.addProductToCart(req.user.sub, addToCartDTO);
   }
 
@@ -79,7 +102,7 @@ export class CartController {
   @ApiResponse({
     status: 200,
     description: 'Cart item quantity updated successfully',
-    type: CartResponseDTO,
+    type: ICartResponseDTO,
   })
   @ApiResponse({
     status: 404,
@@ -93,7 +116,7 @@ export class CartController {
     @Req() req: AuthenticatedRequest,
     @Param('cartItemId', ParseUUIDPipe) cartItemId: string,
     @Body() updateCartItemDTO: UpdateCartItemDTO,
-  ): Promise<CartResponseDTO> {
+  ): Promise<ICartResponseDTO> {
     return await this.cartService.updateCartItemQuantity(req.user.sub, cartItemId, updateCartItemDTO);
   }
 
@@ -115,7 +138,10 @@ export class CartController {
     status: 404,
     description: 'Cart item not found',
   })
-  async removeCartItem(@Req() req: AuthenticatedRequest, @Param('cartItemId', ParseUUIDPipe) cartItemId: string) {
+  async removeCartItem(
+    @Req() req: AuthenticatedRequest,
+    @Param('cartItemId', ParseUUIDPipe) cartItemId: string,
+  ): Promise<{ message: string; cart: ICartResponseDTO }> {
     return await this.cartService.removeCartItem(req.user.sub, cartItemId);
   }
 
@@ -128,7 +154,78 @@ export class CartController {
     status: 200,
     description: 'Cart cleared successfully',
   })
-  async clearCart(@Req() req: AuthenticatedRequest) {
+  async clearCart(@Req() req: AuthenticatedRequest): Promise<{ message: string }> {
     return await this.cartService.clearCart(req.user.sub);
+  }
+
+  @Post('validate-stock')
+  @ApiOperation({
+    summary: 'Validate stock availability for all cart items before checkout',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Stock validation completed',
+    schema: {
+      type: 'object',
+      properties: {
+        valid: { type: 'boolean' },
+        issues: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              itemId: { type: 'string' },
+              productId: { type: 'string' },
+              productName: { type: 'string' },
+              issue: { type: 'string' },
+              requested: { type: 'number' },
+              available: { type: 'number' },
+            },
+          },
+        },
+      },
+    },
+  })
+  async validateStock(@Req() req: AuthenticatedRequest): Promise<IStockValidationResult> {
+    return await this.cartService.validateCartStock(req.user.sub);
+  }
+
+  @Post('checkout')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create order from cart items',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        shippingAddress: {
+          type: 'object',
+          properties: {
+            street: { type: 'string', example: 'Av. Pellegrini' },
+            number: { type: 'string', example: '1234' },
+            city: { type: 'string', example: 'Rosario' },
+            state: { type: 'string', example: 'Santa Fe' },
+            zipCode: { type: 'string', example: '2000' },
+            country: { type: 'string', example: 'Argentina' },
+          },
+          required: ['street', 'number', 'city', 'state', 'zipCode'],
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Order created successfully from cart',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - empty cart or stock issues',
+  })
+  async createOrder(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: { shippingAddress: IShippingAddressDto },
+  ): Promise<ResponseOrderDto> {
+    return await this.cartService.createOrderFromCartCheckout(req.user.sub, body.shippingAddress);
   }
 }

@@ -7,11 +7,7 @@ import { AuthsModule } from '../auths/auths.module';
 import { MailModule } from '../mail/mail.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Users]),
-    forwardRef(() => AuthsModule),
-    MailModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Users]), forwardRef(() => AuthsModule), MailModule],
   providers: [UsersService],
   controllers: [UsersController],
   exports: [UsersService],

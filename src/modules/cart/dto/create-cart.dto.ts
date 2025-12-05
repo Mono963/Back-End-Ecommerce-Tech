@@ -39,36 +39,3 @@ export class UpdateCartItemDTO {
   @Min(0)
   quantity: number;
 }
-
-export class CartItemVariantDTO {
-  id: string;
-  type: string;
-  name: string;
-  priceModifier: number;
-}
-
-export class CartItemResponseDTO {
-  id: string;
-  quantity: number;
-  priceAtAddition: number;
-  subtotal: number;
-  selectedVariants: CartItemVariantDTO[] | null;
-  product: {
-    id: string;
-    name: string;
-    description: string;
-    basePrice: number;
-    baseStock: number;
-    imgUrls: string[];
-    hasVariants: boolean;
-  };
-}
-
-export class CartResponseDTO {
-  id: string;
-  total: number;
-  createdAt: Date;
-  updatedAt: Date;
-  items: CartItemResponseDTO[];
-  itemCount: number;
-}

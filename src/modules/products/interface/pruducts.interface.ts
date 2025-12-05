@@ -1,4 +1,4 @@
-import { VariantType } from '../Entities/products_variant.entity';
+import { TechVariantType } from '../Entities/products_variant.entity';
 
 export interface InterfaceProducts {
   id: string;
@@ -9,40 +9,15 @@ export interface InterfaceProducts {
   imgUrl: string;
 }
 
-export class ResponseVariantDto {
+export interface ResponseVariantDto {
   id: string;
-  type: VariantType;
+  type: TechVariantType;
   name: string;
   description?: string;
   priceModifier: number;
   stock: number;
   isAvailable: boolean;
   sortOrder: number;
-}
-
-export class ResponseProductDto {
-  id: string;
-  name: string;
-  description: string;
-  basePrice: number;
-  baseStock: number;
-  finalPrice: number;
-  totalStock: number;
-  category_name: string;
-  imgUrls: string[];
-  specifications?: Record<string, null>;
-  hasVariants: boolean;
-  isActive: boolean;
-  variants: ResponseVariantDto[];
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface InterfaceProducts {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  stock: number;
-  imgUrl: string;
 }

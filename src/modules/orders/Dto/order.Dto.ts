@@ -1,25 +1,377 @@
-import { IsUUID, IsArray, ValidateNested, ArrayNotEmpty } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsObject,
+  IsString,
+  IsNumber,
+  ValidateNested,
+  IsNotEmpty,
+  Length,
+  IsUUID,
+  IsDateString,
+  Min,
+  Max,
+} from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { OrderStatus } from '../Entities/order.entity';
 
-class ProductIdDto {
-  @ApiProperty({ example: 'c3f45d9a-0a44-4d8b-8b93-8f22987402f4' })
-  @IsUUID()
-  id: string;
+export class ProductSnapshotDto {
+  @ApiProperty({ example: 'Dell Inspiron 15' })
+  name: string;
+
+  @ApiProperty({ example: 'Notebook para trabajo y estudio' })
+  description: string;
+
+  @ApiProperty({ example: 699.99 })
+  basePrice: number;
+
+  @ApiPropertyOptional({ example: 'Dell' })
+  brand?: string;
+
+  @ApiPropertyOptional({ example: 'Inspiron 15 3520' })
+  model?: string;
+
+  @ApiPropertyOptional({ example: 'SKU-DELL-001' })
+  sku?: string;
 }
 
-export class CreateOrderDto {
-  @ApiProperty({ example: 'a0f99ac2-7a89-4c44-8a78-cf2d3b95a90c' })
+export class VariantSnapshotDto {
+  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
+  id: string;
+
+  @ApiProperty({ example: 'RAM' })
+  type: string;
+
+  @ApiProperty({ example: '16GB DDR4' })
+  name: string;
+
+  @ApiProperty({ example: 120 })
+  priceModifier: number;
+
+  @ApiPropertyOptional({ example: 'VARIANT-RAM-16GB' })
+  sku?: string;
+}
+
+export class ShippingAddressDto {
+  @ApiProperty({ example: 'Av. Corrientes', description: 'Nombre de la calle' })
+  @IsString()
+  @IsNotEmpty()
+  @Length(3, 100)
+  street: string;
+
+  @ApiProperty({ example: '1234', description: 'Número de la dirección' })
+  @IsString()
+  @IsNotEmpty()
+  @Length(1, 10)
+  number: string;
+
+  @ApiProperty({ example: 'Buenos Aires', description: 'Ciudad' })
+  @IsString()
+  @IsNotEmpty()
+  @Length(2, 50)
+  city: string;
+
+  @ApiProperty({ example: 'Buenos Aires', description: 'Provincia/Estado' })
+  @IsString()
+  @IsNotEmpty()
+  @Length(2, 50)
+  state: string;
+
+  @ApiProperty({ example: '1001', description: 'Código postal' })
+  @IsString()
+  @IsNotEmpty()
+  @Length(3, 10)
+  zipCode: string;
+}
+
+export class UpdateShippingAddressDto {
+  @ApiProperty({ type: ShippingAddressDto })
+  @IsObject()
+  @ValidateNested()
+  @Type(() => ShippingAddressDto)
+  shippingAddress: ShippingAddressDto;
+
+  @ApiPropertyOptional({
+    example: 'Cambio de dirección solicitado por el cliente',
+    description: 'Razón del cambio de dirección',
+  })
+  @IsOptional()
+  @IsString()
+  @Length(0, 200)
+  reason?: string;
+}
+
+export class ProductInfoDto {
+  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
   @IsUUID()
-  userId: string;
+  id: string;
+
+  @ApiProperty({ example: 'Dell Inspiron 15' })
+  @IsString()
+  name: string;
+
+  @ApiProperty({ example: 'Dell' })
+  @IsString()
+  brand: string;
+
+  @ApiProperty({ example: 699.99 })
+  @IsNumber()
+  currentPrice: number;
+
+  @ApiPropertyOptional({ example: 'SKU-DELL-001' })
+  @IsOptional()
+  @IsString()
+  sku?: string;
+}
+
+export class VariantInfoDto {
+  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
+  @IsUUID()
+  id: string;
+
+  @ApiProperty({ example: 'RAM' })
+  @IsString()
+  type: string;
+
+  @ApiProperty({ example: '16GB DDR4' })
+  @IsString()
+  name: string;
+
+  @ApiProperty({ example: 120 })
+  @IsNumber()
+  priceModifier: number;
+}
+
+export class OrderItemResponseDto {
+  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
+  id: string;
+
+  @ApiProperty({ example: 2 })
+  quantity: number;
+
+  @ApiProperty({ example: 699.99 })
+  unitPrice: number;
+
+  @ApiProperty({ example: 1399.98 })
+  subtotal: number;
+
+  @ApiProperty({ type: ProductSnapshotDto })
+  productSnapshot: ProductSnapshotDto;
+
+  @ApiPropertyOptional({ type: [VariantSnapshotDto] })
+  variantsSnapshot?: VariantSnapshotDto[] | null;
+
+  @ApiProperty({ example: '2024-01-15T10:30:00Z' })
+  createdAt: Date;
+}
+
+export class OrderDetailResponseDto {
+  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
+  id: string;
+
+  @ApiProperty({ example: 1399.98 })
+  subtotal: number;
+
+  @ApiProperty({ example: 293.99 })
+  tax: number;
+
+  @ApiProperty({ example: 0 })
+  shipping: number;
+
+  @ApiProperty({ example: 1693.97 })
+  total: number;
+
+  @ApiPropertyOptional({ type: ShippingAddressDto })
+  shippingAddress?: ShippingAddressDto | null;
+
+  @ApiPropertyOptional({ example: 'credit_card' })
+  paymentMethod?: string | null;
+
+  @ApiProperty({ type: [OrderItemResponseDto] })
+  items: OrderItemResponseDto[];
+}
+
+export class UserSummaryDto {
+  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
+  id: string;
+
+  @ApiProperty({ example: 'Juan Pérez' })
+  name: string;
+
+  @ApiProperty({ example: 'juan@example.com' })
+  email: string;
+
+  @ApiPropertyOptional({ example: '+54 11 1234-5678' })
+  phone?: string;
+}
+
+export class ResponseOrderDto {
+  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
+  id: string;
+
+  @ApiProperty({ example: 'ORD-202401-0001' })
+  orderNumber: string;
 
   @ApiProperty({
-    example: [{ id: 'c3f45d9a-0a44-4d8b-8b93-8f22987402f4' }, { id: 'bc8a2049-5ee6-4aa4-a073-3e11891cb6a9' }],
-    type: [ProductIdDto],
+    enum: OrderStatus,
+    example: OrderStatus.PENDING,
   })
-  @IsArray()
-  @ArrayNotEmpty()
-  @ValidateNested({ each: true })
-  @Type(() => ProductIdDto)
-  products: ProductIdDto[];
+  status: OrderStatus;
+
+  @ApiProperty({ example: '2024-01-15T10:30:00Z' })
+  createdAt: Date;
+
+  @ApiProperty({ example: '2024-01-15T10:30:00Z' })
+  updatedAt: Date;
+
+  @ApiProperty({ type: UserSummaryDto })
+  user: UserSummaryDto;
+
+  @ApiProperty({ type: OrderDetailResponseDto })
+  orderDetail: OrderDetailResponseDto;
+}
+
+export class ConfirmPaymentDto {
+  @ApiProperty({
+    example: 'credit_card',
+    description: 'Método de pago utilizado',
+    enum: ['credit_card', 'debit_card', 'mercadopago', 'paypal', 'cash', 'transfer'],
+  })
+  @IsString()
+  @IsNotEmpty()
+  paymentMethod: string;
+
+  @ApiPropertyOptional({
+    example: 'TRX-123456789',
+    description: 'ID de transacción del procesador de pagos',
+  })
+  @IsOptional()
+  @IsString()
+  transactionId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Detalles adicionales del pago',
+    example: {
+      cardLast4: '4242',
+      cardBrand: 'Visa',
+      authorizationCode: 'AUTH123',
+    },
+  })
+  @IsOptional()
+  @IsObject()
+  paymentDetails?: Record<string, string[]>;
+}
+
+export class PaginationResponseDto<T> {
+  @ApiProperty({ type: [Object] })
+  data: T[];
+
+  @ApiProperty({
+    example: {
+      total: 100,
+      page: 1,
+      limit: 10,
+      totalPages: 10,
+    },
+  })
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export class OrderStatsDto {
+  @ApiProperty({ example: 150 })
+  totalOrders: number;
+
+  @ApiProperty({ example: 10 })
+  pendingOrders: number;
+
+  @ApiProperty({ example: 120 })
+  processedOrders: number;
+
+  @ApiProperty({ example: 254320.5 })
+  totalRevenue: number;
+}
+
+export class OrderFiltersDto {
+  @ApiPropertyOptional({
+    enum: OrderStatus,
+    description: 'Filtrar por estado',
+  })
+  @IsOptional()
+  @IsEnum(OrderStatus)
+  status?: OrderStatus;
+
+  @ApiPropertyOptional({
+    example: '2024-01-01',
+    description: 'Fecha de inicio (YYYY-MM-DD)',
+  })
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
+  @ApiPropertyOptional({
+    example: '2024-12-31',
+    description: 'Fecha de fin (YYYY-MM-DD)',
+  })
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
+
+  @ApiPropertyOptional({
+    example: 10,
+    description: 'Límite de resultados',
+    default: 10,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  @Min(1)
+  @Max(100)
+  limit?: number;
+
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'Página',
+    default: 1,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  @Min(1)
+  page?: number;
+}
+
+export class CreateOrderFromCartDto {
+  @ApiPropertyOptional({
+    type: ShippingAddressDto,
+    description: 'Dirección de envío (opcional si el usuario ya tiene una guardada)',
+  })
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => ShippingAddressDto)
+  shippingAddress?: ShippingAddressDto;
+}
+export class UpdateOrderStatusDto {
+  @ApiProperty({
+    enum: OrderStatus,
+    example: OrderStatus.PAID,
+    description: 'Nuevo estado de la orden',
+  })
+  @IsEnum(OrderStatus)
+  status: OrderStatus;
+
+  @ApiPropertyOptional({
+    example: 'credit_card',
+    description: 'Método de pago (requerido cuando se marca como PAID)',
+    enum: ['credit_card', 'debit_card', 'mercadopago', 'paypal', 'cash'],
+  })
+  @IsOptional()
+  @IsString()
+  paymentMethod?: string;
 }

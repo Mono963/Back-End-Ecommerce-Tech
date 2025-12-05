@@ -23,6 +23,6 @@ import { OrderItem } from './Entities/order.item';
   ],
   controllers: [OrdersController],
   providers: [OrdersService],
-  exports: [OrdersService],
+  exports: [OrdersService, TypeOrmModule],
 })
 export class OrdersModule {}

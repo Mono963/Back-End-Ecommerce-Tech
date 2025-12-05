@@ -43,10 +43,6 @@ export class CategoriesService {
     return await this.categoryRepo.find({ relations: ['products'] });
   }
 
-  async getCategoriesSeeder(): Promise<Category[]> {
-    return await this.categoryRepo.find();
-  }
-
   async findByName(categoryName: string): Promise<Category | null> {
     return await this.categoryRepo.findOneBy({ categoryName });
   }
@@ -62,8 +58,9 @@ export class CategoriesService {
     });
     return await this.categoryRepo.save(category);
   }
+
   async getByIdCategory(id: string): Promise<Category> {
-    const exist = await this.categoryRepo.findOneBy({ id });
+    const exist = await this.categoryRepo.findOne({ where: { id }, relations: ['products', 'products.variants'] });
     if (!exist) {
       throw new Error('La categoria no existe');
     }

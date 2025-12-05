@@ -95,11 +95,6 @@ export class CreateUserDto {
   @IsOptional()
   @IsBoolean()
   isSuperAdmin?: boolean;
-
-  @ApiHideProperty()
-  @IsOptional()
-  @IsBoolean()
-  isDonator?: boolean;
 }
 
 export class LoginUserDto extends PickType(CreateUserDto, ['email', 'password']) {}

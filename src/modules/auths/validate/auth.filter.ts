@@ -1,10 +1,4 @@
-import {
-  ExceptionFilter,
-  Catch,
-  ArgumentsHost,
-  HttpException,
-  Logger,
-} from '@nestjs/common';
+import { ExceptionFilter, Catch, ArgumentsHost, HttpException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 
@@ -25,16 +19,9 @@ export class AuthExceptionFilter implements ExceptionFilter {
 
     this.logger.error('Google OAuth Error:', exception);
 
-    const frontendUrl = this.configService.get<string>(
-      'GoogleOAuth.frontendUrl',
-    );
-    const errorMessage =
-      exception instanceof HttpException
-        ? exception.message
-        : 'Authentication Error';
+    const frontendUrl = this.configService.get<string>('GoogleOAuth.frontendUrl');
+    const errorMessage = exception instanceof HttpException ? exception.message : 'Authentication Error';
 
-    response.redirect(
-      `${frontendUrl}/auth/error?message=${encodeURIComponent(errorMessage)}`,
-    );
+    response.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent(errorMessage)}`);
   }
 }

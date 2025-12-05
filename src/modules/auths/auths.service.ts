@@ -32,8 +32,6 @@ export class AuthsService {
 
     this.logger.log(`Usuario ${email} ha iniciado sesión exitosamente`);
 
-    console.log(this.generateAuthResponse(user));
-
     return this.generateAuthResponse(user);
   }
 
@@ -124,8 +122,6 @@ export class AuthsService {
       isAdmin: user.isAdmin,
       isSuperAdmin: user.isSuperAdmin,
     };
-
-    console.log(payload);
 
     const accessToken = this.jwtService.sign(payload);
 

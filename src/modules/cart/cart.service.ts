@@ -1,16 +1,38 @@
-import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  InternalServerErrorException,
+  Inject,
+  forwardRef,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, In } from 'typeorm';
+import { Repository, DataSource, In, LessThan, QueryRunner, EntityManager } from 'typeorm';
 import { Cart } from './entities/cart.entity';
 import { Users } from '../users/Entyties/users.entity';
 import { Product } from '../products/Entities/products.entity';
 import { ProductVariant } from '../products/Entities/products_variant.entity';
 import { CartItem } from './entities/cart.item.entity';
-import { AddToCartDTO, CartItemResponseDTO, CartResponseDTO, UpdateCartItemDTO } from './dto/create-cart.dto';
+import { AddToCartDTO, UpdateCartItemDTO } from './dto/create-cart.dto';
 import { ProductsService } from '../products/products.service';
+import { OrdersService } from '../orders/orders.service';
+import {
+  ICartItemResponseDTO,
+  ICartResponseDTO,
+  IResponseCartSummaryDTO,
+  IStockValidationIssue,
+  IStockValidationResult,
+  IVariantValidationResult,
+} from './interfaces/interface.cart';
+import { IShippingAddressDto } from '../orders/interfaces/orders.interface';
+import { ResponseOrderDto } from '../orders/Dto/order.Dto';
+import { ICategory } from '../category/interface/category.interface';
 
 @Injectable()
 export class CartService {
+  private readonly logger = new Logger(CartService.name);
+
   constructor(
     @InjectRepository(Cart)
     private readonly cartRepository: Repository<Cart>,
@@ -29,15 +51,37 @@ export class CartService {
 
     private readonly productsService: ProductsService,
 
+    @Inject(forwardRef(() => OrdersService))
+    private readonly ordersService: OrdersService,
+
     private readonly dataSource: DataSource,
   ) {}
 
-  async getCart(userId: string): Promise<CartResponseDTO> {
+  async getCartById(userId: string): Promise<ICartResponseDTO> {
     const cart = await this.getOrCreateCart(userId);
     return this.mapCartToResponse(cart);
   }
 
-  async addProductToCart(userId: string, dto: AddToCartDTO): Promise<CartResponseDTO> {
+  async getCartSummary(userId: string): Promise<IResponseCartSummaryDTO> {
+    const cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items'],
+    });
+
+    if (!cart) {
+      return { itemCount: 0, total: 0, hasItems: false };
+    }
+
+    const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+
+    return {
+      itemCount,
+      total: Number(cart.total),
+      hasItems: cart.items.length > 0,
+    };
+  }
+
+  async addProductToCart(userId: string, dto: AddToCartDTO): Promise<ICartResponseDTO> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -53,72 +97,36 @@ export class CartService {
           where: { id: userId },
         });
         if (!user) {
-          throw new NotFoundException(`User with ID ${userId} not found`);
+          throw new NotFoundException(`Usuario con ID ${userId} no encontrado`);
         }
-        cart = queryRunner.manager.create(Cart, { user, total: 0, items: [] });
+        cart = queryRunner.manager.create(Cart, {
+          user,
+          total: 0,
+          items: [],
+        });
         await queryRunner.manager.save(cart);
       }
 
-      // Obtener producto con variantes
-      const product = await queryRunner.manager.findOne(Product, {
-        where: { id: dto.productId },
-        relations: ['variants'],
-      });
+      const product = await this.validateAndGetProduct(queryRunner, dto.productId);
 
-      if (!product) {
-        throw new NotFoundException(`Product with ID ${dto.productId} not found`);
-      }
+      const { selectedVariants, variantsSnapshot } = await this.validateAndGetVariants(
+        queryRunner,
+        dto.productId,
+        dto.variantIds || [],
+        product.hasVariants,
+      );
 
-      // Obtener y validar variantes si se proporcionaron
-      let selectedVariants: ProductVariant[] = [];
-      let variantsSnapshot = null;
-
-      if (dto.variantIds && dto.variantIds.length > 0) {
-        if (!product.hasVariants) {
-          throw new BadRequestException('Este producto no tiene variantes disponibles');
-        }
-
-        selectedVariants = await queryRunner.manager.find(ProductVariant, {
-          where: {
-            id: In(dto.variantIds),
-            product: { id: dto.productId },
-          },
-        });
-
-        if (selectedVariants.length !== dto.variantIds.length) {
-          throw new BadRequestException('Una o más variantes no son válidas para este producto');
-        }
-
-        // Validar que no hay variantes duplicadas del mismo tipo
-        const typesSet = new Set(selectedVariants.map((v) => v.type));
-        if (typesSet.size !== selectedVariants.length) {
-          throw new BadRequestException('No se pueden seleccionar múltiples variantes del mismo tipo');
-        }
-
-        // Crear snapshot de variantes
-        variantsSnapshot = selectedVariants.map((v) => ({
-          id: v.id,
-          type: v.type,
-          name: v.name,
-          priceModifier: Number(v.priceModifier),
-        }));
-      }
-
-      // Calcular precio con variantes
       const unitPrice = await this.productsService.calculateProductPrice(dto.productId, dto.variantIds || []);
 
-      // Verificar stock
       const availableStock = await this.productsService.getAvailableStock(dto.productId, dto.variantIds || []);
 
       if (availableStock < dto.quantity) {
         throw new BadRequestException(`Stock insuficiente. Disponible: ${availableStock}, Solicitado: ${dto.quantity}`);
       }
 
-      // Buscar item existente con las mismas variantes
       let cartItem = this.findExistingCartItem(cart.items, dto.productId, dto.variantIds || []);
 
       if (cartItem) {
-        // Actualizar cantidad existente
         const newQuantity = cartItem.quantity + dto.quantity;
         if (availableStock < newQuantity) {
           throw new BadRequestException(
@@ -128,7 +136,6 @@ export class CartService {
         cartItem.quantity = newQuantity;
         cartItem.subtotal = parseFloat((newQuantity * Number(cartItem.priceAtAddition)).toFixed(2));
       } else {
-        // Crear nuevo item
         cartItem = queryRunner.manager.create(CartItem, {
           cart,
           product,
@@ -138,19 +145,17 @@ export class CartService {
           selectedVariants: variantsSnapshot,
           variants: selectedVariants,
         });
+
         if (!cart.items) cart.items = [];
         cart.items.push(cartItem);
       }
 
       await queryRunner.manager.save(cartItem);
 
-      // Recalcular total del carrito
-      cart.total = parseFloat(cart.items.reduce((sum, item) => sum + Number(item.subtotal), 0).toFixed(2));
+      await this.recalculateCartTotal(queryRunner, cart);
 
-      await queryRunner.manager.save(cart);
       await queryRunner.commitTransaction();
-
-      return await this.getCart(userId);
+      return await this.getCartById(userId);
     } catch (error) {
       await queryRunner.rollbackTransaction();
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
@@ -162,7 +167,7 @@ export class CartService {
     }
   }
 
-  async updateCartItemQuantity(userId: string, cartItemId: string, dto: UpdateCartItemDTO): Promise<CartResponseDTO> {
+  async updateCartItemQuantity(userId: string, cartItemId: string, dto: UpdateCartItemDTO): Promise<ICartResponseDTO> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -183,11 +188,9 @@ export class CartService {
       }
 
       if (dto.quantity === 0) {
-        // Remover item
         await queryRunner.manager.remove(cartItem);
         cart.items = cart.items.filter((item) => item.id !== cartItemId);
       } else {
-        // Verificar stock con variantes
         const variantIds = cartItem.variants?.map((v) => v.id) || [];
         const availableStock = await this.productsService.getAvailableStock(cartItem.product.id, variantIds);
 
@@ -197,19 +200,15 @@ export class CartService {
           );
         }
 
-        // Actualizar cantidad
         cartItem.quantity = dto.quantity;
         cartItem.subtotal = parseFloat((dto.quantity * Number(cartItem.priceAtAddition)).toFixed(2));
         await queryRunner.manager.save(cartItem);
       }
 
-      // Recalcular total
-      cart.total = parseFloat(cart.items.reduce((sum, item) => sum + Number(item.subtotal), 0).toFixed(2));
+      await this.recalculateCartTotal(queryRunner, cart);
 
-      await queryRunner.manager.save(cart);
       await queryRunner.commitTransaction();
-
-      return await this.getCart(userId);
+      return await this.getCartById(userId);
     } catch (error) {
       await queryRunner.rollbackTransaction();
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
@@ -221,7 +220,7 @@ export class CartService {
     }
   }
 
-  async removeCartItem(userId: string, cartItemId: string): Promise<{ message: string; cart: CartResponseDTO }> {
+  async removeCartItem(userId: string, cartItemId: string): Promise<{ message: string; cart: ICartResponseDTO }> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -244,13 +243,11 @@ export class CartService {
       await queryRunner.manager.remove(cartItem);
       cart.items = cart.items.filter((item) => item.id !== cartItemId);
 
-      // Recalcular total
-      cart.total = parseFloat(cart.items.reduce((sum, item) => sum + Number(item.subtotal), 0).toFixed(2));
+      await this.recalculateCartTotal(queryRunner, cart);
 
-      await queryRunner.manager.save(cart);
       await queryRunner.commitTransaction();
 
-      const updatedCart = await this.getCart(userId);
+      const updatedCart = await this.getCartById(userId);
       return {
         message: 'Item eliminado del carrito exitosamente',
         cart: updatedCart,
@@ -267,43 +264,148 @@ export class CartService {
   }
 
   async clearCart(userId: string): Promise<{ message: string }> {
-    const cart = await this.cartRepository.findOne({
-      where: { user: { id: userId } },
-      relations: ['items'],
-    });
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    if (!cart) {
-      throw new NotFoundException(`Carrito no encontrado para el usuario`);
+    try {
+      const cart = await queryRunner.manager.findOne(Cart, {
+        where: { user: { id: userId } },
+        relations: ['items'],
+      });
+
+      if (!cart) {
+        throw new NotFoundException(`Carrito no encontrado para el usuario`);
+      }
+
+      if (cart.items && cart.items.length > 0) {
+        await queryRunner.manager.remove(CartItem, cart.items);
+      }
+
+      cart.items = [];
+      cart.total = 0;
+
+      await queryRunner.manager.save(cart);
+
+      await queryRunner.commitTransaction();
+
+      this.logger.log(`Carrito del usuario ${userId} vaciado exitosamente.`);
+      return { message: 'Carrito vaciado exitosamente' };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('No se pudo vaciar el carrito');
+    } finally {
+      await queryRunner.release();
     }
-
-    await this.cartItemRepository.remove(cart.items);
-    cart.total = 0;
-    await this.cartRepository.save(cart);
-
-    return { message: 'Carrito vaciado exitosamente' };
   }
 
-  // Crear orden desde el carrito
-  async createOrderFromCart(userId: string): Promise<any> {
-    const cart = await this.cartRepository.findOne({
-      where: { user: { id: userId } },
-      relations: ['user', 'items', 'items.product', 'items.variants'],
-    });
+  async validateCartStock(userId: string): Promise<IStockValidationResult> {
+    const cart = await this.getOrCreateCart(userId);
+    const issues: IStockValidationIssue[] = [];
 
-    if (!cart || cart.items.length === 0) {
-      throw new BadRequestException('El carrito está vacío');
+    for (const item of cart.items) {
+      const currentProduct = await this.productRepository.findOne({
+        where: { id: item.product.id },
+      });
+
+      if (!currentProduct?.isActive) {
+        issues.push({
+          itemId: item.id,
+          productId: item.product.id,
+          productName: item.product.name,
+          issue: 'Producto no disponible',
+          requested: item.quantity,
+          available: 0,
+        });
+        continue;
+      }
+
+      const variantIds = item.variants?.map((v) => v.id) || [];
+      const availableStock = await this.productsService.getAvailableStock(item.product.id, variantIds);
+
+      if (availableStock < item.quantity) {
+        issues.push({
+          itemId: item.id,
+          productId: item.product.id,
+          productName: item.product.name,
+          issue: 'Stock insuficiente',
+          requested: item.quantity,
+          available: availableStock,
+        });
+      }
     }
 
-    // Aquí conectarías con OrdersService para crear la orden
-    // pasando los items del carrito con sus variantes
+    return {
+      valid: issues.length === 0,
+      issues,
+    };
+  }
 
-    return cart;
+  async createOrderFromCartCheckout(userId: string, shippingAddress: IShippingAddressDto): Promise<ResponseOrderDto> {
+    const stockValidation = await this.validateCartStock(userId);
+
+    if (!stockValidation.valid) {
+      throw new BadRequestException({
+        message: 'Algunos productos en el carrito no están disponibles',
+        issues: stockValidation.issues,
+      });
+    }
+
+    return await this.ordersService.createOrderFromCart(userId, shippingAddress);
+  }
+
+  async cleanupAbandonedCarts(daysOld: number = 30): Promise<{
+    message: string;
+    cleaned: number;
+  }> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const abandonedCarts = await queryRunner.manager.find(Cart, {
+        where: {
+          updatedAt: LessThan(cutoffDate),
+        },
+        relations: ['items'],
+      });
+
+      let cleanedCount = 0;
+
+      for (const cart of abandonedCarts) {
+        if (cart.items.length > 0) {
+          await queryRunner.manager.remove(cart.items);
+          cart.total = 0;
+          await queryRunner.manager.save(cart);
+          cleanedCount++;
+        }
+      }
+
+      await queryRunner.commitTransaction();
+
+      return {
+        message: `Carritos abandonados limpiados exitosamente`,
+        cleaned: cleanedCount,
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error('Error limpiando carritos abandonados:', error);
+      throw new InternalServerErrorException('Error al limpiar carritos abandonados');
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   private async getOrCreateCart(userId: string): Promise<Cart> {
     let cart = await this.cartRepository.findOne({
       where: { user: { id: userId } },
-      relations: ['user', 'items', 'items.product', 'items.variants'],
+      relations: ['user', 'items', 'items.product', 'items.product.category', 'items.variants'],
     });
 
     if (!cart) {
@@ -311,22 +413,114 @@ export class CartService {
       if (!user) {
         throw new NotFoundException(`Usuario con ID ${userId} no encontrado`);
       }
-      cart = this.cartRepository.create({ user, total: 0, items: [] });
+      cart = this.cartRepository.create({
+        user,
+        total: 0,
+        items: [],
+      });
       await this.cartRepository.save(cart);
     }
 
     return cart;
   }
 
+  /**
+   * Valida y obtiene un producto
+   */
+  private async validateAndGetProduct(queryRunner: QueryRunner, productId: string): Promise<Product> {
+    const product = await queryRunner.manager.findOne(Product, {
+      where: { id: productId },
+      relations: ['variants', 'category'],
+    });
+
+    if (!product) {
+      throw new NotFoundException(`Producto con ID ${productId} no encontrado`);
+    }
+
+    if (!product.isActive) {
+      throw new BadRequestException('El producto no está disponible');
+    }
+
+    return product;
+  }
+
+  /**
+   * Valida y obtiene variantes - LÓGICA MEJORADA
+   */
+  private async validateAndGetVariants(
+    queryRunner: QueryRunner,
+    productId: string,
+    variantIds: string[],
+    hasVariants: boolean,
+  ): Promise<IVariantValidationResult> {
+    let selectedVariants: ProductVariant[] = [];
+    let variantsSnapshot: Array<{
+      id: string;
+      type: string;
+      name: string;
+      priceModifier: number;
+    }> = [];
+
+    // ✅ Caso 1: No se enviaron variantes
+    if (!variantIds || variantIds.length === 0) {
+      if (hasVariants) {
+        // Si el producto tiene variantes pero no se seleccionaron, es un error
+        throw new BadRequestException('Este producto requiere seleccionar variantes');
+      }
+      // Si no tiene variantes, está bien no enviar ninguna
+      return { selectedVariants: [], variantsSnapshot: [] };
+    }
+
+    // ✅ Caso 2: Se enviaron variantes
+    if (!hasVariants) {
+      throw new BadRequestException('Este producto no acepta variantes');
+    }
+
+    selectedVariants = await queryRunner.manager.find(ProductVariant, {
+      where: {
+        id: In(variantIds),
+        product: { id: productId },
+        isAvailable: true,
+      },
+    });
+
+    if (selectedVariants.length !== variantIds.length) {
+      throw new BadRequestException('Una o más variantes no son válidas o no están disponibles');
+    }
+
+    // Validar que no hay variantes duplicadas del mismo tipo
+    const typesSet = new Set(selectedVariants.map((v) => v.type));
+    if (typesSet.size !== selectedVariants.length) {
+      throw new BadRequestException('No se pueden seleccionar múltiples variantes del mismo tipo');
+    }
+
+    // Crear snapshot de variantes
+    variantsSnapshot = selectedVariants.map((v) => ({
+      id: v.id,
+      type: v.type,
+      name: v.name,
+      priceModifier: Number(v.priceModifier),
+    }));
+
+    return { selectedVariants, variantsSnapshot };
+  }
+
+  /**
+   * Busca un item existente en el carrito con el mismo producto y variantes - LÓGICA CORREGIDA
+   */
   private findExistingCartItem(items: CartItem[], productId: string, variantIds: string[]): CartItem | undefined {
     return items?.find((item) => {
       if (item.product.id !== productId) return false;
 
       const itemVariantIds = item.variants?.map((v) => v.id) || [];
 
-      // Verificar si tienen las mismas variantes
+      // ✅ Ambos arrays deben tener la misma longitud
       if (itemVariantIds.length !== variantIds.length) return false;
 
+      // ✅ Si ambos están vacíos, coinciden
+      if (itemVariantIds.length === 0 && variantIds.length === 0) return true;
+
+      // ✅ Comparar arrays ordenados
       const sortedItemIds = [...itemVariantIds].sort();
       const sortedNewIds = [...variantIds].sort();
 
@@ -334,22 +528,56 @@ export class CartService {
     });
   }
 
-  private mapCartToResponse(cart: Cart): CartResponseDTO {
-    const items: CartItemResponseDTO[] =
+  private async recalculateCartTotal(queryRunner: QueryRunner | EntityManager, cart: Cart): Promise<void> {
+    cart.total = parseFloat(cart.items.reduce((sum, item) => sum + Number(item.subtotal), 0).toFixed(2));
+
+    if ('manager' in queryRunner) {
+      // Es un QueryRunner
+      await queryRunner.manager.save(cart);
+    } else {
+      // Es un EntityManager
+      await queryRunner.save(cart);
+    }
+  }
+
+  /**
+   * Mapea el carrito a DTO de respuesta
+   */
+  private mapCartToResponse(cart: Cart): ICartResponseDTO {
+    const items: ICartItemResponseDTO[] =
       cart.items?.map((item) => ({
         id: item.id,
         quantity: item.quantity,
         priceAtAddition: Number(item.priceAtAddition),
         subtotal: Number(item.subtotal),
+        addedAt: item.addedAt,
         selectedVariants: item.selectedVariants,
+        variants:
+          item.variants?.map((v) => ({
+            id: v.id,
+            type: v.type,
+            name: v.name,
+            priceModifier: Number(v.priceModifier),
+            stock: v.stock,
+            isAvailable: v.isAvailable,
+          })) || [],
         product: {
           id: item.product.id,
           name: item.product.name,
           description: item.product.description,
+          brand: item.product.brand,
+          model: item.product.model,
           basePrice: Number(item.product.basePrice),
           baseStock: item.product.baseStock,
           imgUrls: item.product.imgUrls || [],
           hasVariants: item.product.hasVariants,
+          isActive: item.product.isActive,
+          category: item.product.category
+            ? {
+                id: item.product.category.id,
+                name: (item.product.category as ICategory).categoryName || 'Sin nombre',
+              }
+            : null,
         },
       })) || [];
 

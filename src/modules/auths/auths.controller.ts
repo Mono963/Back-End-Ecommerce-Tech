@@ -6,8 +6,9 @@ import { ConfigService } from '@nestjs/config';
 
 import { AuthsService } from './auths.service';
 import { AuthExceptionFilter } from './validate/auth.filter';
-import { GoogleUser } from './interface/IAuth.interface';
+import { AuthResponse, GoogleUser } from './interface/IAuth.interface';
 import { CreateUserDto, LoginUserDto } from '../users/Dtos/CreateUserDto';
+import { ResponseUserDto } from '../users/interface/IUserResponseDto';
 
 interface AuthenticatedRequest extends Request {
   user: GoogleUser;
@@ -32,8 +33,7 @@ export class AuthsController {
     description: 'Invalid credentials',
   })
   @Post('signin')
-  async signin(@Body() credentials: LoginUserDto) {
-    // Validación de tipos explícita
+  async signin(@Body() credentials: LoginUserDto): Promise<AuthResponse> {
     if (!credentials || typeof credentials !== 'object') {
       throw new Error('Invalid credentials format');
     }
@@ -64,8 +64,7 @@ export class AuthsController {
     }),
   )
   @Post('signup')
-  async signup(@Body() newUser: CreateUserDto) {
-    // Validación de tipos explícita
+  async signup(@Body() newUser: CreateUserDto): Promise<ResponseUserDto> {
     if (!newUser || typeof newUser !== 'object') {
       throw new Error('Invalid user data format');
     }
@@ -81,7 +80,7 @@ export class AuthsController {
   @UseGuards(PassportAuthGuard('google'))
   @Get('google')
   async googleAuth(): Promise<void> {
-    // Este método es manejado por Passport, no necesita implementación
+    // PassportAuthGuard
   }
 
   @ApiOperation({ summary: 'Google OAuth callback handler' })
@@ -93,32 +92,18 @@ export class AuthsController {
   @UseGuards(PassportAuthGuard('google'))
   @Get('google/callback')
   async googleAuthRedirect(@Req() req: AuthenticatedRequest, @Res() res: Response): Promise<void> {
-    // Validación segura del usuario de Google
     const googleUser = req.user;
-
     if (!googleUser || typeof googleUser !== 'object') {
       throw new Error('Invalid Google user data');
     }
-
-    // Validación adicional de las propiedades requeridas
     if (!googleUser.id || !googleUser.email || !googleUser.name) {
       throw new Error('Incomplete Google user profile');
     }
-
     const frontendUrl = this.configService.get<string>('GoogleOAuth.frontendUrl');
-
     if (!frontendUrl) {
       throw new Error('Frontend URL not configured');
     }
-
-    try {
-      const result = await this.authService.googleLogin(googleUser);
-
-      res.redirect(`${frontendUrl}/auth/callback?token=${result.accessToken}&userId=${result.user.id}`);
-    } catch (error) {
-      // Manejo seguro de errores
-      const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
-      res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent(errorMessage)}`);
-    }
+    const result = await this.authService.googleLogin(googleUser);
+    res.redirect(`${frontendUrl}/auth/callback?token=${result.accessToken}&userId=${result.user.id}`);
   }
 }
