@@ -8,14 +8,15 @@ import {
   UpdateDateColumn,
   JoinColumn,
 } from 'typeorm';
-import { Users } from '../../users/Entyties/users.entity';
 import { CartItem } from './cart.item.entity';
+import { Users } from 'src/modules/users/Entyties/users.entity';
 
 @Entity('carts')
 export class Cart {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  // Total del carrito
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   total: number;
 
@@ -25,13 +26,14 @@ export class Cart {
   @UpdateDateColumn()
   updatedAt: Date;
 
+  // Un carrito pertenece a un usuario
   @ManyToOne(() => Users, (user) => user.cart)
   @JoinColumn({ name: 'user_id' })
   user: Users;
 
+  // Un carrito tiene muchos items
   @OneToMany(() => CartItem, (cartItem) => cartItem.cart, {
-    cascade: true,
-    eager: true,
+    cascade: true, // Si elimino el carrito, se eliminan los items
   })
   items: CartItem[];
 }

@@ -1,9 +1,4 @@
-import {
-  IsUUID,
-  IsArray,
-  ValidateNested,
-  ArrayNotEmpty,
-} from 'class-validator';
+import { IsUUID, IsArray, ValidateNested, ArrayNotEmpty } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -19,10 +14,7 @@ export class CreateOrderDto {
   userId: string;
 
   @ApiProperty({
-    example: [
-      { id: 'c3f45d9a-0a44-4d8b-8b93-8f22987402f4' },
-      { id: 'bc8a2049-5ee6-4aa4-a073-3e11891cb6a9' },
-    ],
+    example: [{ id: 'c3f45d9a-0a44-4d8b-8b93-8f22987402f4' }, { id: 'bc8a2049-5ee6-4aa4-a073-3e11891cb6a9' }],
     type: [ProductIdDto],
   })
   @IsArray()

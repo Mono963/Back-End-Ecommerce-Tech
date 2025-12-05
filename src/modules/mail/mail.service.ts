@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { Transporter } from 'nodemailer';
 import { ConfigService } from '@nestjs/config';
@@ -31,27 +27,15 @@ export class MailService {
     });
   }
 
-  private async getStripoTemplateHtml(
-    templateName: string,
-    context: Record<string, any>,
-  ): Promise<string> {
-    const templatePath = path.resolve(
-      process.cwd(),
-      'dist',
-      'modules',
-      'mail',
-      'templates',
-      templateName,
-    );
+  private async getStripoTemplateHtml(templateName: string, context: Record<string, any>): Promise<string> {
+    const templatePath = path.resolve(process.cwd(), 'dist', 'modules', 'mail', 'templates', templateName);
 
     let templateSource: string;
     try {
       templateSource = await fs.promises.readFile(templatePath, 'utf8');
     } catch (error) {
       this.logger.log(`Error reading template file ${templatePath}:`, error);
-      throw new InternalServerErrorException(
-        `Failed to load email template: ${templateName}`,
-      );
+      throw new InternalServerErrorException(`Failed to load email template: ${templateName}`);
     }
 
     const template = Handlebars.compile(templateSource);
@@ -68,10 +52,7 @@ export class MailService {
   ): Promise<void> {
     try {
       const emailFrom = `"ROOTS COOPERATIVA" <${this.configService.get<string>('EMAIL_FROM')}>`;
-      const rawHtml = await this.getStripoTemplateHtml(
-        templateFileName,
-        context,
-      );
+      const rawHtml = await this.getStripoTemplateHtml(templateFileName, context);
       const inlinedHtml = juice(rawHtml);
       this.logger.log(inlinedHtml);
       await this.transporter.sendMail({
@@ -82,14 +63,10 @@ export class MailService {
         text: textAlt,
       });
 
-      this.logger.log(
-        `Correo enviado a ${to}: "${subject}" usando plantilla "${templateFileName}"`,
-      );
+      this.logger.log(`Correo enviado a ${to}: "${subject}" usando plantilla "${templateFileName}"`);
     } catch (error) {
       this.logger.log('Error al enviar correo:', error);
-      throw new InternalServerErrorException(
-        'Error al enviar el correo electrónico.',
-      );
+      throw new InternalServerErrorException('Error al enviar el correo electrónico.');
     }
   }
 
@@ -113,13 +90,7 @@ export class MailService {
       appName: 'ROOTS COOPERATIVA',
     };
 
-    await this.sendMail(
-      userEmail,
-      subject,
-      textAlt,
-      'appointment-pending.html',
-      context,
-    );
+    await this.sendMail(userEmail, subject, textAlt, 'appointment-pending.html', context);
   }
 
   async sendAppointmentCancelledNotification(
@@ -146,13 +117,7 @@ export class MailService {
       appName: 'ROOTS COOPERATIVA',
     };
 
-    await this.sendMail(
-      userEmail,
-      subject,
-      finalTextAlt,
-      'appointment-cancelled.html',
-      context,
-    );
+    await this.sendMail(userEmail, subject, finalTextAlt, 'appointment-cancelled.html', context);
   }
   async sendAppointmentCancelledNotificationToAdmin(
     userName: string,
@@ -184,13 +149,7 @@ export class MailService {
       appName: 'ROOTS COOPERATIVA',
     };
 
-    await this.sendMail(
-      'rootscooperativadev@gmail.com',
-      subject,
-      textAlt,
-      'appointment-cancelled-admin.html',
-      context,
-    );
+    await this.sendMail('rootscooperativadev@gmail.com', subject, textAlt, 'appointment-cancelled-admin.html', context);
   }
   async sendAppointmentRejectedToUser(
     email: string,
@@ -218,13 +177,7 @@ export class MailService {
       appName: 'ROOTS COOPERATIVA',
     };
 
-    await this.sendMail(
-      email,
-      subject,
-      textAlt,
-      'appointment-rejected.html',
-      context,
-    );
+    await this.sendMail(email, subject, textAlt, 'appointment-rejected.html', context);
   }
 
   async sendWelcomeEmail(userEmail: string, userName: string): Promise<void> {
@@ -237,19 +190,10 @@ export class MailService {
       appLink: 'https://frontend-rootscoop.vercel.app',
     };
 
-    await this.sendMail(
-      userEmail,
-      subject,
-      textAlt,
-      'welcome-email.html',
-      context,
-    );
+    await this.sendMail(userEmail, subject, textAlt, 'welcome-email.html', context);
   }
 
-  async sendLoginNotification(
-    userEmail: string,
-    userName: string,
-  ): Promise<void> {
+  async sendLoginNotification(userEmail: string, userName: string): Promise<void> {
     const subject = 'Inicio de Sesión en tu Cuenta';
     const textAlt = `Hola ${userName},\n\nSe ha iniciado sesión en tu cuenta.\n\nSi no fuiste tú, contactá a soporte.\n\nROOTS COOPERATIVA.`;
 
@@ -259,13 +203,7 @@ export class MailService {
       supportLink: 'https://frontend-rootscoop.vercel.app/contacto',
     };
 
-    await this.sendMail(
-      userEmail,
-      subject,
-      textAlt,
-      'login-notification.html',
-      context,
-    );
+    await this.sendMail(userEmail, subject, textAlt, 'login-notification.html', context);
   }
   async sendOrderProcessingNotification(
     userEmail: string,
@@ -287,18 +225,9 @@ export class MailService {
       orderDate: orderDate.toLocaleDateString(),
     };
 
-    await this.sendMail(
-      userEmail,
-      subject,
-      textAlt,
-      'order-processing.html',
-      context,
-    );
+    await this.sendMail(userEmail, subject, textAlt, 'order-processing.html', context);
   }
-  async sendUserDataChangedNotification(
-    userEmail: string,
-    userName: string,
-  ): Promise<void> {
+  async sendUserDataChangedNotification(userEmail: string, userName: string): Promise<void> {
     const subject = 'Tus Datos Personales Han Sido Modificados';
     const textAlt = `Hola ${userName},\n\nSe han modificado los datos de tu cuenta.\n\nSi no fuiste vos, contactá al equipo de soporte inmediatamente.\n\nROOTS COOPERATIVA.`;
 
@@ -308,19 +237,9 @@ export class MailService {
       supportLink: 'https://frontend-rootscoop.vercel.app/contacto',
     };
 
-    await this.sendMail(
-      userEmail,
-      subject,
-      textAlt,
-      'data-changed.html',
-      context,
-    );
+    await this.sendMail(userEmail, subject, textAlt, 'data-changed.html', context);
   }
-  async sendContactConfirmation(
-    email: string,
-    name: string,
-    reason: string,
-  ): Promise<void> {
+  async sendContactConfirmation(email: string, name: string, reason: string): Promise<void> {
     const subject = 'Consulta recibida - ROOTS COOPERATIVA';
     const textAlt =
       `Hola ${name},\n\n` +
@@ -338,18 +257,9 @@ export class MailService {
 
     await this.sendMail(email, subject, textAlt, 'contact-info.html', context);
   }
-  async sendContactNotificationToAdmin(
-    name: string,
-    email: string,
-    phone: string,
-    reason: string,
-  ): Promise<void> {
+  async sendContactNotificationToAdmin(name: string, email: string, phone: string, reason: string): Promise<void> {
     const subject = 'Nueva consulta desde el sitio web';
-    const textAlt =
-      `Nombre: ${name}\n` +
-      `Email: ${email}\n` +
-      `Teléfono: ${phone}\n` +
-      `Motivo: ${reason}`;
+    const textAlt = `Nombre: ${name}\n` + `Email: ${email}\n` + `Teléfono: ${phone}\n` + `Motivo: ${reason}`;
 
     const context = {
       name,
@@ -359,31 +269,17 @@ export class MailService {
       appName: 'ROOTS COOPERATIVA',
     };
 
-    await this.sendMail(
-      'rootscooperativadev@gmail.com',
-      subject,
-      textAlt,
-      'contact-admin.html',
-      context,
-    );
+    await this.sendMail('rootscooperativadev@gmail.com', subject, textAlt, 'contact-admin.html', context);
   }
   async sendPurchaseConfirmation(email: string): Promise<void> {
     const subject = '¡Gracias por tu compra en ROOTS COOPERATIVA!';
-    const textAlt =
-      `Gracias por tu compra.\n\n` +
-      `Saludos,\nEl equipo de ROOTS COOPERATIVA.`;
+    const textAlt = `Gracias por tu compra.\n\n` + `Saludos,\nEl equipo de ROOTS COOPERATIVA.`;
 
     const context = {
       appName: 'ROOTS COOPERATIVA',
     };
 
-    await this.sendMail(
-      email,
-      subject,
-      textAlt,
-      'purchase-confirmation.html',
-      context,
-    );
+    await this.sendMail(email, subject, textAlt, 'purchase-confirmation.html', context);
   }
   async sendPurchaseAlertToAdmin(
     userName: string,
@@ -411,19 +307,9 @@ export class MailService {
       appName: 'ROOTS COOPERATIVA',
     };
 
-    await this.sendMail(
-      adminEmail,
-      subject,
-      textAlt,
-      'purchase-confirmation-admin.html',
-      context,
-    );
+    await this.sendMail(adminEmail, subject, textAlt, 'purchase-confirmation-admin.html', context);
   }
-  async sendPasswordResetEmail(
-    email: string,
-    name: string,
-    resetUrl: string,
-  ): Promise<void> {
+  async sendPasswordResetEmail(email: string, name: string, resetUrl: string): Promise<void> {
     const subject = 'Restablece tu contraseña - ROOTS COOPERATIVA';
     const textAlt =
       `Hola ${name},\n\n` +
@@ -438,20 +324,10 @@ export class MailService {
       appName: 'ROOTS COOPERATIVA',
     };
 
-    await this.sendMail(
-      email,
-      subject,
-      textAlt,
-      'changed-password.html',
-      context,
-    );
+    await this.sendMail(email, subject, textAlt, 'changed-password.html', context);
   }
-  async sendPasswordChangedConfirmationEmail(
-    email: string,
-    name: string,
-  ): Promise<void> {
-    const subject =
-      'Confirmación: Tu Contraseña ha Cambiado - ROOTS COOPERATIVA';
+  async sendPasswordChangedConfirmationEmail(email: string, name: string): Promise<void> {
+    const subject = 'Confirmación: Tu Contraseña ha Cambiado - ROOTS COOPERATIVA';
     const textAlt =
       `Hola ${name},\n\n` +
       `Te confirmamos que tu contraseña en ROOTS COOPERATIVA ha sido cambiada correctamente.\n\n` +
@@ -464,13 +340,7 @@ export class MailService {
       appName: 'ROOTS COOPERATIVA',
     };
 
-    await this.sendMail(
-      email,
-      subject,
-      textAlt,
-      'confirm-password-changed.html',
-      context,
-    );
+    await this.sendMail(email, subject, textAlt, 'confirm-password-changed.html', context);
   }
   async sendPendingAppointmentToAdmin(
     userName: string,
@@ -499,18 +369,9 @@ export class MailService {
       appName: 'ROOTS COOPERATIVA',
     };
 
-    await this.sendMail(
-      'rootscooperativadev@gmail.com',
-      subject,
-      textAlt,
-      'appointment-pending-admin.html',
-      context,
-    );
+    await this.sendMail('rootscooperativadev@gmail.com', subject, textAlt, 'appointment-pending-admin.html', context);
   }
-  async sendAccountDeletedNotification(
-    userEmail: string,
-    userName: string,
-  ): Promise<void> {
+  async sendAccountDeletedNotification(userEmail: string, userName: string): Promise<void> {
     const subject = 'Tu cuenta ha sido desactivada';
     const textAlt = `Hola ${userName},\n\nTu cuenta en ROOTS COOPERATIVA ha sido desactivada.\n\nSi esto fue un error, contactá al soporte.`;
 
@@ -520,13 +381,7 @@ export class MailService {
       supportLink: 'https://frontend-rootscoop.vercel.app/contacto',
     };
 
-    await this.sendMail(
-      userEmail,
-      subject,
-      textAlt,
-      'user-blocked.html',
-      context,
-    );
+    await this.sendMail(userEmail, subject, textAlt, 'user-blocked.html', context);
   }
   async sendDonationThanks(userEmail: string): Promise<void> {
     const subject = '¡Gracias por tu generosa donación a ROOTS COOPERATIVA!';
@@ -539,12 +394,7 @@ export class MailService {
 
     await this.sendMail(userEmail, subject, textAlt, 'donation.html', context);
   }
-  async sendDonationAlertToAdmin(
-    name: string,
-    amount: number,
-    email: string,
-    phone: number,
-  ): Promise<void> {
+  async sendDonationAlertToAdmin(name: string, amount: number, email: string, phone: number): Promise<void> {
     const adminEmail = 'rootscooperativadev@gmail.com';
     const subject = 'Nueva donación recibida en ROOTS COOPERATIVA';
     const textAlt = `Hola equipo ROOTS,
@@ -568,13 +418,7 @@ Seguimos sumando voluntades.
       appName: 'ROOTS COOPERATIVA',
     };
 
-    await this.sendMail(
-      adminEmail,
-      subject,
-      textAlt,
-      'donation-admin.html',
-      context,
-    );
+    await this.sendMail(adminEmail, subject, textAlt, 'donation-admin.html', context);
   }
   async sendAppointmentApprovedEmail(
     email: string,
@@ -602,18 +446,9 @@ Seguimos sumando voluntades.
       appName: 'ROOTS COOPERATIVA',
     };
 
-    await this.sendMail(
-      email,
-      subject,
-      textAlt,
-      'appointment-approved.html',
-      context,
-    );
+    await this.sendMail(email, subject, textAlt, 'appointment-approved.html', context);
   }
-  async sendPaymentPendingEmail(
-    email: string,
-    userName: string,
-  ): Promise<void> {
+  async sendPaymentPendingEmail(email: string, userName: string): Promise<void> {
     const subject = 'Pago pendiente - ROOTS COOPERATIVA';
     const textAlt =
       `Hola ${userName},\n\n` +
@@ -628,18 +463,9 @@ Seguimos sumando voluntades.
       appName: 'ROOTS COOPERATIVA',
     };
 
-    await this.sendMail(
-      email,
-      subject,
-      textAlt,
-      'payment-pending.html',
-      context,
-    );
+    await this.sendMail(email, subject, textAlt, 'payment-pending.html', context);
   }
-  async sendPaymentRejectedEmail(
-    email: string,
-    userName: string,
-  ): Promise<void> {
+  async sendPaymentRejectedEmail(email: string, userName: string): Promise<void> {
     const subject = 'Pago rechazado - ROOTS COOPERATIVA';
     const textAlt =
       `Hola ${userName},\n\n` +
@@ -653,12 +479,6 @@ Seguimos sumando voluntades.
       appName: 'ROOTS COOPERATIVA',
     };
 
-    await this.sendMail(
-      email,
-      subject,
-      textAlt,
-      'payment-rejected.html',
-      context,
-    );
+    await this.sendMail(email, subject, textAlt, 'payment-rejected.html', context);
   }
 }

@@ -6,5 +6,4 @@ export enum UserRole {
   USER = 'user',
 }
 
-export const Roles = (...roles: UserRole[]): CustomDecorator<string> =>
-  SetMetadata('roles', roles);
+export const Roles = (...roles: UserRole[]): CustomDecorator<string> => SetMetadata('roles', roles);

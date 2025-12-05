@@ -1,4 +1,9 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+  "compilerOptions": {
+    "declaration": false, // No necesario en build
+    "declarationMap": false, // No necesario en build
+    "sourceMap": false // Opcional: desactivar para builds más rápidos en prod
+  },
+  "exclude": ["node_modules", "dist", "test", "**/*spec.ts", "**/*test.ts", "**/*.e2e-spec.ts", "src/**/*.spec.ts", "src/**/*.test.ts"]
 }

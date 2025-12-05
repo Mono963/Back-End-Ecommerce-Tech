@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -11,11 +6,7 @@ import { Repository } from 'typeorm';
 
 import { Users } from '../users/Entyties/users.entity';
 import { UsersService } from '../users/users.service';
-import {
-  AuthResponse,
-  GoogleUser,
-  IUserAuthResponse,
-} from './interface/IAuth.interface';
+import { AuthResponse, GoogleUser, IUserAuthResponse } from './interface/IAuth.interface';
 import { CreateUserDto } from '../users/Dtos/CreateUserDto';
 import { ResponseUserDto } from '../users/interface/IUserResponseDto';
 import { AuthValidations } from './validate/auth.validate';
@@ -41,6 +32,8 @@ export class AuthsService {
 
     this.logger.log(`Usuario ${email} ha iniciado sesión exitosamente`);
 
+    console.log(this.generateAuthResponse(user));
+
     return this.generateAuthResponse(user);
   }
 
@@ -49,9 +42,7 @@ export class AuthsService {
 
     AuthValidations.validatePasswordMatch(password, confirmPassword);
 
-    const existingEmailUser = await this.userService.findByEmail(
-      userData.email,
-    );
+    const existingEmailUser = await this.userService.findByEmail(userData.email);
     AuthValidations.validateEmailIsNotTaken(existingEmailUser?.email);
 
     const existingUsernameUser = await this.usersRepository.findOne({
@@ -60,10 +51,7 @@ export class AuthsService {
     });
 
     if (existingUsernameUser) {
-      AuthValidations.validateUserNameExist(
-        userData.username,
-        existingUsernameUser,
-      );
+      AuthValidations.validateUserNameExist(userData.username, existingUsernameUser);
     }
 
     try {
@@ -98,25 +86,17 @@ export class AuthsService {
     }
 
     if (isNewUser) {
-      this.logger.log(
-        `Nuevo usuario creado via Google OAuth: ${googleUser.email}`,
-      );
+      this.logger.log(`Nuevo usuario creado via Google OAuth: ${googleUser.email}`);
     } else {
-      this.logger.log(
-        `Usuario existente autenticado via Google OAuth: ${googleUser.email}`,
-      );
+      this.logger.log(`Usuario existente autenticado via Google OAuth: ${googleUser.email}`);
     }
 
     return this.generateAuthResponse(authenticatedUser);
   }
 
-  private async createUserFromGoogleProfile(
-    googleUser: GoogleUser,
-  ): Promise<IUserAuthResponse> {
+  private async createUserFromGoogleProfile(googleUser: GoogleUser): Promise<IUserAuthResponse> {
     const randomPassword = await AuthValidations.generateRandomPassword();
-    const username = AuthValidations.generateUsernameFromEmail(
-      googleUser.email,
-    );
+    const username = AuthValidations.generateUsernameFromEmail(googleUser.email);
 
     const createdUser = await this.userService.createUserService({
       name: googleUser.name,
@@ -140,9 +120,12 @@ export class AuthsService {
       sub: user.id,
       email: user.email,
       name: user.name,
+      username: user.username,
       isAdmin: user.isAdmin,
       isSuperAdmin: user.isSuperAdmin,
     };
+
+    console.log(payload);
 
     const accessToken = this.jwtService.sign(payload);
 
@@ -161,9 +144,7 @@ export class AuthsService {
     };
   }
 
-  private async findUserByEmail(
-    email: string,
-  ): Promise<IUserAuthResponse & { password?: string }> {
+  private async findUserByEmail(email: string): Promise<IUserAuthResponse & { password?: string }> {
     const foundUser = await this.userService.findByEmail(email);
     if (!foundUser) {
       throw new UnauthorizedException('Credenciales inválidas');
@@ -173,9 +154,7 @@ export class AuthsService {
 
   private validateGoogleUser(googleUser: GoogleUser): void {
     if (!googleUser?.email) {
-      throw new BadRequestException(
-        'Email required for authentication with Google',
-      );
+      throw new BadRequestException('Email required for authentication with Google');
     }
   }
 }

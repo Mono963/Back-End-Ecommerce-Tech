@@ -18,6 +18,7 @@ import { ConfigService } from '@nestjs/config';
 import { MailService } from '../mail/mail.service';
 import { UpdateRoleDto } from './Dtos/UpdateRoleDto';
 import { ResetPasswordDto } from './Dtos/reset-password.dto';
+import { IPaginatedResult } from './interface/IPaginatedResult';
 
 @Injectable()
 export class UsersService {
@@ -30,17 +31,11 @@ export class UsersService {
     private readonly mailService: MailService,
   ) {}
 
-  async findAll(): Promise<Users[]> {
-    return this.usersRepository.find({
-      order: { createdAt: 'DESC' },
-    });
-  }
-
-  async getUsers(searchQuery: UserSearchQueryDto) {
+  async getUsers(searchQuery: UserSearchQueryDto): Promise<IPaginatedResult<Users>> {
     const { username, email, ...pagination } = searchQuery;
 
     if (!username && !email) {
-      return paginate(this.usersRepository, pagination, {
+      return await paginate(this.usersRepository, pagination, {
         order: { createdAt: 'DESC' },
         withDeleted: true,
         select: [
@@ -103,13 +98,13 @@ export class UsersService {
       items,
       total,
       pages,
-    };
+    } as IPaginatedResult<Users>;
   }
 
   async getUserById(id: string): Promise<Users> {
     const user = await this.usersRepository.findOne({
       where: { id },
-      relations: ['orders', 'cart'], // Removidas las relaciones que no existen
+      relations: ['orders', 'cart'],
     });
 
     if (!user) {
@@ -120,9 +115,22 @@ export class UsersService {
   }
 
   async findByEmail(email: string): Promise<Users | null> {
-    return this.usersRepository.findOne({
+    return await this.usersRepository.findOne({
       where: { email },
-      select: ['id', 'name', 'email', 'password', 'isAdmin', 'isSuperAdmin'],
+      select: [
+        'id',
+        'name',
+        'email',
+        'password',
+        'birthdate',
+        'phone',
+        'address',
+        'username',
+        'isAdmin',
+        'isSuperAdmin',
+        'createdAt',
+        'deletedAt',
+      ],
     });
   }
 
@@ -180,16 +188,11 @@ export class UsersService {
       );
     }
 
-    this.mailService
-      .sendUserDataChangedNotification(updatedUser.email, updatedUser.name)
-      .catch((err: unknown) => {
-        const message =
-          err instanceof Error
-            ? err.message
-            : 'Error desconocido al enviar email de modificación de datos';
-        const stack = err instanceof Error ? err.stack : undefined;
-        this.logger.error(message, stack);
-      });
+    this.mailService.sendUserDataChangedNotification(updatedUser.email, updatedUser.name).catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Error desconocido al enviar email de modificación de datos';
+      const stack = err instanceof Error ? err.stack : undefined;
+      this.logger.error(message, stack);
+    });
 
     return updatedUser;
   }
@@ -204,15 +207,10 @@ export class UsersService {
     const isSamePassword = await bcrypt.compare(dto.newPassword, user.password);
 
     if (isSamePassword) {
-      throw new BadRequestException(
-        'La nueva contraseña no puede ser igual a la actual',
-      );
+      throw new BadRequestException('La nueva contraseña no puede ser igual a la actual');
     }
 
-    await AuthValidations.validateNewPasswordIsDifferent(
-      dto.newPassword,
-      user.password,
-    );
+    await AuthValidations.validateNewPasswordIsDifferent(dto.newPassword, user.password);
 
     await AuthValidations.validatePassword(dto.currentPassword, user.password);
 
@@ -221,17 +219,14 @@ export class UsersService {
     user.password = hashedPassword;
     await this.usersRepository.save(user);
 
-    this.mailService
-      .sendPasswordChangedConfirmationEmail(user.email, user.name)
-      .catch((err: unknown) => {
-        const message =
-          err instanceof Error ? err.message : 'Error sending email';
-        const stack = err instanceof Error ? err.stack : undefined;
-        this.logger.error(message, stack);
-      });
+    this.mailService.sendPasswordChangedConfirmationEmail(user.email, user.name).catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Error sending email';
+      const stack = err instanceof Error ? err.stack : undefined;
+      this.logger.error(message, stack);
+    });
   }
 
-  async rollChange(userId: string, dto: UpdateRoleDto) {
+  async rollChange(userId: string, dto: UpdateRoleDto): Promise<void> {
     try {
       const user = await this.usersRepository.findOne({
         where: { id: userId },
@@ -241,8 +236,7 @@ export class UsersService {
         throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
       }
 
-      const result = await this.usersRepository.update(user.id, dto);
-      return result;
+      await this.usersRepository.update(user.id, dto);
     } catch (error) {
       this.logger.error('Error changing user role:', error);
       throw new InternalServerErrorException('Error changing user role');
@@ -263,17 +257,11 @@ export class UsersService {
         throw new NotFoundException(`User: ${id} not found`);
       }
 
-      await this.mailService.sendAccountDeletedNotification(
-        user.email,
-        user.name,
-      );
+      await this.mailService.sendAccountDeletedNotification(user.email, user.name);
 
       return { message: `User ${id} successfully removed.` };
     } catch (error) {
-      this.logger.error(
-        'Error: Al eliminar la cuenta intente mas tarde',
-        error,
-      );
+      this.logger.error('Error: Al eliminar la cuenta intente mas tarde', error);
       throw new InternalServerErrorException(`Error deleting User ${id}`);
     }
   }
@@ -300,14 +288,10 @@ export class UsersService {
         throw new NotFoundException(`User: ${id} could not be restored`);
       }
 
-      // Devolver el usuario completo después de la restauración
       const restoredUser = await this.getUserById(id);
       return restoredUser;
     } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof BadRequestException
-      ) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
         throw error;
       }
 
@@ -325,15 +309,10 @@ export class UsersService {
       throw new BadRequestException('Credenciales inválidas');
     }
 
-    const frontendUrl =
-      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
     const resetUrl = `${frontendUrl}/reset-password?token=${encodeURIComponent(email)}`;
 
-    await this.mailService.sendPasswordResetEmail(
-      user.email,
-      user.name,
-      resetUrl,
-    );
+    await this.mailService.sendPasswordResetEmail(user.email, user.name, resetUrl);
   }
 
   async resetPassword(dto: ResetPasswordDto): Promise<void> {
@@ -355,9 +334,6 @@ export class UsersService {
     user.password = hashedPassword;
     await this.usersRepository.save(user);
 
-    await this.mailService.sendPasswordChangedConfirmationEmail(
-      user.email,
-      user.name,
-    );
+    await this.mailService.sendPasswordChangedConfirmationEmail(user.email, user.name);
   }
 }

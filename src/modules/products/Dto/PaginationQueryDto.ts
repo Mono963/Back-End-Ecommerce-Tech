@@ -1,4 +1,4 @@
-import { IsEmail, IsInt, IsOptional, IsPositive, IsString, Max } from 'class-validator';
+import { IsInt, IsNumber, IsOptional, IsPositive, IsString, Length, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -27,22 +27,24 @@ export class PaginationQueryDto {
   page = 1;
 }
 
-export class UserSearchQueryDto extends PaginationQueryDto {
+export class ProductsSearchQueryDto extends PaginationQueryDto {
   @ApiProperty({
-    example: 'john_doe',
+    example: 'ram',
     required: false,
-    description: 'Username to search for users',
+    description: 'name to search for products',
   })
   @IsOptional()
+  @Length(3, 80)
   @IsString()
-  username?: string;
+  name?: string;
 
   @ApiProperty({
-    example: 'john@example.com',
+    example: 1000,
     required: false,
-    description: 'Email to search for users',
+    description: 'price to search for products',
   })
   @IsOptional()
-  @IsEmail({}, { message: 'email must be a valid email address' })
-  email?: string;
+  @IsNumber()
+  @Min(0.01)
+  price?: number;
 }

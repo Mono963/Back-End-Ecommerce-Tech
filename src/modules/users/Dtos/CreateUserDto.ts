@@ -1,10 +1,4 @@
-import {
-  PickType,
-  ApiProperty,
-  ApiHideProperty,
-  PartialType,
-  OmitType,
-} from '@nestjs/swagger';
+import { PickType, ApiProperty, ApiHideProperty, PartialType, OmitType } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsDateString,
@@ -74,13 +68,10 @@ export class CreateUserDto {
   })
   @IsNotEmpty()
   @IsString()
-  @Matches(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,15}$/,
-    {
-      message:
-        'The password must have at least one uppercase letter, one lowercase letter, one number, and one special character. (!@#$%^&*)',
-    },
-  )
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,15}$/, {
+    message:
+      'The password must have at least one uppercase letter, one lowercase letter, one number, and one special character. (!@#$%^&*)',
+  })
   password: string;
 
   @ApiProperty({
@@ -89,13 +80,10 @@ export class CreateUserDto {
   })
   @IsNotEmpty()
   @IsString()
-  @Matches(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,15}$/,
-    {
-      message:
-        'The confirmPassword must have at least one uppercase letter, one lowercase letter, one number, and one special character. (!@#$%^&*)',
-    },
-  )
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,15}$/, {
+    message:
+      'The confirmPassword must have at least one uppercase letter, one lowercase letter, one number, and one special character. (!@#$%^&*)',
+  })
   confirmPassword: string;
 
   @ApiHideProperty()
@@ -114,18 +102,10 @@ export class CreateUserDto {
   isDonator?: boolean;
 }
 
-export class LoginUserDto extends PickType(CreateUserDto, [
-  'email',
-  'password',
-]) {}
+export class LoginUserDto extends PickType(CreateUserDto, ['email', 'password']) {}
 
 export class UpdateUserDto extends PartialType(CreateUserDto) {}
 
-export class CreateUserDbDto extends OmitType(CreateUserDto, [
-  'confirmPassword',
-] as const) {}
+export class CreateUserDbDto extends OmitType(CreateUserDto, ['confirmPassword'] as const) {}
 
-export class UpdateUserDbDto extends OmitType(UpdateUserDto, [
-  'confirmPassword',
-  'email',
-] as const) {}
+export class UpdateUserDbDto extends OmitType(UpdateUserDto, ['confirmPassword', 'email'] as const) {}

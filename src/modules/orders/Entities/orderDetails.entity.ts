@@ -1,30 +1,49 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  OneToOne,
-  ManyToMany,
-  JoinTable,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, OneToMany } from 'typeorm';
 import { Order } from './order.entity';
-import { Product } from '../../products/Entities/products.entity';
+import { OrderItem } from './order.item';
 
-@Entity({
-  name: 'orders_details',
-})
+@Entity('orders_details')
 export class OrderDetail {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'decimal', precision: 10, nullable: false })
+  // Subtotal sin impuestos ni envío
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  subtotal: number;
+
+  // Impuestos
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  tax: number;
+
+  // Costo de envío
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  shipping: number;
+
+  // Total final
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   total: number;
 
-  @OneToOne(() => Order, (order) => order.orderDetail, { nullable: false })
+  // Dirección de envío
+  @Column({ type: 'json', nullable: true })
+  shippingAddress: {
+    street: string;
+    number: string;
+    city: string;
+    state: string;
+    zipCode: string;
+  };
+
+  // Método de pago usado
+  @Column({ nullable: true })
+  paymentMethod: string; // "credit_card", "debit_card", "mercadopago", etc
+
+  // Un detalle pertenece a una orden
+  @OneToOne(() => Order, (order) => order.orderDetail)
   order: Order;
 
-  @ManyToMany(() => Product)
-  @JoinTable({
-    name: 'order_details_products',
+  // Un detalle tiene muchos items
+  @OneToMany(() => OrderItem, (item) => item.orderDetail, {
+    cascade: true,
   })
-  products: Product[];
+  items: OrderItem[];
 }

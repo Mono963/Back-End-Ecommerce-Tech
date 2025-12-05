@@ -14,20 +14,9 @@ import {
 } from '@nestjs/common';
 import { CartService } from './cart.service';
 import { AuthGuard } from 'src/guards/auth.guards';
-import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiOperation,
-  ApiParam,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedRequest } from '../users/interface/IUserResponseDto';
-import {
-  AddToCartDTO,
-  CartResponseDTO,
-  UpdateCartItemDTO,
-} from './dto/create-cart.dto';
+import { AddToCartDTO, CartResponseDTO, UpdateCartItemDTO } from './dto/create-cart.dto';
 
 @ApiTags('Cart')
 @Controller('cart')
@@ -47,7 +36,7 @@ export class CartController {
     type: CartResponseDTO,
   })
   async getMyCart(@Req() req: AuthenticatedRequest): Promise<CartResponseDTO> {
-    return this.cartService.getCart(req.user.sub);
+    return await this.cartService.getCart(req.user.sub);
   }
 
   @Post('add')
@@ -73,7 +62,7 @@ export class CartController {
     @Req() req: AuthenticatedRequest,
     @Body() addToCartDTO: AddToCartDTO,
   ): Promise<CartResponseDTO> {
-    return this.cartService.addProductToCart(req.user.sub, addToCartDTO);
+    return await this.cartService.addProductToCart(req.user.sub, addToCartDTO);
   }
 
   @Put('items/:cartItemId')
@@ -105,11 +94,7 @@ export class CartController {
     @Param('cartItemId', ParseUUIDPipe) cartItemId: string,
     @Body() updateCartItemDTO: UpdateCartItemDTO,
   ): Promise<CartResponseDTO> {
-    return this.cartService.updateCartItemQuantity(
-      req.user.sub,
-      cartItemId,
-      updateCartItemDTO,
-    );
+    return await this.cartService.updateCartItemQuantity(req.user.sub, cartItemId, updateCartItemDTO);
   }
 
   @Delete('items/:cartItemId')
@@ -130,11 +115,8 @@ export class CartController {
     status: 404,
     description: 'Cart item not found',
   })
-  async removeCartItem(
-    @Req() req: AuthenticatedRequest,
-    @Param('cartItemId', ParseUUIDPipe) cartItemId: string,
-  ) {
-    return this.cartService.removeCartItem(req.user.sub, cartItemId);
+  async removeCartItem(@Req() req: AuthenticatedRequest, @Param('cartItemId', ParseUUIDPipe) cartItemId: string) {
+    return await this.cartService.removeCartItem(req.user.sub, cartItemId);
   }
 
   @Delete('clear')
@@ -147,6 +129,6 @@ export class CartController {
     description: 'Cart cleared successfully',
   })
   async clearCart(@Req() req: AuthenticatedRequest) {
-    return this.cartService.clearCart(req.user.sub);
+    return await this.cartService.clearCart(req.user.sub);
   }
 }

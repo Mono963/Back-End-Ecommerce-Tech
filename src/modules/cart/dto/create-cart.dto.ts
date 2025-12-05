@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsUUID, IsInt, Min } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsUUID, IsInt, Min, IsOptional, IsArray } from 'class-validator';
 
 export class AddToCartDTO {
   @ApiProperty({
@@ -17,6 +17,16 @@ export class AddToCartDTO {
   @IsInt()
   @Min(1)
   quantity: number;
+
+  @ApiPropertyOptional({
+    example: ['variant-id-1', 'variant-id-2'],
+    description: 'Array of variant IDs (e.g., color, storage)',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  variantIds?: string[];
 }
 
 export class UpdateCartItemDTO {
@@ -30,19 +40,27 @@ export class UpdateCartItemDTO {
   quantity: number;
 }
 
-// dto/cart-response.dto.ts
+export class CartItemVariantDTO {
+  id: string;
+  type: string;
+  name: string;
+  priceModifier: number;
+}
+
 export class CartItemResponseDTO {
   id: string;
   quantity: number;
   priceAtAddition: number;
   subtotal: number;
+  selectedVariants: CartItemVariantDTO[] | null;
   product: {
     id: string;
     name: string;
     description: string;
-    price: number;
-    stock: number;
+    basePrice: number;
+    baseStock: number;
     imgUrls: string[];
+    hasVariants: boolean;
   };
 }
 

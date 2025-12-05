@@ -1,15 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Post,
-  Req,
-  Res,
-  UseFilters,
-  UseGuards,
-  UsePipes,
-  ValidationPipe,
-} from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, Res, UseFilters, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthGuard as PassportAuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
@@ -103,10 +92,7 @@ export class AuthsController {
   @UseFilters(AuthExceptionFilter)
   @UseGuards(PassportAuthGuard('google'))
   @Get('google/callback')
-  async googleAuthRedirect(
-    @Req() req: AuthenticatedRequest,
-    @Res() res: Response,
-  ): Promise<void> {
+  async googleAuthRedirect(@Req() req: AuthenticatedRequest, @Res() res: Response): Promise<void> {
     // Validación segura del usuario de Google
     const googleUser = req.user;
 
@@ -119,9 +105,7 @@ export class AuthsController {
       throw new Error('Incomplete Google user profile');
     }
 
-    const frontendUrl = this.configService.get<string>(
-      'GoogleOAuth.frontendUrl',
-    );
+    const frontendUrl = this.configService.get<string>('GoogleOAuth.frontendUrl');
 
     if (!frontendUrl) {
       throw new Error('Frontend URL not configured');
@@ -130,16 +114,11 @@ export class AuthsController {
     try {
       const result = await this.authService.googleLogin(googleUser);
 
-      res.redirect(
-        `${frontendUrl}/auth/callback?token=${result.accessToken}&userId=${result.user.id}`,
-      );
+      res.redirect(`${frontendUrl}/auth/callback?token=${result.accessToken}&userId=${result.user.id}`);
     } catch (error) {
       // Manejo seguro de errores
-      const errorMessage =
-        error instanceof Error ? error.message : 'Authentication failed';
-      res.redirect(
-        `${frontendUrl}/auth/error?message=${encodeURIComponent(errorMessage)}`,
-      );
+      const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
+      res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent(errorMessage)}`);
     }
   }
 }

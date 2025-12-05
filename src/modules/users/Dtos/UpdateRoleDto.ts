@@ -7,7 +7,7 @@ export class UpdateRoleDto {
     description: 'Define si el usuario será admin o no',
   })
   @IsBoolean()
-  isAdmin: boolean;
+  isAdmin?: boolean;
 
   @ApiProperty({
     example: true,
@@ -15,4 +15,9 @@ export class UpdateRoleDto {
   })
   @IsBoolean()
   isSuperAdmin?: boolean;
+}
+
+export interface ResponseUserRoleDto {
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
 }

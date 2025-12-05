@@ -14,20 +14,11 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiOperation,
-  ApiParam,
-  ApiQuery,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { AuthGuard } from 'src/guards/auth.guards';
 import { RoleGuard } from 'src/guards/auth.guards.admin';
 import { Roles, UserRole } from 'src/decorator/role.decorator';
-import { Users } from './Entyties/users.entity';
 import { PaginatedUsersDto } from './Dtos/paginated-users.dto';
 import { UserSearchQueryDto } from './Dtos/PaginationQueryDto';
 import {
@@ -47,18 +38,6 @@ import { ResetPasswordDto } from './Dtos/reset-password.dto';
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
-
-  @ApiOperation({ summary: 'Get all users for newsletter' })
-  @UseGuards(AuthGuard, RoleGuard)
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
-  @ApiResponse({
-    status: 200,
-    description: 'Find all users to send newsletter',
-  })
-  @Get('all/newsletter')
-  async findAll(): Promise<Users[]> {
-    return this.usersService.findAll();
-  }
 
   @ApiOperation({
     summary: 'Retrieve all users (paginated) with optional search filters',
@@ -81,9 +60,7 @@ export class UsersController {
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
   @Get()
-  async getUsers(
-    @Query() searchQuery: UserSearchQueryDto,
-  ): Promise<PaginatedUsersDto> {
+  async getUsers(@Query() searchQuery: UserSearchQueryDto): Promise<PaginatedUsersDto> {
     const { items, ...meta } = await this.usersService.getUsers(searchQuery);
     return { ...meta, items: ResponseUserWithAdminDto.toDTOList(items) };
   }
@@ -94,7 +71,7 @@ export class UsersController {
   async changeOwnPassword(
     @Req() req: AuthenticatedRequest,
     @Body() dto: UpdatePasswordDto,
-  ) {
+  ): Promise<{ message: string }> {
     await this.usersService.changePassword(req.user.sub, dto);
     return { message: 'Contraseña actualizada correctamente' };
   }
@@ -104,9 +81,7 @@ export class UsersController {
   @ApiParam({ name: 'id', type: String })
   @ApiResponse({ status: 200, description: 'OK', type: ResponseUserDto })
   @UseGuards(AuthGuard)
-  async getUserById(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<ResponseUserDto> {
+  async getUserById(@Param('id', ParseUUIDPipe) id: string): Promise<ResponseUserDto> {
     return ResponseUserDto.toDTO(await this.usersService.getUserById(id));
   }
 
@@ -117,9 +92,9 @@ export class UsersController {
   async rollChange(
     @Param('id', ParseUUIDPipe) userId: string,
     @Body() dto: UpdateRoleDto,
-  ) {
-    const userRole = await this.usersService.rollChange(userId, dto);
-    return { message: 'Los roles se actualizaron correctamente', userRole };
+  ): Promise<{ message: string }> {
+    await this.usersService.rollChange(userId, dto);
+    return { message: 'Los roles se actualizaron correctamente' };
   }
 
   @Put('update/user')
@@ -127,14 +102,8 @@ export class UsersController {
   @ApiBody({ type: UpdateUserDbDto })
   @UseGuards(AuthGuard)
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  async updateUser(
-    @Req() req: AuthenticatedRequest,
-    @Body() updateData: UpdateUserDbDto,
-  ): Promise<IUserResponseDto> {
-    const user = await this.usersService.updateUserService(
-      req.user.sub,
-      updateData,
-    );
+  async updateUser(@Req() req: AuthenticatedRequest, @Body() updateData: UpdateUserDbDto): Promise<IUserResponseDto> {
+    const user = await this.usersService.updateUserService(req.user.sub, updateData);
     return ResponseUserDto.toDTO(user);
   }
 
@@ -155,7 +124,7 @@ export class UsersController {
   })
   @UseGuards(AuthGuard)
   @Delete(':id')
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id') id: string): Promise<{ message: string }> {
     return await this.usersService.deleteUser(id);
   }
 
@@ -173,9 +142,7 @@ export class UsersController {
     description: 'User successfully restored',
     type: ResponseUserDto,
   })
-  async restoreUser(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<ResponseUserDto> {
+  async restoreUser(@Param('id', ParseUUIDPipe) id: string): Promise<ResponseUserDto> {
     const user = await this.usersService.restoreUser(id);
     return ResponseUserDto.toDTO(user);
   }
@@ -187,7 +154,7 @@ export class UsersController {
     status: 200,
     description: 'If the email exists, a reset link is sent.',
   })
-  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+  async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<{ message: string }> {
     await this.usersService.sendResetPasswordEmail(dto.email);
     return {
       message: 'If the email exists, the password reset link has been sent.',
@@ -201,7 +168,7 @@ export class UsersController {
     status: 200,
     description: 'Password reset successfully',
   })
-  async resetPassword(@Body() dto: ResetPasswordDto) {
+  async resetPassword(@Body() dto: ResetPasswordDto): Promise<{ message: string }> {
     await this.usersService.resetPassword(dto);
     return { message: 'Password reset successfully' };
   }

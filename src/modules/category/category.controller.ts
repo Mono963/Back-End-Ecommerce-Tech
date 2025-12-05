@@ -44,7 +44,7 @@ export class CategoriesController {
   @ApiBearerAuth()
   @Get(':id')
   @HttpCode(HttpStatus.OK)
-  getById(@Param('id') id: string) {
+  getById(@Param('id') id: string): Promise<Category> {
     const category = this.categoriesService.getByIdCategory(id);
     return category;
   }
@@ -60,9 +60,7 @@ export class CategoriesController {
       return await this.categoriesService.preloadCategories();
     } catch (error) {
       console.error('[CategoriesController:seedCategories] →', error);
-      throw new InternalServerErrorException(
-        'Error al precargar las categorías',
-      );
+      throw new InternalServerErrorException('Error al precargar las categorías');
     }
   }
 }

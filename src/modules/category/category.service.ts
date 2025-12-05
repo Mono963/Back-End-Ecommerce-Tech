@@ -40,28 +40,29 @@ export class CategoriesService {
   }
 
   async getCategories(): Promise<Category[]> {
-    return this.categoryRepo.find({ relations: ['products'] });
+    return await this.categoryRepo.find({ relations: ['products'] });
+  }
+
+  async getCategoriesSeeder(): Promise<Category[]> {
+    return await this.categoryRepo.find();
   }
 
   async findByName(categoryName: string): Promise<Category | null> {
-    return this.categoryRepo.findOneBy({ categoryName });
+    return await this.categoryRepo.findOneBy({ categoryName });
   }
 
   async createCategory(dto: CreateCategoryDto): Promise<Category> {
     const exists = await this.findByName(dto.categoryName);
     if (exists) {
-      throw new HttpException(
-        `La categoría "${dto.categoryName}" ya existe`,
-        HttpStatus.CONFLICT,
-      );
+      throw new HttpException(`La categoría "${dto.categoryName}" ya existe`, HttpStatus.CONFLICT);
     }
 
     const category = this.categoryRepo.create({
       categoryName: dto.categoryName,
     });
-    return this.categoryRepo.save(category);
+    return await this.categoryRepo.save(category);
   }
-  async getByIdCategory(id: string): Promise<Category | null> {
+  async getByIdCategory(id: string): Promise<Category> {
     const exist = await this.categoryRepo.findOneBy({ id });
     if (!exist) {
       throw new Error('La categoria no existe');

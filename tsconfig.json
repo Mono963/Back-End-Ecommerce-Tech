@@ -1,24 +1,60 @@
 {
   "compilerOptions": {
+    // Configuración de módulos
     "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+
+    // Configuración de salida
+    "target": "ES2022", // Más estable que ES2023
+    "lib": ["ES2022"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "sourceMap": true,
     "declaration": true,
+    "declarationMap": true, // Para mejor debugging
     "removeComments": true,
+
+    // Decoradores y metadatos
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "target": "ES2023",
-    "sourceMap": true,
-    "outDir": "./dist",
+
+    // Configuración de paths
     "baseUrl": "./",
     "paths": {
-      "src/*": ["src/*"]
+      "src/*": ["src/*"],
+      "@/*": ["src/*"], // Alias adicional más común
+      "@modules/*": ["src/modules/*"],
+      "@common/*": ["src/common/*"],
+      "@config/*": ["src/config/*"]
     },
+
+    // Optimizaciones de compilación
     "incremental": true,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo", // Mejor ubicación
     "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+
+    // Configuración strict (recomendada)
+    "strict": false, // Gradualmente cambiar a true
     "strictNullChecks": true,
-    "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
-  }
+    "strictFunctionTypes": false,
+    "strictPropertyInitialization": false,
+    "noImplicitAny": false,
+    "noImplicitThis": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": false,
+
+    // Configuración adicional
+    "forceConsistentCasingInFileNames": true,
+    "noEmitOnError": true,
+    "preserveConstEnums": true,
+    "newLine": "lf"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test", "**/*spec.ts", "**/*test.ts", "**/*.e2e-spec.ts"]
 }

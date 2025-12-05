@@ -5,12 +5,7 @@ import { Repository } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { File } from './entities/file.entity';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import {
-  v2 as CloudinaryType,
-  UploadApiErrorResponse,
-  UploadApiResponse,
-  UploadStream,
-} from 'cloudinary';
+import { v2 as CloudinaryType, UploadApiErrorResponse, UploadApiResponse, UploadStream } from 'cloudinary';
 import { Readable, PassThrough } from 'stream';
 
 describe('FileService', () => {
@@ -34,10 +29,7 @@ describe('FileService', () => {
       uploader: {
         upload_stream: (
           options?: any,
-          callback?: (
-            error: UploadApiErrorResponse | undefined,
-            result?: UploadApiResponse,
-          ) => void,
+          callback?: (error: UploadApiErrorResponse | undefined, result?: UploadApiResponse) => void,
         ): UploadStream => {
           const passthrough = new PassThrough();
           process.nextTick(() => {
@@ -106,30 +98,22 @@ describe('FileService', () => {
     };
 
     it('debería lanzar BadRequestException si no hay archivo o buffer', async () => {
-      await expect(service.uploadImage('prod-1', null as any)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(service.uploadImage('prod-1', null as any)).rejects.toThrow(BadRequestException);
       // Para evitar error TS: casteamos a unknown primero, luego a Express.Multer.File
       const invalidFile = {
         ...fakeFile,
         buffer: null,
       } as unknown as Express.Multer.File;
 
-      await expect(service.uploadImage('prod-1', invalidFile)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(service.uploadImage('prod-1', invalidFile)).rejects.toThrow(BadRequestException);
     });
 
     it('debería lanzar NotFoundException si producto no existe', async () => {
       productService.findProductEntityById!.mockResolvedValue(null);
 
-      await expect(service.uploadImage('prod-1', fakeFile)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.uploadImage('prod-1', fakeFile)).rejects.toThrow(NotFoundException);
 
-      expect(productService.findProductEntityById).toHaveBeenCalledWith(
-        'prod-1',
-      );
+      expect(productService.findProductEntityById).toHaveBeenCalledWith('prod-1');
     });
 
     it('debería subir la imagen correctamente y actualizar el producto', async () => {
@@ -149,9 +133,7 @@ describe('FileService', () => {
 
       const result = await service.uploadImage('prod-1', fakeFile);
 
-      expect(productService.findProductEntityById).toHaveBeenCalledWith(
-        'prod-1',
-      );
+      expect(productService.findProductEntityById).toHaveBeenCalledWith('prod-1');
       expect(fileRepo.create).toHaveBeenCalledWith({
         url: 'https://cloudinary.com/fake-image.jpg',
         mimeType: 'image/png',
@@ -177,10 +159,7 @@ describe('FileService', () => {
       // Mock error en upload_stream usando PassThrough
       cloudinary.uploader.upload_stream = (
         options?: any,
-        callback?: (
-          error: UploadApiErrorResponse | undefined,
-          result?: UploadApiResponse,
-        ) => void,
+        callback?: (error: UploadApiErrorResponse | undefined, result?: UploadApiResponse) => void,
       ): UploadStream => {
         const passthrough = new PassThrough();
         process.nextTick(() => {
@@ -198,9 +177,7 @@ describe('FileService', () => {
         return passthrough;
       };
 
-      await expect(service.uploadImage('prod-1', fakeFile)).rejects.toThrow(
-        'Error al subir imagen a Cloudinary',
-      );
+      await expect(service.uploadImage('prod-1', fakeFile)).rejects.toThrow('Error al subir imagen a Cloudinary');
     });
   });
 });

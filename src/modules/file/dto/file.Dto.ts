@@ -8,8 +8,7 @@ export class FileResponseDto {
   id: string;
 
   @ApiProperty({
-    example:
-      'https://res.cloudinary.com/demo/image/upload/v123456789/product.jpg',
+    example: 'https://res.cloudinary.com/demo/image/upload/v123456789/product.jpg',
     description: 'URL pública de la imagen subida a Cloudinary',
   })
   url: string;
@@ -21,5 +20,5 @@ export class UploadImageDto {
     format: 'binary',
     description: 'Archivo de imagen a subir (JPG, PNG, etc.)',
   })
-  file?: any;
+  file?: Express.Multer.File;
 }

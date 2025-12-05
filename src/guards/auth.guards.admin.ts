@@ -1,9 +1,4 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  Injectable,
-  ForbiddenException,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { AuthGuard } from './auth.guards';
@@ -33,14 +28,12 @@ export class RoleGuard extends AuthGuard implements CanActivate {
 
     const hasRequiredRole = roles.some((role) => {
       switch (role) {
-        case UserRole.SUPER_ADMIN: {
-          const isSuperAdmin = user.isSuperAdmin === true;
-          return isSuperAdmin;
-        }
-        case UserRole.ADMIN: {
-          const isManagerOrSuper = user.isAdmin || user.isSuperAdmin;
-          return isManagerOrSuper;
-        }
+        case UserRole.SUPER_ADMIN:
+          return user.isSuperAdmin === true;
+        case UserRole.ADMIN:
+          return user.isAdmin === true || user.isSuperAdmin === true;
+        case UserRole.USER:
+          return true;
         default:
           return false;
       }
@@ -54,15 +47,15 @@ export class RoleGuard extends AuthGuard implements CanActivate {
               return 'superadmin';
             case UserRole.ADMIN:
               return 'admin';
+            case UserRole.USER:
+              return 'user';
             default:
               return rol;
           }
         })
         .join(' or ');
 
-      throw new ForbiddenException(
-        `Access restricted. This action requires one of the following roles: ${roleNames}`,
-      );
+      throw new ForbiddenException(`Access restricted. This action requires one of the following roles: ${roleNames}`);
     }
 
     return true;
