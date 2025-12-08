@@ -11,6 +11,7 @@ import { FileModule } from './modules/file/file.module';
 import { AuthsModule } from './modules/auths/auths.module';
 import { UsersModule } from './modules/users/users.module';
 import { CartModule } from './modules/cart/cart.module';
+import { RoleModule } from './module/role/role.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { CartModule } from './modules/cart/cart.module';
     FileModule,
     AuthsModule,
     CartModule,
+    RoleModule,
   ],
   controllers: [],
   providers: [],

@@ -37,13 +37,7 @@ export class Users {
   password: string;
 
   @Column({ type: 'bigint', nullable: false })
-  phone: number;
-
-  @Column({ type: 'boolean', default: false })
-  isAdmin: boolean;
-
-  @Column({ type: 'boolean', default: false })
-  isSuperAdmin: boolean;
+  phone: string;
 
   @CreateDateColumn()
   createdAt?: Date;

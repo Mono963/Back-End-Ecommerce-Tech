@@ -31,6 +31,18 @@ export interface IOrderResponseDto {
   status: OrderStatus;
 }
 
+// User Address Interface agregar en el futuro
+export interface UserAddress {
+  id: string;
+  label: string;
+  street: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  country: string;
+  isDefault: boolean;
+}
+
 export interface ICartResponseDto {
   id: string;
   total: number;
