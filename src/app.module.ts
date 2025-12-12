@@ -11,7 +11,13 @@ import { FileModule } from './modules/file/file.module';
 import { AuthsModule } from './modules/auths/auths.module';
 import { UsersModule } from './modules/users/users.module';
 import { CartModule } from './modules/cart/cart.module';
-import { RoleModule } from './module/role/role.module';
+import { RolesModule } from './modules/roles/roles.module';
+import { SeedsModule } from './seeds/seedUser/seeds.module';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { throttlerConfig } from './config/throttler.config';
+import { APP_GUARD } from '@nestjs/core';
+import { AppController } from './app.controller';
+import { ReviewModule } from './modules/review/review.module';
 
 @Module({
   imports: [
@@ -29,6 +35,7 @@ import { RoleModule } from './module/role/role.module';
         return config;
       },
     }),
+    ThrottlerModule.forRoot(throttlerConfig),
     UsersModule,
     ProductsModule,
     OrdersModule,
@@ -36,13 +43,20 @@ import { RoleModule } from './module/role/role.module';
     FileModule,
     AuthsModule,
     CartModule,
-    RoleModule,
+    RolesModule,
+    SeedsModule,
+    ReviewModule,
   ],
-  controllers: [],
-  providers: [],
+  controllers: [AppController],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
+  configure(consumer: MiddlewareConsumer): void {
     consumer.apply(RegisterDateMiddleware).forRoutes('*');
   }
 }

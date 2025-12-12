@@ -14,13 +14,14 @@ import { OrderDetail } from './Entities/orderDetails.entity';
 import { OrderItem } from './Entities/order.item';
 import { Product } from '../products/Entities/products.entity';
 import { ProductVariant } from '../products/Entities/products_variant.entity';
-import { Users } from '../users/Entyties/users.entity';
+import { Users } from '../users/Entities/users.entity';
 import { Cart } from '../cart/entities/cart.entity';
 import { CartItem } from '../cart/entities/cart.item.entity';
 import { ProductsService } from '../products/products.service';
 import { OrderFiltersDto, ResponseOrderDto } from './Dto/order.Dto';
 import { IShippingAddressInternal } from './interfaces/orders.interface';
 import { CartService } from '../cart/cart.service';
+import { UserAddress } from '../users/interface/IUserResponseDto';
 
 @Injectable()
 export class OrdersService {
@@ -93,6 +94,36 @@ export class OrdersService {
         throw new BadRequestException('El carrito está vacío');
       }
 
+      // Obtener la dirección seleccionada del usuario (si existe)
+      let shippingAddressSnapshot: UserAddress | null = null;
+      let shippingAddressId: string | null = null;
+
+      if (cart.selectedAddressId) {
+        const user = await queryRunner.manager.findOne(Users, {
+          where: { id: userId },
+          select: ['id', 'addresses'],
+        });
+
+        const selectedAddress = user?.addresses?.find((addr) => addr.id === cart.selectedAddressId);
+
+        if (selectedAddress) {
+          shippingAddressId = selectedAddress.id;
+          shippingAddressSnapshot = {
+            id: selectedAddress.id,
+            label: selectedAddress.label,
+            street: selectedAddress.street,
+            city: selectedAddress.city,
+            province: selectedAddress.province,
+            postalCode: selectedAddress.postalCode,
+            country: selectedAddress.country,
+            isDefault: selectedAddress.isDefault,
+          };
+          this.logger.log(`Usando dirección guardada ${shippingAddressId} para orden`);
+        } else {
+          this.logger.warn(`Dirección ${cart.selectedAddressId} no encontrada, usando dirección temporal si se proveyó`);
+        }
+      }
+
       await this.verifyStockAvailability(cart.items);
 
       const orderNumber = await this.generateOrderNumber();
@@ -108,6 +139,8 @@ export class OrdersService {
         tax,
         shipping,
         total,
+        shippingAddressId,
+        shippingAddressSnapshot,
         shippingAddress: shippingAddress || null,
         items: [],
       });
@@ -210,6 +243,8 @@ export class OrdersService {
       tax: number;
       shipping: number;
       total: number;
+      shippingAddressId?: string | null;
+      shippingAddressSnapshot?: UserAddress | null;
       shippingAddress: IShippingAddressInternal | null;
       items: OrderItem[];
     },
@@ -219,7 +254,8 @@ export class OrdersService {
       tax: data.tax,
       shipping: data.shipping,
       total: data.total,
-      shippingAddress: data.shippingAddress ? data.shippingAddress : undefined,
+      shippingAddressId: data.shippingAddressId || null,
+      shippingAddressSnapshot: data.shippingAddressSnapshot || null,
       paymentMethod: undefined,
       items: data.items,
     });
@@ -489,10 +525,11 @@ export class OrdersService {
   }
 
   private mapOrderToDto(order: Order): ResponseOrderDto {
-    const shippingAddress = order.orderDetail.shippingAddress
+    // Usar el snapshot de dirección si existe
+    const shippingAddress = order.orderDetail.shippingAddressSnapshot
       ? {
-          ...order.orderDetail.shippingAddress,
-          country: order.orderDetail.shippingAddress.country || 'Argentina',
+          ...order.orderDetail.shippingAddressSnapshot,
+          country: order.orderDetail.shippingAddressSnapshot.country || 'Argentina',
         }
       : null;
 
@@ -514,6 +551,7 @@ export class OrdersService {
         shipping: Number(order.orderDetail.shipping),
         total: Number(order.orderDetail.total),
         shippingAddress,
+        shippingAddressId: order.orderDetail.shippingAddressId,
         paymentMethod: order.orderDetail.paymentMethod,
         items: order.orderDetail.items.map((item) => ({
           id: item.id,

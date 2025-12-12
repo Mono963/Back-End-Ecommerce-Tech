@@ -2,13 +2,15 @@ import {
   BadRequestException,
   ConflictException,
   InternalServerErrorException,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { GoogleUser, IUserAuthResponse } from '../interface/IAuth.interface';
-import { Users } from 'src/modules/users/Entyties/users.entity';
+import { Users } from 'src/modules/users/Entities/users.entity';
 
 export class AuthValidations {
   private static readonly BCRYPT_ROUNDS = 12;
+  private static readonly logger = new Logger(AuthValidations.name);
 
   static validateCredentials(email: string, password: string): void {
     if (!email || !password) {
@@ -39,8 +41,8 @@ export class AuthValidations {
     return await bcrypt.hash(randomString, this.BCRYPT_ROUNDS);
   }
 
-  static handleSignupError(error: any): never {
-    console.error('[AuthsService:signup] →', error);
+  static handleSignupError(error: unknown): never {
+    AuthValidations.logger.error('[AuthsService:signup] →', error);
 
     if (error && typeof error === 'object' && 'code' in error && (error as { code?: unknown }).code === '23505') {
       throw new BadRequestException('The email or username already exists');
@@ -49,7 +51,7 @@ export class AuthValidations {
     throw new InternalServerErrorException('Error registering user');
   }
 
-  static validateUserExists(user: any): asserts user is IUserAuthResponse {
+  static validateUserExists(user: unknown): asserts user is IUserAuthResponse {
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }

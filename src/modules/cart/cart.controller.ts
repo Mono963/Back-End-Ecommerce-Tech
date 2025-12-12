@@ -20,6 +20,7 @@ import { AddToCartDTO, UpdateCartItemDTO } from './dto/create-cart.dto';
 import { ICartResponseDTO, IResponseCartSummaryDTO, IStockValidationResult } from './interfaces/interface.cart';
 import { IShippingAddressDto } from '../orders/interfaces/orders.interface';
 import { ResponseOrderDto } from '../orders/Dto/order.Dto';
+import { SelectAddressDto } from './dto/select-address.dto';
 
 @ApiTags('Cart')
 @Controller('cart')
@@ -63,7 +64,6 @@ export class CartController {
   }
 
   @Post('add')
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Add a product to the shopping cart',
   })
@@ -89,7 +89,6 @@ export class CartController {
   }
 
   @Put('items/:cartItemId')
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Update the quantity of an item in the cart',
   })
@@ -121,7 +120,6 @@ export class CartController {
   }
 
   @Delete('items/:cartItemId')
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Remove an item from the shopping cart',
   })
@@ -146,7 +144,6 @@ export class CartController {
   }
 
   @Delete('clear')
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Clear all items from the shopping cart',
   })
@@ -190,8 +187,58 @@ export class CartController {
     return await this.cartService.validateCartStock(req.user.sub);
   }
 
+  @Post('select-address')
+  @ApiOperation({
+    summary: 'Select a saved address from user profile for checkout',
+    description: 'Validates that the address exists in user.addresses before selecting it',
+  })
+  @ApiBody({ type: SelectAddressDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Address selected successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Dirección seleccionada exitosamente para el checkout' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Address not found in user saved addresses',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Cart not found',
+  })
+  async selectAddress(@Req() req: AuthenticatedRequest, @Body() dto: SelectAddressDto): Promise<{ message: string }> {
+    return await this.cartService.selectAddressForCheckout(req.user.sub, dto.addressId);
+  }
+
+  @Get('selected-address')
+  @ApiOperation({
+    summary: 'Get the currently selected address ID for checkout',
+    description: 'Returns the addressId selected for the cart, or null if none selected',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Selected address ID retrieved',
+    schema: {
+      type: 'object',
+      properties: {
+        selectedAddressId: { type: 'string', nullable: true, example: '550e8400-e29b-41d4-a716-446655440000' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Cart not found',
+  })
+  async getSelectedAddress(@Req() req: AuthenticatedRequest): Promise<{ selectedAddressId: string | null }> {
+    return await this.cartService.getSelectedAddress(req.user.sub);
+  }
+
   @Post('checkout')
-  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Create order from cart items',
   })

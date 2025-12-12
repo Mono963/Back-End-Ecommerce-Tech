@@ -16,7 +16,7 @@ import { FileValidationPipe } from '../../common/pipes/file-validation.pipe';
 import { FileResponseDto, UploadImageDto } from './dto/file.Dto';
 
 import { AuthGuard } from '../../guards/auth.guards';
-import { RoleGuard } from '../../guards/auth.guards.admin';
+import { RoleGuard } from '../../guards/auth.guards.role';
 import { Roles, UserRole } from '../../decorator/role.decorator';
 
 @ApiTags('File')
@@ -28,7 +28,24 @@ export class FileController {
   @Post('uploadImage/:id')
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB máximo
+      },
+      fileFilter: (req, file, callback) => {
+        const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (allowedMimes.includes(file.mimetype)) {
+          callback(null, true);
+        } else {
+          callback(
+            new BadRequestException('Tipo de archivo no permitido. Solo se permiten: JPEG, JPG, PNG, WEBP'),
+            false,
+          );
+        }
+      },
+    }),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UploadImageDto })
   @ApiResponse({

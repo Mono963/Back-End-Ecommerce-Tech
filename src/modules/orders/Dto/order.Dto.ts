@@ -15,6 +15,7 @@ import {
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { OrderStatus } from '../Entities/order.entity';
+import { UserAddress } from 'src/modules/users/interface/IUserResponseDto';
 
 export class ProductSnapshotDto {
   @ApiProperty({ example: 'Dell Inspiron 15' })
@@ -182,8 +183,23 @@ export class OrderDetailResponseDto {
   @ApiProperty({ example: 1693.97 })
   total: number;
 
-  @ApiPropertyOptional({ type: ShippingAddressDto })
-  shippingAddress?: ShippingAddressDto | null;
+  @ApiPropertyOptional({
+    description: 'Address snapshot at time of order (unified address structure)',
+    example: {
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      label: 'Casa',
+      street: 'Av. Corrientes 1234',
+      city: 'Buenos Aires',
+      province: 'Buenos Aires',
+      postalCode: '1001',
+      country: 'Argentina',
+      isDefault: true,
+    },
+  })
+  shippingAddress?: UserAddress | null;
+
+  @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  shippingAddressId?: string | null;
 
   @ApiPropertyOptional({ example: 'credit_card' })
   paymentMethod?: string | null;

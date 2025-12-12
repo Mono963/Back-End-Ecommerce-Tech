@@ -27,8 +27,8 @@ export class AuthGuard implements CanActivate {
         email: payload.email,
         name: payload.name,
         username: payload.username,
-        isSuperAdmin: payload.isSuperAdmin || false,
-        isAdmin: payload.isAdmin || false,
+        role: payload.role,
+        permissions: payload.permissions,
         exp: payload.exp,
         iat: payload.iat,
       };
