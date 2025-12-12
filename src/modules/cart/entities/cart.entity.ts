@@ -10,7 +10,7 @@ import {
   Index,
 } from 'typeorm';
 import { CartItem } from './cart.item.entity';
-import { Users } from 'src/modules/users/Entyties/users.entity';
+import { Users } from 'src/modules/users/Entities/users.entity';
 
 @Index(['updatedAt'])
 @Index(['user_id'], { unique: true })
@@ -24,6 +24,10 @@ export class Cart {
 
   @Column({ type: 'uuid' })
   user_id: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  @Index()
+  selectedAddressId: string | null;
 
   @CreateDateColumn()
   createdAt: Date;

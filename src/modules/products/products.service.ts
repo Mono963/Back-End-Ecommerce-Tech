@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, DataSource, ILike } from 'typeorm';
 import { Product } from './Entities/products.entity';
@@ -7,12 +7,14 @@ import { CategoriesService } from '../category/category.service';
 import { ProductsSearchQueryDto } from './Dto/PaginationQueryDto';
 import { paginate } from 'src/common/pagination/paginate';
 import { IPaginatedResultProducts } from './interface/IPaginatedResult';
-import { PRODUCTS_SEED } from './data/products.data';
 import { CreateProductDto, CreateVariantDto, ResponseProductDto, UpdateProductDto } from './Dto/products.Dto';
 import { mapToProductDto } from './Dto/products.validate';
+import { PRODUCTS_SEED } from 'src/seeds/products.data';
 
 @Injectable()
 export class ProductsService {
+  private readonly logger = new Logger(ProductsService.name);
+
   constructor(
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
@@ -31,7 +33,7 @@ export class ProductsService {
 
     if (!name && !price && !brand && featured === undefined) {
       const result = await paginate(this.productRepo, pagination, {
-        relations: ['category', 'files', 'variants'],
+        relations: ['category', 'files', 'variants', 'reviews'],
         order: { createdAt: 'DESC' },
         where: { isActive: true },
       });
@@ -47,6 +49,7 @@ export class ProductsService {
     queryBuilder.leftJoinAndSelect('product.category', 'category');
     queryBuilder.leftJoinAndSelect('product.files', 'files');
     queryBuilder.leftJoinAndSelect('product.variants', 'variants');
+    queryBuilder.leftJoinAndSelect('product.reviews', 'review');
     queryBuilder.where('product.isActive = :isActive', { isActive: true });
 
     if (name) {
@@ -95,7 +98,7 @@ export class ProductsService {
   async getProductById(id: string): Promise<ResponseProductDto> {
     const product = await this.productRepo.findOne({
       where: { id, isActive: true },
-      relations: ['category', 'files', 'variants'],
+      relations: ['category', 'files', 'variants', 'reviews'],
     });
 
     if (!product) {
@@ -485,13 +488,13 @@ export class ProductsService {
       try {
         const existing = await this.productRepo.findOneBy({ name: seedData.name });
         if (existing) {
-          console.log(`Producto ${seedData.name} ya existe, omitiendo...`);
+          this.logger.log(`Producto ${seedData.name} ya existe, omitiendo...`);
           continue;
         }
 
         const category = await this.categoriesService.findByName(seedData.categoryName);
         if (!category) {
-          console.log(`Categoría ${seedData.categoryName} no encontrada para ${seedData.name}`);
+          this.logger.log(`Categoría ${seedData.categoryName} no encontrada para ${seedData.name}`);
           continue;
         }
 
@@ -532,14 +535,14 @@ export class ProductsService {
           savedProduct.hasVariants = true;
           await this.productRepo.save(savedProduct);
 
-          console.log(`Producto ${seedData.name} creado con ${variants.length} variantes`);
+          this.logger.log(`Producto ${seedData.name} creado con ${variants.length} variantes`);
         } else {
-          console.log(`Producto ${seedData.name} creado sin variantes`);
+          this.logger.log(`Producto ${seedData.name} creado sin variantes`);
         }
 
         created.push(savedProduct);
       } catch (error) {
-        console.error(`Error creando producto ${seedData.name}:`, error);
+        this.logger.error(`Error creando producto ${seedData.name}:`, error);
       }
     }
 

@@ -17,7 +17,7 @@ import {
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { AuthGuard } from 'src/guards/auth.guards';
-import { RoleGuard } from 'src/guards/auth.guards.admin';
+import { RoleGuard } from 'src/guards/auth.guards.role';
 import { Roles, UserRole } from 'src/decorator/role.decorator';
 import { PaginatedUsersDto } from './Dtos/paginated-users.dto';
 import { UserSearchQueryDto } from './Dtos/PaginationQueryDto';
@@ -26,12 +26,14 @@ import {
   IUserResponseDto,
   ResponseUserDto,
   ResponseUserWithAdminDto,
+  UserAddress,
 } from './interface/IUserResponseDto';
 import { UpdatePasswordDto } from './Dtos/UpdatePasswordDto';
 import { UpdateRoleDto } from './Dtos/UpdateRoleDto';
 import { UpdateUserDbDto } from './Dtos/CreateUserDto';
 import { ForgotPasswordDto } from './Dtos/forgot-password.dto';
 import { ResetPasswordDto } from './Dtos/reset-password.dto';
+import { CreateAddressDto, UpdateAddressDto } from './Dtos/address.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -171,5 +173,146 @@ export class UsersController {
   async resetPassword(@Body() dto: ResetPasswordDto): Promise<{ message: string }> {
     await this.usersService.resetPassword(dto);
     return { message: 'Password reset successfully' };
+  }
+
+  // ==================== ADDRESS ENDPOINTS ====================
+
+  @Get('addresses/my-addresses')
+  @ApiOperation({ summary: 'Get all addresses for the authenticated user' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of user addresses',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          label: { type: 'string' },
+          street: { type: 'string' },
+          city: { type: 'string' },
+          province: { type: 'string' },
+          postalCode: { type: 'string' },
+          country: { type: 'string' },
+          isDefault: { type: 'boolean' },
+        },
+      },
+    },
+  })
+  @UseGuards(AuthGuard)
+  async getMyAddresses(@Req() req: AuthenticatedRequest): Promise<UserAddress[]> {
+    return await this.usersService.getAddresses(req.user.sub);
+  }
+
+  @Post('addresses')
+  @ApiOperation({ summary: 'Add a new address for the authenticated user' })
+  @ApiBody({ type: CreateAddressDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Address created successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        label: { type: 'string' },
+        street: { type: 'string' },
+        city: { type: 'string' },
+        province: { type: 'string' },
+        postalCode: { type: 'string' },
+        country: { type: 'string' },
+        isDefault: { type: 'boolean' },
+      },
+    },
+  })
+  @UseGuards(AuthGuard)
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  async addAddress(@Req() req: AuthenticatedRequest, @Body() dto: CreateAddressDto): Promise<UserAddress> {
+    return await this.usersService.addAddress(req.user.sub, dto);
+  }
+
+  @Patch('addresses/:addressId')
+  @ApiOperation({ summary: 'Update an existing address' })
+  @ApiParam({
+    name: 'addressId',
+    type: String,
+    description: 'Address UUID',
+  })
+  @ApiBody({ type: UpdateAddressDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Address updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        label: { type: 'string' },
+        street: { type: 'string' },
+        city: { type: 'string' },
+        province: { type: 'string' },
+        postalCode: { type: 'string' },
+        country: { type: 'string' },
+        isDefault: { type: 'boolean' },
+      },
+    },
+  })
+  @UseGuards(AuthGuard)
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  async updateAddress(
+    @Req() req: AuthenticatedRequest,
+    @Param('addressId', ParseUUIDPipe) addressId: string,
+    @Body() dto: UpdateAddressDto,
+  ): Promise<UserAddress> {
+    return await this.usersService.updateAddress(req.user.sub, addressId, dto);
+  }
+
+  @Delete('addresses/:addressId')
+  @ApiOperation({ summary: 'Delete an address' })
+  @ApiParam({
+    name: 'addressId',
+    type: String,
+    description: 'Address UUID to delete',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Address deleted successfully',
+  })
+  @UseGuards(AuthGuard)
+  async deleteAddress(
+    @Req() req: AuthenticatedRequest,
+    @Param('addressId', ParseUUIDPipe) addressId: string,
+  ): Promise<{ message: string }> {
+    return await this.usersService.deleteAddress(req.user.sub, addressId);
+  }
+
+  @Patch('addresses/:addressId/set-default')
+  @ApiOperation({ summary: 'Set an address as default' })
+  @ApiParam({
+    name: 'addressId',
+    type: String,
+    description: 'Address UUID to set as default',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Default address updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        label: { type: 'string' },
+        street: { type: 'string' },
+        city: { type: 'string' },
+        province: { type: 'string' },
+        postalCode: { type: 'string' },
+        country: { type: 'string' },
+        isDefault: { type: 'boolean' },
+      },
+    },
+  })
+  @UseGuards(AuthGuard)
+  async setDefaultAddress(
+    @Req() req: AuthenticatedRequest,
+    @Param('addressId', ParseUUIDPipe) addressId: string,
+  ): Promise<UserAddress> {
+    return await this.usersService.setDefaultAddress(req.user.sub, addressId);
   }
 }

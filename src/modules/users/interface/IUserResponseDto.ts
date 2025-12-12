@@ -1,30 +1,29 @@
 import { OrderStatus } from 'src/modules/orders/Entities/order.entity';
-import { Users } from '../Entyties/users.entity';
+import { Users } from '../Entities/users.entity';
 
 export interface IUserResponseDto {
   id: string;
   name: string;
   email: string;
-  birthdate: Date;
-  phone: number;
-  address: string;
+  birthDate: Date;
+  phone: string;
+  address: UserAddress | string;
   username: string;
-  isAdmin?: boolean;
-  isSuperAdmin?: boolean;
   createdAt: Date;
   deletedAt: Date | null;
   orders?: IOrderResponseDto[];
   cart?: ICartResponseDto;
+  role?: string;
 }
 
 export interface AuthenticatedRequest extends Request {
   user: {
     sub: string;
     email: string;
-    isAdmin: boolean;
-    isSuperAdmin: boolean;
+    role: string;
   };
 }
+
 export interface IOrderResponseDto {
   id: string;
   orderNumber: string;
@@ -57,12 +56,11 @@ export class ResponseUserDto {
       id: user.id,
       name: user.name,
       email: user.email,
-      birthdate: user.birthdate,
+      birthDate: user.birthDate,
       phone: user.phone,
       address: user.address || '',
       username: user.username,
-      isAdmin: user.isAdmin,
-      isSuperAdmin: user.isSuperAdmin,
+      role: user.role?.name,
       createdAt: user.createdAt ?? new Date(),
       deletedAt: user.deletedAt,
       orders:
@@ -90,8 +88,7 @@ export class ResponseUserDto {
 }
 
 export interface IUserResponseWithAdmin extends IUserResponseDto {
-  isSuperAdmin: boolean;
-  isAdmin: boolean;
+  role: string;
   password: string;
 }
 
@@ -99,8 +96,7 @@ export class ResponseUserWithAdminDto {
   static toDTO(user: Users): IUserResponseWithAdmin {
     return {
       ...ResponseUserDto.toDTO(user),
-      isSuperAdmin: user.isSuperAdmin,
-      isAdmin: user.isAdmin,
+      role: user.role?.name,
       password: user.password,
     };
   }

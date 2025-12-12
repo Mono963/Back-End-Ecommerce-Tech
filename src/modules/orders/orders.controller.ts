@@ -15,7 +15,7 @@ import {
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { AuthGuard } from '../../guards/auth.guards';
-import { RoleGuard } from '../../guards/auth.guards.admin';
+import { RoleGuard } from '../../guards/auth.guards.role';
 import { Roles, UserRole } from '../../decorator/role.decorator';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { OrderStatus } from './Entities/order.entity';
@@ -259,7 +259,7 @@ export class OrdersController {
     @Body() body: { paymentMethod: string; transactionId?: string },
     @Req() req: AuthenticatedRequest,
   ): Promise<ResponseOrderDto> {
-    const isAdminUser = req.user.isAdmin || req.user.isSuperAdmin;
+    const isAdminUser = req.user && req.user['role'] === UserRole.ADMIN;
     const userId = isAdminUser ? undefined : req.user.sub;
 
     const order = await this.ordersService.getOrder(id, userId);

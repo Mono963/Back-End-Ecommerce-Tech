@@ -18,7 +18,7 @@ import {
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { AuthGuard } from '../../guards/auth.guards';
-import { RoleGuard } from '../../guards/auth.guards.admin';
+import { RoleGuard } from '../../guards/auth.guards.role';
 import { Roles, UserRole } from '../../decorator/role.decorator';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import { ProductsSearchQueryDto } from './Dto/PaginationQueryDto';

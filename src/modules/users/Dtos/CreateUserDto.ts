@@ -1,15 +1,5 @@
-import { PickType, ApiProperty, ApiHideProperty, PartialType, OmitType } from '@nestjs/swagger';
-import {
-  IsBoolean,
-  IsDateString,
-  IsEmail,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Length,
-  Matches,
-} from 'class-validator';
+import { PickType, ApiProperty, PartialType, OmitType } from '@nestjs/swagger';
+import { IsDateString, IsEmail, IsNotEmpty, IsOptional, IsString, Length, Matches } from 'class-validator';
 
 export class CreateUserDto {
   @ApiProperty({
@@ -33,17 +23,17 @@ export class CreateUserDto {
     description: 'This field must contain the birthdate',
     example: '1990-05-15',
   })
-  @IsOptional()
   @IsDateString()
-  birthdate: string;
+  birthDate: string;
 
   @ApiProperty({
     description: 'This field must contain the phone number',
-    example: 1234567890,
+    example: '1234567890',
   })
   @IsOptional()
-  @IsNumber()
-  phone: number;
+  @IsString()
+  @Matches(/^\+?[1-9]\d{1,14}$/, { message: 'Invalid phone format' })
+  phone: string;
 
   @ApiProperty({
     description: 'Dirección completa',
@@ -85,16 +75,6 @@ export class CreateUserDto {
       'The confirmPassword must have at least one uppercase letter, one lowercase letter, one number, and one special character. (!@#$%^&*)',
   })
   confirmPassword: string;
-
-  @ApiHideProperty()
-  @IsOptional()
-  @IsBoolean()
-  isAdmin?: boolean;
-
-  @ApiHideProperty()
-  @IsOptional()
-  @IsBoolean()
-  isSuperAdmin?: boolean;
 }
 
 export class LoginUserDto extends PickType(CreateUserDto, ['email', 'password']) {}

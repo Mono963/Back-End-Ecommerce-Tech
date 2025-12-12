@@ -4,12 +4,12 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { Users } from '../users/Entyties/users.entity';
-import { UsersService } from '../users/users.service';
-import { AuthResponse, GoogleUser, IUserAuthResponse } from './interface/IAuth.interface';
+import { Users } from '../users/Entities/users.entity';
+import { AuthResponse, GoogleUser } from './interface/IAuth.interface';
 import { CreateUserDto } from '../users/Dtos/CreateUserDto';
 import { ResponseUserDto } from '../users/interface/IUserResponseDto';
 import { AuthValidations } from './validate/auth.validate';
+import { Role } from '../roles/entities/role.entity';
 
 @Injectable()
 export class AuthsService {
@@ -18,15 +18,24 @@ export class AuthsService {
   constructor(
     @InjectRepository(Users)
     private readonly usersRepository: Repository<Users>,
-    private readonly userService: UsersService,
     private readonly jwtService: JwtService,
+    @InjectRepository(Role)
+    private readonly roleRepository: Repository<Role>,
     private readonly configService: ConfigService,
   ) {}
 
-  async signin(email: string, password: string): Promise<AuthResponse> {
+  async singin(email: string, password: string): Promise<AuthResponse> {
     AuthValidations.validateCredentials(email, password);
 
-    const user = await this.findUserByEmail(email);
+    const user = await this.usersRepository.findOne({
+      where: { email },
+      relations: ['role'],
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Credenciales inválidas');
+    }
+
     AuthValidations.validateUserHasPassword(user);
     await AuthValidations.validatePassword(password, user.password);
 
@@ -40,30 +49,47 @@ export class AuthsService {
 
     AuthValidations.validatePasswordMatch(password, confirmPassword);
 
-    const existingEmailUser = await this.userService.findByEmail(userData.email);
+    const existingEmailUser = await this.usersRepository.findOne({
+      where: { email: userData.email },
+    });
     AuthValidations.validateEmailIsNotTaken(existingEmailUser?.email);
 
     const existingUsernameUser = await this.usersRepository.findOne({
       where: { username: userData.username },
-      select: ['id', 'username'],
     });
-
     if (existingUsernameUser) {
       AuthValidations.validateUserNameExist(userData.username, existingUsernameUser);
     }
 
     try {
-      const hashedPassword = await AuthValidations.hashPassword(password);
-      const newUser = await this.userService.createUserService({
-        ...userData,
-        password: hashedPassword,
-        isAdmin: false,
-        isSuperAdmin: false,
+      let clientRole = await this.roleRepository.findOne({
+        where: { name: 'CLIENT' },
       });
 
-      this.logger.log(`Usuario registrado exitosamente: ${newUser.email}`);
+      if (!clientRole) {
+        clientRole = await this.roleRepository.save({
+          name: 'CLIENT',
+          description: 'Cliente que reserva propiedades',
+          permissions: {
+            bookings: ['create', 'read'],
+            reviews: ['create', 'read'],
+          },
+        });
+      }
 
-      return ResponseUserDto.toDTO(newUser);
+      const hashedPassword = await AuthValidations.hashPassword(password);
+
+      const newUser = this.usersRepository.create({
+        ...userData,
+        password: hashedPassword,
+        role: clientRole,
+      });
+
+      const savedUser = await this.usersRepository.save(newUser);
+
+      this.logger.log(`Usuario registrado exitosamente: ${savedUser.email}`);
+
+      return ResponseUserDto.toDTO(savedUser);
     } catch (error) {
       AuthValidations.handleSignupError(error);
     }
@@ -72,15 +98,19 @@ export class AuthsService {
   async googleLogin(googleUser: GoogleUser): Promise<AuthResponse> {
     this.validateGoogleUser(googleUser);
 
-    const existingUser = await this.userService.findByEmail(googleUser.email);
-    let authenticatedUser: IUserAuthResponse;
+    const existingUser = await this.usersRepository.findOne({
+      where: { email: googleUser.email },
+      relations: ['role'],
+    });
+
+    let authenticatedUser: Users;
     let isNewUser = false;
 
     if (!existingUser) {
       authenticatedUser = await this.createUserFromGoogleProfile(googleUser);
       isNewUser = true;
     } else {
-      authenticatedUser = existingUser as IUserAuthResponse;
+      authenticatedUser = existingUser;
     }
 
     if (isNewUser) {
@@ -92,35 +122,49 @@ export class AuthsService {
     return this.generateAuthResponse(authenticatedUser);
   }
 
-  private async createUserFromGoogleProfile(googleUser: GoogleUser): Promise<IUserAuthResponse> {
+  private async createUserFromGoogleProfile(googleUser: GoogleUser): Promise<Users> {
     const randomPassword = await AuthValidations.generateRandomPassword();
     const username = AuthValidations.generateUsernameFromEmail(googleUser.email);
 
-    const createdUser = await this.userService.createUserService({
+    let clientRole = await this.roleRepository.findOne({
+      where: { name: 'CLIENT' },
+    });
+
+    if (!clientRole) {
+      clientRole = await this.roleRepository.save({
+        name: 'CLIENT',
+        description: 'Cliente que reserva propiedades',
+        permissions: {
+          bookings: ['create', 'read'],
+          reviews: ['create', 'read'],
+        },
+      });
+    }
+
+    const createdUser = this.usersRepository.create({
       name: googleUser.name,
       email: googleUser.email,
-      birthdate: new Date().toISOString().split('T')[0],
+      birthDate: new Date().toISOString().split('T')[0],
       username,
       password: randomPassword,
-      phone: 0,
-      address: 'Sin dirección',
-      isAdmin: false,
-      isSuperAdmin: false,
+      phone: '+10000000000',
+      role: clientRole, // ✅ Asignar rol
     });
+
+    const savedUser = await this.usersRepository.save(createdUser);
 
     this.logger.log(`Usuario creado via Google OAuth: ${googleUser.email}`);
 
-    return createdUser as IUserAuthResponse;
+    return savedUser;
   }
 
-  private generateAuthResponse(user: IUserAuthResponse): AuthResponse {
+  private generateAuthResponse(entity: Users): AuthResponse {
     const payload = {
-      sub: user.id,
-      email: user.email,
-      name: user.name,
-      username: user.username,
-      isAdmin: user.isAdmin,
-      isSuperAdmin: user.isSuperAdmin,
+      sub: entity.id,
+      email: entity.email,
+      name: entity.name,
+      role: entity.role?.name || 'CLIENT', // ✅ ROL desde la entidad
+      permissions: entity.role?.permissions || {},
     };
 
     const accessToken = this.jwtService.sign(payload);
@@ -129,23 +173,15 @@ export class AuthsService {
       accessToken,
       expiresIn: 3600,
       user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        birthdate: user.birthdate,
-        address: user.address,
-        username: user.username,
-        phone: user.phone,
+        id: entity.id,
+        name: entity.name,
+        email: entity.email,
+        role: entity.role?.name || 'CLIENT',
+        username: entity.username,
+        phone: entity.phone,
+        birthDate: entity.birthDate,
       },
     };
-  }
-
-  private async findUserByEmail(email: string): Promise<IUserAuthResponse & { password?: string }> {
-    const foundUser = await this.userService.findByEmail(email);
-    if (!foundUser) {
-      throw new UnauthorizedException('Credenciales inválidas');
-    }
-    return foundUser as IUserAuthResponse & { password?: string };
   }
 
   private validateGoogleUser(googleUser: GoogleUser): void {

@@ -1,6 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
+import compression from 'compression';
 import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
@@ -8,6 +10,25 @@ async function bootstrap(): Promise<void> {
 
   const app = await NestFactory.create(AppModule);
 
+  // ✅ Security Headers (Helmet)
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Para Swagger
+          imgSrc: ["'self'", 'data:', 'https:'],
+        },
+      },
+      crossOriginEmbedderPolicy: false, // Para Swagger
+    }),
+  );
+
+  // ✅ Compression
+  app.use(compression());
+
+  // Validation
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -16,15 +37,17 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
+  // CORS
   app.enableCors({
     origin: ['http://localhost:3001', 'http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5173'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
 
+  // Swagger
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('API')
-    .setDescription('API de pruebas')
+    .setTitle('E-commerce API')
+    .setDescription('Complete API for e-commerce platform')
     .setVersion('1.0.0')
     .addBearerAuth()
     .build();
@@ -35,12 +58,13 @@ async function bootstrap(): Promise<void> {
   const port = process.env.PORT ?? 3001;
   await app.listen(port);
 
-  logger.log(`🚀 Frontend corriendo en`);
-  logger.log(`📚 Swagger en `);
+  logger.log(`🚀 Application running on: http://localhost:${port}`);
+  logger.log(`📚 Swagger documentation: http://localhost:${port}/api/docs`);
   logger.log(`📚 Swagger en http://localhost:3001/api/docs`);
 }
 
 bootstrap().catch((error) => {
-  console.error('Error al iniciar:', error);
+  const logger = new Logger('Bootstrap');
+  logger.error('Error al iniciar:', error);
   process.exit(1);
 });

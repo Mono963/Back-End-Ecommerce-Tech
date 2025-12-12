@@ -10,7 +10,7 @@ import {
   Index,
 } from 'typeorm';
 import { OrderDetail } from './orderDetails.entity';
-import { Users } from 'src/modules/users/Entyties/users.entity';
+import { Users } from 'src/modules/users/Entities/users.entity';
 
 export enum OrderStatus {
   PENDING = 'pending',

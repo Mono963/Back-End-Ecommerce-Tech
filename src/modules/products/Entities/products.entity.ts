@@ -13,7 +13,7 @@ import {
 import { Category } from '../../category/entities/category.entity';
 import { File } from '../../file/entities/file.entity';
 import { ProductVariant } from './products_variant.entity';
-
+import { Review } from 'src/modules/review/entities/review.entity';
 @Index(['brand'])
 @Index(['isActive', 'featured'])
 @Index(['name', 'description'], { fulltext: true })
@@ -95,4 +95,7 @@ export class Product {
   @ManyToOne(() => Category, (category) => category.products)
   @JoinColumn({ name: 'category_id' })
   category: Category;
+
+  @OneToMany(() => Review, (review) => review.product)
+  reviews: Review[];
 }

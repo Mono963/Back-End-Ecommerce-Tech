@@ -10,7 +10,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In, LessThan, QueryRunner, EntityManager } from 'typeorm';
 import { Cart } from './entities/cart.entity';
-import { Users } from '../users/Entyties/users.entity';
+import { Users } from '../users/Entities/users.entity';
 import { Product } from '../products/Entities/products.entity';
 import { ProductVariant } from '../products/Entities/products_variant.entity';
 import { CartItem } from './entities/cart.item.entity';
@@ -300,6 +300,63 @@ export class CartService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  /**
+   * Selecciona una dirección del usuario para el checkout
+   * Valida que la dirección exista en user.addresses antes de guardarla
+   */
+  async selectAddressForCheckout(userId: string, addressId: string): Promise<{ message: string }> {
+    const cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['user'],
+    });
+
+    if (!cart) {
+      throw new NotFoundException(`Carrito no encontrado para el usuario`);
+    }
+
+    // Validar que el usuario tenga esa dirección
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'addresses'],
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+    }
+
+    const addressExists = user.addresses?.some((addr) => addr.id === addressId);
+
+    if (!addressExists) {
+      throw new BadRequestException(
+        `La dirección con id ${addressId} no existe en las direcciones guardadas del usuario`,
+      );
+    }
+
+    // Guardar el addressId seleccionado en el carrito
+    cart.selectedAddressId = addressId;
+    await this.cartRepository.save(cart);
+
+    this.logger.log(`Dirección ${addressId} seleccionada para carrito del usuario ${userId}`);
+
+    return { message: 'Dirección seleccionada exitosamente para el checkout' };
+  }
+
+  /**
+   * Obtiene la dirección seleccionada actual del carrito
+   */
+  async getSelectedAddress(userId: string): Promise<{ selectedAddressId: string | null }> {
+    const cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      select: ['id', 'selectedAddressId'],
+    });
+
+    if (!cart) {
+      throw new NotFoundException(`Carrito no encontrado para el usuario`);
+    }
+
+    return { selectedAddressId: cart.selectedAddressId };
   }
 
   async validateCartStock(userId: string): Promise<IStockValidationResult> {
