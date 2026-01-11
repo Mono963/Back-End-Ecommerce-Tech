@@ -8,7 +8,7 @@ export class AuthExceptionFilter implements ExceptionFilter {
 
   constructor(private configService: ConfigService) {}
 
-  catch(exception: unknown, host: ArgumentsHost) {
+  catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request: Request = ctx.getRequest();

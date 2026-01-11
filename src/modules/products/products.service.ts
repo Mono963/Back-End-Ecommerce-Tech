@@ -454,7 +454,7 @@ export class ProductsService {
     const created: Product[] = [];
 
     const categoriasSeeder = await this.categoriesService.getCategories();
-    if (!categoriasSeeder || categoriasSeeder.length === 0) {
+    if (!categoriasSeeder || categoriasSeeder.items.length === 0) {
       return {
         message: 'No hay categorías. Primero precarga las categorías.',
         total: 0,
@@ -550,5 +550,82 @@ export class ProductsService {
       message: `Productos precargados correctamente. Creados: ${created.length}/${PRODUCTS_SEED.length}`,
       total: created.length,
     };
+  }
+
+  async getProductsByCategory(categoryId: string): Promise<ResponseProductDto[]> {
+    const category = await this.categoriesService.getByIdCategory(categoryId);
+
+    if (!category) {
+      throw new NotFoundException(`Categoría con ID ${categoryId} no encontrada`);
+    }
+
+    const products = await this.productRepo.find({
+      where: {
+        category: { id: categoryId },
+        isActive: true,
+      },
+      relations: ['category', 'files', 'variants', 'reviews'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return products.map(mapToProductDto);
+  }
+
+  async searchProducts(query: string, limit: number = 10): Promise<ResponseProductDto[]> {
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+
+    const searchTerm = `%${query.trim()}%`;
+
+    const products = await this.productRepo
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.category', 'category')
+      .leftJoinAndSelect('product.files', 'files')
+      .leftJoinAndSelect('product.variants', 'variants')
+      .leftJoinAndSelect('product.reviews', 'reviews')
+      .where('product.isActive = :isActive', { isActive: true })
+      .andWhere(
+        '(LOWER(product.name) LIKE LOWER(:searchTerm) OR LOWER(product.brand) LIKE LOWER(:searchTerm) OR LOWER(product.description) LIKE LOWER(:searchTerm))',
+        { searchTerm },
+      )
+      .orderBy('product.featured', 'DESC')
+      .addOrderBy('product.createdAt', 'DESC')
+      .take(limit)
+      .getMany();
+
+    return products.map(mapToProductDto);
+  }
+
+  async getRelatedProducts(productId: string, limit: number = 6): Promise<ResponseProductDto[]> {
+    const product = await this.productRepo.findOne({
+      where: { id: productId },
+      relations: ['category'],
+    });
+
+    if (!product) {
+      throw new NotFoundException(`Producto con ID ${productId} no encontrado`);
+    }
+
+    const relatedProducts = await this.productRepo
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.category', 'category')
+      .leftJoinAndSelect('product.files', 'files')
+      .leftJoinAndSelect('product.variants', 'variants')
+      .leftJoinAndSelect('product.reviews', 'reviews')
+      .where('product.id != :productId', { productId })
+      .andWhere('product.isActive = :isActive', { isActive: true })
+      .andWhere('(product.category_id = :categoryId OR LOWER(product.brand) = LOWER(:brand))', {
+        categoryId: product.category?.id,
+        brand: product.brand,
+      })
+      .orderBy('CASE WHEN product.category_id = :categoryId THEN 0 ELSE 1 END', 'ASC')
+      .addOrderBy('product.featured', 'DESC')
+      .addOrderBy('product.createdAt', 'DESC')
+      .setParameter('categoryId', product.category?.id)
+      .take(limit)
+      .getMany();
+
+    return relatedProducts.map(mapToProductDto);
   }
 }

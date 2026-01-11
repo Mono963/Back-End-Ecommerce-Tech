@@ -11,7 +11,7 @@ import {
   IsArray,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { TechVariantType } from '../Entities/products_variant.entity';
+import { LaptopSpecs, MouseSpecs, TechVariantType } from '../interface/products.interface';
 
 export class CreateVariantDto {
   @ApiProperty({ enum: TechVariantType, example: TechVariantType.STORAGE })
@@ -116,7 +116,7 @@ export class CreateProductDto {
     description: 'Especificaciones técnicas del producto',
   })
   @IsOptional()
-  specifications?: Record<string, null | string | string[] | number | boolean>;
+  specifications?: LaptopSpecs | MouseSpecs | Record<string, unknown>;
 
   @ApiPropertyOptional({
     example: true,
@@ -197,7 +197,7 @@ export class UpdateProductDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  specifications?: Record<string, null | string | string[] | number | boolean>;
+  specifications?: LaptopSpecs | MouseSpecs | Record<string, unknown>;
 
   @ApiPropertyOptional({ example: true })
   @IsOptional()
@@ -293,7 +293,7 @@ export class ResponseProductDto {
       warranty: '1 año',
     },
   })
-  specifications?: Record<string, null | string | string[] | number | boolean>;
+  specifications?: LaptopSpecs | MouseSpecs | Record<string, unknown>;
 
   @ApiProperty({ example: true })
   hasVariants: boolean;

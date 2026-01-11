@@ -6,7 +6,12 @@
       "Bash(npm run start:dev:*)",
       "Bash(timeout /t 5)",
       "Bash(npm run typecheck:*)",
-      "Bash(npm ls:*)"
+      "Bash(npm ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(tree:*)",
+      "Bash(cat:*)",
+      "Bash(npm run lint:check:*)",
+      "Bash(npm run lint:fix:*)"
     ],
     "deny": [],
     "ask": []

@@ -315,4 +315,32 @@ export class UsersController {
   ): Promise<UserAddress> {
     return await this.usersService.setDefaultAddress(req.user.sub, addressId);
   }
+
+  @Get('stats/me')
+  @ApiOperation({
+    summary: 'Obtener estadísticas personales del usuario',
+    description: 'Retorna estadísticas del usuario autenticado: total de órdenes, total gastado, productos en wishlist',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Estadísticas obtenidas exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        totalOrders: { type: 'number', example: 15 },
+        totalSpent: { type: 'number', example: 5499.99 },
+        wishlistItemsCount: { type: 'number', example: 8 },
+        reviewsCount: { type: 'number', example: 12 },
+      },
+    },
+  })
+  @UseGuards(AuthGuard)
+  async getMyStats(@Req() req: AuthenticatedRequest): Promise<{
+    totalOrders: number;
+    totalSpent: number;
+    wishlistItemsCount: number;
+    reviewsCount: number;
+  }> {
+    return await this.usersService.getUserStats(req.user.sub);
+  }
 }

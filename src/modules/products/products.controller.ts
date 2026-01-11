@@ -119,11 +119,99 @@ export class ProductsController {
     return await this.productsService.getProductsByBrand(brand);
   }
 
-  @Get(':id')
-  @ApiBearerAuth()
+  @Get('category/:categoryId')
   @ApiOperation({
-    summary: 'Obtener producto por ID',
-    description: 'Retorna un producto específico con todas sus variantes',
+    summary: 'Obtener productos por categoría',
+    description: 'Retorna todos los productos activos de una categoría específica',
+  })
+  @ApiParam({
+    name: 'categoryId',
+    type: 'string',
+    description: 'ID de la categoría',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Productos de la categoría obtenidos',
+    type: [ResponseProductDto],
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Categoría no encontrada',
+  })
+  async getProductsByCategory(@Param('categoryId', ParseUUIDPipe) categoryId: string): Promise<ResponseProductDto[]> {
+    return await this.productsService.getProductsByCategory(categoryId);
+  }
+
+  @Get('search')
+  @ApiOperation({
+    summary: 'Búsqueda de productos con autocompletado',
+    description: 'Busca productos por nombre, marca o descripción con resultados rápidos',
+  })
+  @ApiQuery({
+    name: 'q',
+    required: true,
+    type: String,
+    description: 'Término de búsqueda',
+    example: 'laptop',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Límite de resultados',
+    example: 10,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Resultados de búsqueda',
+    type: [ResponseProductDto],
+  })
+  async searchProducts(
+    @Query('q') query: string,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ): Promise<ResponseProductDto[]> {
+    return await this.productsService.searchProducts(query, limit);
+  }
+
+  @Get(':id/related')
+  @ApiOperation({
+    summary: 'Obtener productos relacionados',
+    description: 'Retorna productos relacionados basados en categoría y marca',
+  })
+  @ApiParam({
+    name: 'id',
+    type: 'string',
+    description: 'ID del producto',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Cantidad de productos relacionados',
+    example: 6,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Productos relacionados obtenidos',
+    type: [ResponseProductDto],
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Producto no encontrado',
+  })
+  async getRelatedProducts(
+    @Param('id', ParseUUIDPipe) productId: string,
+    @Query('limit', new DefaultValuePipe(6), ParseIntPipe) limit: number,
+  ): Promise<ResponseProductDto[]> {
+    return await this.productsService.getRelatedProducts(productId, limit);
+  }
+
+  @Get(':id')
+  @ApiOperation({
+    summary: 'Obtener producto por ID (Público)',
+    description: 'Retorna un producto específico con todas sus variantes - No requiere autenticación',
   })
   @ApiParam({
     name: 'id',
@@ -140,7 +228,6 @@ export class ProductsController {
     status: 404,
     description: 'Producto no encontrado',
   })
-  @UseGuards(AuthGuard)
   async getProductById(@Param('id', ParseUUIDPipe) id: string): Promise<ResponseProductDto> {
     return await this.productsService.getProductById(id);
   }

@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { CartService } from './cart.service';
 import { AuthGuard } from 'src/guards/auth.guards';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedRequest } from '../users/interface/IUserResponseDto';
 import { AddToCartDTO, UpdateCartItemDTO } from './dto/create-cart.dto';
 import { ICartResponseDTO, IResponseCartSummaryDTO, IStockValidationResult } from './interfaces/interface.cart';
@@ -24,7 +24,6 @@ import { SelectAddressDto } from './dto/select-address.dto';
 
 @ApiTags('Cart')
 @Controller('cart')
-@ApiBearerAuth()
 @UseGuards(AuthGuard)
 export class CartController {
   constructor(private readonly cartService: CartService) {}
