@@ -33,30 +33,64 @@ export class ProductsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Obtener productos paginados con filtros opcionales',
-    description: 'Retorna una lista paginada de productos activos con opciones de búsqueda',
+    summary: 'Obtener productos paginados con filtros para catálogo',
+    description: 'Retorna una lista paginada de productos activos con múltiples filtros combinables para el catálogo',
   })
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Número de página' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    example: 10,
+    description: 'Productos por página (max 100)',
+  })
   @ApiQuery({
     name: 'name',
     required: false,
     type: String,
-    description: 'Buscar por nombre de producto',
-    example: 'Dell',
+    description: 'Buscar por nombre de producto (parcial, case-insensitive)',
+    example: 'Laptop',
   })
   @ApiQuery({
     name: 'brand',
     required: false,
     type: String,
-    description: 'Filtrar por marca',
+    description: 'Filtrar por marca (parcial, case-insensitive)',
     example: 'Dell',
+  })
+  @ApiQuery({
+    name: 'categoryId',
+    required: false,
+    type: String,
+    description: 'Filtrar por ID de categoría (UUID)',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiQuery({
+    name: 'color',
+    required: false,
+    type: String,
+    description: 'Filtrar por color de variante (parcial, case-insensitive)',
+    example: 'Negro',
+  })
+  @ApiQuery({
+    name: 'minPrice',
+    required: false,
+    type: Number,
+    description: 'Precio mínimo del producto',
+    example: 100,
+  })
+  @ApiQuery({
+    name: 'maxPrice',
+    required: false,
+    type: Number,
+    description: 'Precio máximo del producto',
+    example: 2000,
   })
   @ApiQuery({
     name: 'price',
     required: false,
     type: Number,
-    description: 'Buscar productos en rango de precio (±10%)',
+    description: 'Buscar productos en rango de precio (±10%) - Usar minPrice/maxPrice para rangos exactos',
     example: 1000,
   })
   @ApiQuery({
@@ -441,10 +475,9 @@ export class ProductsController {
   }
 
   @Get(':id/price')
-  @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Calcular precio de producto con variantes',
-    description: 'Calcula el precio final del producto con las variantes seleccionadas',
+    summary: 'Calcular precio de producto con variantes (Público)',
+    description: 'Calcula el precio final del producto con las variantes seleccionadas - No requiere autenticación',
   })
   @ApiParam({
     name: 'id',
@@ -470,7 +503,6 @@ export class ProductsController {
       },
     },
   })
-  @UseGuards(AuthGuard)
   async calculatePrice(
     @Param('id', ParseUUIDPipe) productId: string,
     @Query('variants') variants?: string,
@@ -481,10 +513,9 @@ export class ProductsController {
   }
 
   @Get(':id/stock')
-  @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Obtener stock disponible',
-    description: 'Obtiene el stock disponible para un producto con variantes específicas',
+    summary: 'Obtener stock disponible (Público)',
+    description: 'Obtiene el stock disponible para un producto con variantes específicas - No requiere autenticación',
   })
   @ApiParam({
     name: 'id',
@@ -510,7 +541,6 @@ export class ProductsController {
       },
     },
   })
-  @UseGuards(AuthGuard)
   async getStock(
     @Param('id', ParseUUIDPipe) productId: string,
     @Query('variants') variants?: string,

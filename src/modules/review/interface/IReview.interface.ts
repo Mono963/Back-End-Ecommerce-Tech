@@ -13,15 +13,47 @@ export enum Rating {
 export interface ReviewDto {
   rating: Rating;
   message: string;
+  isVisible?: boolean;
   productId: string;
 }
 
-export interface ReviewResponse {
+// Respuesta pública (para clientes y endpoints públicos) - SIN isVisible
+export interface ReviewResponsePublic {
   id: string;
   rating: Rating;
   message: string;
   createdAt: Date;
+  user?: {
+    id: string;
+    name: string;
+  };
+  product?: {
+    id: string;
+    name: string;
+  };
 }
+
+// Respuesta para admin - CON isVisible
+export interface ReviewResponseAdmin {
+  id: string;
+  rating: Rating;
+  message: string;
+  isVisible: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  product?: {
+    id: string;
+    name: string;
+  };
+}
+
+// Alias para compatibilidad (usa el público por defecto)
+export type ReviewResponse = ReviewResponsePublic;
 
 export class ReviewFiltersDto {
   @ApiPropertyOptional({
@@ -76,7 +108,18 @@ export class ReviewFiltersDto {
 
 export class PaginatedReviewsDto {
   @ApiProperty({ type: [Object] })
-  items: ReviewResponse[];
+  items: ReviewResponsePublic[];
+
+  @ApiProperty({ example: 100, description: 'Total de reviews' })
+  total: number;
+
+  @ApiProperty({ example: 10, description: 'Total de páginas' })
+  pages: number;
+}
+
+export class PaginatedReviewsAdminDto {
+  @ApiProperty({ type: [Object] })
+  items: ReviewResponseAdmin[];
 
   @ApiProperty({ example: 100, description: 'Total de reviews' })
   total: number;

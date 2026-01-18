@@ -1,15 +1,20 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Review } from './entities/review.entity';
 import { Product } from '../products/Entities/products.entity';
 import { DataSource, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Users } from '../users/Entities/users.entity';
-import { PaginatedReviewsDto, ReviewDto, ReviewFiltersDto, ReviewResponse } from './interface/IReview.interface';
+import {
+  PaginatedReviewsDto,
+  PaginatedReviewsAdminDto,
+  ReviewFiltersDto,
+  ReviewResponsePublic,
+  ReviewResponseAdmin,
+} from './interface/IReview.interface';
+import { CreateReviewDto } from './dto/create-review.dto';
 
 @Injectable()
 export class ReviewService {
-  private readonly logger = new Logger(ReviewService.name);
-
   constructor(
     @InjectRepository(Review)
     private readonly reviewRepo: Repository<Review>,
@@ -19,7 +24,59 @@ export class ReviewService {
     private readonly usersRepo: Repository<Users>,
     private readonly dataSource: DataSource,
   ) {}
-  async create(dto: ReviewDto, userId: string): Promise<ReviewResponse> {
+
+  // ============ FUNCIONES DE MAPEO (Punto 3) ============
+
+  // Mapea una Review a respuesta PÚBLICA (sin isVisible)
+  private toPublicResponse(review: Review): ReviewResponsePublic {
+    return {
+      id: review.id,
+      rating: review.rating,
+      message: review.message,
+      createdAt: review.createdAt,
+      user: review.user
+        ? {
+            id: review.user.id,
+            name: review.user.name,
+          }
+        : undefined,
+      product: review.product
+        ? {
+            id: review.product.id,
+            name: review.product.name,
+          }
+        : undefined,
+    };
+  }
+
+  // Mapea una Review a respuesta ADMIN (con isVisible)
+  private toAdminResponse(review: Review): ReviewResponseAdmin {
+    return {
+      id: review.id,
+      rating: review.rating,
+      message: review.message,
+      isVisible: review.isVisible,
+      createdAt: review.createdAt,
+      updatedAt: review.updatedAt,
+      user: review.user
+        ? {
+            id: review.user.id,
+            name: review.user.name,
+            email: review.user.email,
+          }
+        : undefined,
+      product: review.product
+        ? {
+            id: review.product.id,
+            name: review.product.name,
+          }
+        : undefined,
+    };
+  }
+
+  // ============ MÉTODOS DEL SERVICIO ============
+
+  async create(dto: CreateReviewDto, userId: string): Promise<ReviewResponsePublic> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -56,7 +113,8 @@ export class ReviewService {
       const review = queryRunner.manager.create(Review, reviewData);
       await queryRunner.manager.save(review);
       await queryRunner.commitTransaction();
-      return review;
+
+      return this.toPublicResponse(review);
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -65,13 +123,13 @@ export class ReviewService {
     }
   }
 
-  async findAll(filters?: ReviewFiltersDto): Promise<PaginatedReviewsDto> {
+  // GET /review - Solo ADMIN (devuelve isVisible)
+  async findAll(filters?: ReviewFiltersDto): Promise<PaginatedReviewsAdminDto> {
     const { rating, productId, userName, page = 1, limit = 10 } = filters || {};
 
     // Si no hay filtros, usar findAndCount directo
     if (!rating && !productId && !userName) {
       const [reviews, total] = await this.reviewRepo.findAndCount({
-        where: { isVisible: true },
         relations: ['user', 'product'],
         order: { createdAt: 'DESC' },
         skip: (page - 1) * limit,
@@ -81,7 +139,7 @@ export class ReviewService {
       const pages = Math.ceil(total / limit);
 
       return {
-        items: reviews,
+        items: reviews.map((r) => this.toAdminResponse(r)),
         total,
         pages,
       };
@@ -91,7 +149,6 @@ export class ReviewService {
     const queryBuilder = this.reviewRepo.createQueryBuilder('review');
     queryBuilder.leftJoinAndSelect('review.user', 'user');
     queryBuilder.leftJoinAndSelect('review.product', 'product');
-    queryBuilder.where('review.isVisible = :isVisible', { isVisible: true });
 
     // Filtrar por rating
     if (rating !== undefined) {
@@ -119,29 +176,31 @@ export class ReviewService {
     const pages = Math.ceil(total / limit);
 
     return {
-      items: reviews,
+      items: reviews.map((r) => this.toAdminResponse(r)),
       total,
       pages,
     };
   }
 
-  async findOne(id: string): Promise<ReviewResponse> {
-    const reviews = await this.reviewRepo.findOne({
+  async findOne(id: string): Promise<ReviewResponsePublic> {
+    const review = await this.reviewRepo.findOne({
       where: { id },
       relations: ['user', 'product'],
     });
-    if (!reviews) {
+    if (!review) {
       throw new NotFoundException(`La Reseña con este '${id}' no fue encontrada`);
     }
-    return reviews;
+    return this.toPublicResponse(review);
   }
 
-  async findByProduct(productId: string): Promise<Review[]> {
-    return await this.reviewRepo.find({
-      where: { product: { id: productId }, isVisible: true },
-      relations: ['user'],
+  // GET /review/product/:productId - Solo ADMIN (devuelve isVisible)
+  async findByProduct(productId: string): Promise<ReviewResponseAdmin[]> {
+    const reviews = await this.reviewRepo.find({
+      where: { product: { id: productId } },
+      relations: ['user', 'product'],
       order: { createdAt: 'DESC' },
     });
+    return reviews.map((r) => this.toAdminResponse(r));
   }
 
   async remove(id: string, userId: string): Promise<void> {
@@ -161,7 +220,8 @@ export class ReviewService {
     await this.reviewRepo.delete(id);
   }
 
-  async findByProductPublic(productId: string): Promise<ReviewResponse[]> {
+  // GET /review/product/:productId/public - PÚBLICO (sin isVisible, solo visibles)
+  async findByProductPublic(productId: string): Promise<ReviewResponsePublic[]> {
     const reviews = await this.reviewRepo.find({
       where: {
         product: { id: productId },
@@ -171,7 +231,7 @@ export class ReviewService {
       order: { createdAt: 'DESC' },
     });
 
-    return reviews;
+    return reviews.map((r) => this.toPublicResponse(r));
   }
 
   async canUserReview(
@@ -198,5 +258,22 @@ export class ReviewService {
       hasReviewed: false,
       message: 'Puedes dejar una reseña para este producto',
     };
+  }
+
+  // Método para que el admin cambie la visibilidad
+  async toggleVisibility(id: string): Promise<ReviewResponseAdmin> {
+    const review = await this.reviewRepo.findOne({
+      where: { id },
+      relations: ['user', 'product'],
+    });
+
+    if (!review) {
+      throw new NotFoundException(`Review con id ${id} no encontrada`);
+    }
+
+    review.isVisible = !review.isVisible;
+    await this.reviewRepo.save(review);
+
+    return this.toAdminResponse(review);
   }
 }

@@ -29,9 +29,20 @@ export class ProductsService {
   ) {}
 
   async getProducts(searchQuery: ProductsSearchQueryDto): Promise<IPaginatedResultProducts<ResponseProductDto>> {
-    const { name, price, brand, featured, ...pagination } = searchQuery;
+    const { name, price, minPrice, maxPrice, brand, categoryId, color, featured, ...pagination } = searchQuery;
 
-    if (!name && !price && !brand && featured === undefined) {
+    const hasFilters: boolean = Boolean(
+      name ||
+        price ||
+        minPrice !== undefined ||
+        maxPrice !== undefined ||
+        brand ||
+        categoryId ||
+        color ||
+        featured !== undefined,
+    );
+
+    if (!hasFilters) {
       const result = await paginate(this.productRepo, pagination, {
         relations: ['category', 'files', 'variants', 'reviews'],
         order: { createdAt: 'DESC' },
@@ -64,11 +75,32 @@ export class ProductsService {
       });
     }
 
+    if (categoryId) {
+      queryBuilder.andWhere('product.category_id = :categoryId', { categoryId: String(categoryId) });
+    }
+
     if (featured !== undefined) {
       queryBuilder.andWhere('product.featured = :featured', { featured });
     }
 
-    if (price) {
+    if (color) {
+      queryBuilder.andWhere(
+        'EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = product.id ' +
+          "AND pv.type = 'color' AND LOWER(pv.name) LIKE LOWER(:colorName))",
+        { colorName: `%${color}%` },
+      );
+    }
+
+    if (minPrice !== undefined && maxPrice !== undefined) {
+      queryBuilder.andWhere('product.basePrice BETWEEN :minPriceRange AND :maxPriceRange', {
+        minPriceRange: Number(minPrice),
+        maxPriceRange: Number(maxPrice),
+      });
+    } else if (minPrice !== undefined) {
+      queryBuilder.andWhere('product.basePrice >= :minPriceRange', { minPriceRange: Number(minPrice) });
+    } else if (maxPrice !== undefined) {
+      queryBuilder.andWhere('product.basePrice <= :maxPriceRange', { maxPriceRange: Number(maxPrice) });
+    } else if (price) {
       queryBuilder.andWhere(
         '(product.basePrice BETWEEN :minPrice AND :maxPrice OR ' +
           'EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = product.id AND ' +
@@ -389,7 +421,7 @@ export class ProductsService {
         featured: true,
         isActive: true,
       },
-      relations: ['category', 'variants', 'files'],
+      relations: ['category', 'variants', 'files', 'reviews'],
       take: limit,
       order: { createdAt: 'DESC' },
     });
@@ -403,7 +435,7 @@ export class ProductsService {
         brand: ILike(`%${brand}%`),
         isActive: true,
       },
-      relations: ['category', 'variants', 'files'],
+      relations: ['category', 'variants', 'files', 'reviews'],
       order: { name: 'ASC' },
     });
 

@@ -7,7 +7,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
-  Index, // 👈 Importar Index
+  Index,
 } from 'typeorm';
 import { Product } from './products.entity';
 import { CartItem } from '../../cart/entities/cart.item.entity';

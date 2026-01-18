@@ -1,5 +1,18 @@
 import { ReviewResponse } from 'src/modules/review/interface/IReview.interface';
 
+export interface IProductVariant {
+  id: string;
+  type: TechVariantType;
+  name: string;
+  description?: string;
+  priceModifier: number;
+  stock: number;
+  isAvailable: boolean;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface IProducts {
   id: string;
   name: string;
@@ -19,21 +32,8 @@ export interface IProducts {
     id: string;
     categoryName: string;
   } | null;
-  variants: ResponseVariantDto[];
+  variants: IProductVariant[];
   reviews: ReviewResponse[];
-}
-
-export interface ResponseVariantDto {
-  id: string;
-  type: TechVariantType;
-  name: string;
-  description?: string;
-  priceModifier: number;
-  stock: number;
-  isAvailable: boolean;
-  sortOrder: number;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface IProductWhishlist {
