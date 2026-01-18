@@ -1,19 +1,20 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, DataSource } from 'typeorm';
+import { Repository, In, DataSource, ILike } from 'typeorm';
 import { Product } from './Entities/products.entity';
 import { ProductVariant } from './Entities/products_variant.entity';
-import { CreateProductDto, UpdateProductDto, CreateVariantDto } from './Dto/products.Dto';
 import { CategoriesService } from '../category/category.service';
-import { mapToProductDto } from './Dto/products.mapper';
 import { ProductsSearchQueryDto } from './Dto/PaginationQueryDto';
 import { paginate } from 'src/common/pagination/paginate';
 import { IPaginatedResultProducts } from './interface/IPaginatedResult';
-import { ResponseProductDto } from './interface/pruducts.interface';
-import { PRODUCTS_SEED } from './data/products.data';
+import { CreateProductDto, CreateVariantDto, ResponseProductDto, UpdateProductDto } from './Dto/products.Dto';
+import { mapToProductDto } from './Dto/products.validate';
+import { PRODUCTS_SEED } from 'src/seeds/products.data';
 
 @Injectable()
 export class ProductsService {
+  private readonly logger = new Logger(ProductsService.name);
+
   constructor(
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
@@ -28,11 +29,22 @@ export class ProductsService {
   ) {}
 
   async getProducts(searchQuery: ProductsSearchQueryDto): Promise<IPaginatedResultProducts<ResponseProductDto>> {
-    const { name, price, ...pagination } = searchQuery;
+    const { name, price, minPrice, maxPrice, brand, categoryId, color, featured, ...pagination } = searchQuery;
 
-    if (!name && !price) {
+    const hasFilters: boolean = Boolean(
+      name ||
+        price ||
+        minPrice !== undefined ||
+        maxPrice !== undefined ||
+        brand ||
+        categoryId ||
+        color ||
+        featured !== undefined,
+    );
+
+    if (!hasFilters) {
       const result = await paginate(this.productRepo, pagination, {
-        relations: ['category', 'orderDetails', 'files', 'variants'],
+        relations: ['category', 'files', 'variants', 'reviews'],
         order: { createdAt: 'DESC' },
         where: { isActive: true },
       });
@@ -48,6 +60,7 @@ export class ProductsService {
     queryBuilder.leftJoinAndSelect('product.category', 'category');
     queryBuilder.leftJoinAndSelect('product.files', 'files');
     queryBuilder.leftJoinAndSelect('product.variants', 'variants');
+    queryBuilder.leftJoinAndSelect('product.reviews', 'review');
     queryBuilder.where('product.isActive = :isActive', { isActive: true });
 
     if (name) {
@@ -56,7 +69,38 @@ export class ProductsService {
       });
     }
 
-    if (price) {
+    if (brand) {
+      queryBuilder.andWhere('LOWER(product.brand) LIKE LOWER(:brand)', {
+        brand: `%${brand}%`,
+      });
+    }
+
+    if (categoryId) {
+      queryBuilder.andWhere('product.category_id = :categoryId', { categoryId: String(categoryId) });
+    }
+
+    if (featured !== undefined) {
+      queryBuilder.andWhere('product.featured = :featured', { featured });
+    }
+
+    if (color) {
+      queryBuilder.andWhere(
+        'EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = product.id ' +
+          "AND pv.type = 'color' AND LOWER(pv.name) LIKE LOWER(:colorName))",
+        { colorName: `%${color}%` },
+      );
+    }
+
+    if (minPrice !== undefined && maxPrice !== undefined) {
+      queryBuilder.andWhere('product.basePrice BETWEEN :minPriceRange AND :maxPriceRange', {
+        minPriceRange: Number(minPrice),
+        maxPriceRange: Number(maxPrice),
+      });
+    } else if (minPrice !== undefined) {
+      queryBuilder.andWhere('product.basePrice >= :minPriceRange', { minPriceRange: Number(minPrice) });
+    } else if (maxPrice !== undefined) {
+      queryBuilder.andWhere('product.basePrice <= :maxPriceRange', { maxPriceRange: Number(maxPrice) });
+    } else if (price) {
       queryBuilder.andWhere(
         '(product.basePrice BETWEEN :minPrice AND :maxPrice OR ' +
           'EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = product.id AND ' +
@@ -86,7 +130,7 @@ export class ProductsService {
   async getProductById(id: string): Promise<ResponseProductDto> {
     const product = await this.productRepo.findOne({
       where: { id, isActive: true },
-      relations: ['category', 'orderDetails', 'files', 'variants'],
+      relations: ['category', 'files', 'variants', 'reviews'],
     });
 
     if (!product) {
@@ -96,7 +140,7 @@ export class ProductsService {
     return mapToProductDto(product);
   }
 
-  async createProduct(dto: CreateProductDto): Promise<Product> {
+  async createProduct(dto: CreateProductDto): Promise<ResponseProductDto> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -122,10 +166,15 @@ export class ProductsService {
       const productData = {
         name: dto.name,
         description: dto.description,
+        brand: dto.brand,
+        model: dto.model,
         basePrice: dto.basePrice,
         baseStock: dto.baseStock,
+        imgUrls: dto.imgUrls || [],
+        featured: dto.featured || false,
         specifications: dto.specifications || {},
         hasVariants: dto.hasVariants || false,
+        isActive: true,
         category,
       };
 
@@ -141,13 +190,16 @@ export class ProductsService {
           }),
         );
 
-        await this.variantRepo.save(variants);
+        await queryRunner.manager.save(ProductVariant, variants);
+
         savedProduct.hasVariants = true;
-        await this.productRepo.save(savedProduct);
+        await queryRunner.manager.save(Product, savedProduct);
       }
 
       await queryRunner.commitTransaction();
-      return await this.getProductWithRelations(savedProduct.id);
+
+      const fullProduct = await this.getProductWithRelations(savedProduct.id);
+      return mapToProductDto(fullProduct);
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -187,8 +239,12 @@ export class ProductsService {
     Object.assign(product, {
       name: dto.name ?? product.name,
       description: dto.description ?? product.description,
+      brand: dto.brand ?? product.brand,
+      model: dto.model ?? product.model,
       basePrice: dto.basePrice ?? product.basePrice,
       baseStock: dto.baseStock ?? product.baseStock,
+      imgUrls: dto.imgUrls ?? product.imgUrls,
+      featured: dto.featured ?? product.featured,
       specifications: dto.specifications ?? product.specifications,
       hasVariants: dto.hasVariants ?? product.hasVariants,
       isActive: dto.isActive ?? product.isActive,
@@ -201,17 +257,11 @@ export class ProductsService {
   async deleteProduct(id: string): Promise<{ id: string; message: string }> {
     const product = await this.productRepo.findOne({
       where: { id },
-      relations: ['variants', 'orderDetails'],
+      relations: ['variants'],
     });
 
     if (!product) {
       throw new NotFoundException(`Producto con id ${id} no encontrado`);
-    }
-
-    if (product.orderDetails && product.orderDetails.length > 0) {
-      throw new BadRequestException(
-        'No se puede eliminar el producto porque tiene órdenes asociadas. Puede desactivarlo en su lugar.',
-      );
     }
 
     product.isActive = false;
@@ -365,6 +415,33 @@ export class ProductsService {
     return Math.min(...selectedVariants.map((v) => v.stock));
   }
 
+  async getFeaturedProducts(limit: number = 10): Promise<ResponseProductDto[]> {
+    const products = await this.productRepo.find({
+      where: {
+        featured: true,
+        isActive: true,
+      },
+      relations: ['category', 'variants', 'files', 'reviews'],
+      take: limit,
+      order: { createdAt: 'DESC' },
+    });
+
+    return products.map(mapToProductDto);
+  }
+
+  async getProductsByBrand(brand: string): Promise<ResponseProductDto[]> {
+    const products = await this.productRepo.find({
+      where: {
+        brand: ILike(`%${brand}%`),
+        isActive: true,
+      },
+      relations: ['category', 'variants', 'files', 'reviews'],
+      order: { name: 'ASC' },
+    });
+
+    return products.map(mapToProductDto);
+  }
+
   private async getProductWithRelations(id: string): Promise<Product> {
     const product = await this.productRepo.findOne({
       where: { id },
@@ -409,19 +486,29 @@ export class ProductsService {
     const created: Product[] = [];
 
     const categoriasSeeder = await this.categoriesService.getCategories();
-    if (!categoriasSeeder || categoriasSeeder.length === 0) {
-      return { message: 'No hay categorías. Primero precarga las categorías.', total: 0 };
+    if (!categoriasSeeder || categoriasSeeder.items.length === 0) {
+      return {
+        message: 'No hay categorías. Primero precarga las categorías.',
+        total: 0,
+      };
     }
 
     if (!PRODUCTS_SEED || PRODUCTS_SEED.length === 0) {
-      return { message: 'No hay datos para precargar', total: 0 };
+      return {
+        message: 'No hay datos para precargar',
+        total: 0,
+      };
     }
 
     if ((await this.productRepo.count()) > 0) {
-      return { message: 'La base de datos ya contiene productos', total: 0 };
+      return {
+        message: 'La base de datos ya contiene productos',
+        total: 0,
+      };
     }
 
     const invalidProducts = PRODUCTS_SEED.filter((p) => !p.categoryName || p.categoryName.trim() === '');
+
     if (invalidProducts.length > 0) {
       return {
         message: 'Todos los productos deben tener un nombre de categoría válido',
@@ -433,21 +520,25 @@ export class ProductsService {
       try {
         const existing = await this.productRepo.findOneBy({ name: seedData.name });
         if (existing) {
-          console.log(`Producto ${seedData.name} ya existe, omitiendo...`);
+          this.logger.log(`Producto ${seedData.name} ya existe, omitiendo...`);
           continue;
         }
 
         const category = await this.categoriesService.findByName(seedData.categoryName);
         if (!category) {
-          console.log(`Categoría ${seedData.categoryName} no encontrada para ${seedData.name}`);
+          this.logger.log(`Categoría ${seedData.categoryName} no encontrada para ${seedData.name}`);
           continue;
         }
 
         const productData = {
           name: seedData.name,
           description: seedData.description,
+          brand: seedData.brand,
+          model: seedData.model,
           basePrice: seedData.basePrice,
           baseStock: seedData.baseStock,
+          imgUrls: seedData.imgUrls || [],
+          featured: seedData.featured || false,
           specifications: seedData.specifications || {},
           hasVariants: seedData.hasVariants || false,
           isActive: true,
@@ -476,14 +567,14 @@ export class ProductsService {
           savedProduct.hasVariants = true;
           await this.productRepo.save(savedProduct);
 
-          console.log(`Producto ${seedData.name} creado con ${variants.length} variantes`);
+          this.logger.log(`Producto ${seedData.name} creado con ${variants.length} variantes`);
         } else {
-          console.log(`Producto ${seedData.name} creado sin variantes`);
+          this.logger.log(`Producto ${seedData.name} creado sin variantes`);
         }
 
         created.push(savedProduct);
       } catch (error) {
-        console.error(`Error creando producto ${seedData.name}:`, error);
+        this.logger.error(`Error creando producto ${seedData.name}:`, error);
       }
     }
 
@@ -491,5 +582,82 @@ export class ProductsService {
       message: `Productos precargados correctamente. Creados: ${created.length}/${PRODUCTS_SEED.length}`,
       total: created.length,
     };
+  }
+
+  async getProductsByCategory(categoryId: string): Promise<ResponseProductDto[]> {
+    const category = await this.categoriesService.getByIdCategory(categoryId);
+
+    if (!category) {
+      throw new NotFoundException(`Categoría con ID ${categoryId} no encontrada`);
+    }
+
+    const products = await this.productRepo.find({
+      where: {
+        category: { id: categoryId },
+        isActive: true,
+      },
+      relations: ['category', 'files', 'variants', 'reviews'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return products.map(mapToProductDto);
+  }
+
+  async searchProducts(query: string, limit: number = 10): Promise<ResponseProductDto[]> {
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+
+    const searchTerm = `%${query.trim()}%`;
+
+    const products = await this.productRepo
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.category', 'category')
+      .leftJoinAndSelect('product.files', 'files')
+      .leftJoinAndSelect('product.variants', 'variants')
+      .leftJoinAndSelect('product.reviews', 'reviews')
+      .where('product.isActive = :isActive', { isActive: true })
+      .andWhere(
+        '(LOWER(product.name) LIKE LOWER(:searchTerm) OR LOWER(product.brand) LIKE LOWER(:searchTerm) OR LOWER(product.description) LIKE LOWER(:searchTerm))',
+        { searchTerm },
+      )
+      .orderBy('product.featured', 'DESC')
+      .addOrderBy('product.createdAt', 'DESC')
+      .take(limit)
+      .getMany();
+
+    return products.map(mapToProductDto);
+  }
+
+  async getRelatedProducts(productId: string, limit: number = 6): Promise<ResponseProductDto[]> {
+    const product = await this.productRepo.findOne({
+      where: { id: productId },
+      relations: ['category'],
+    });
+
+    if (!product) {
+      throw new NotFoundException(`Producto con ID ${productId} no encontrado`);
+    }
+
+    const relatedProducts = await this.productRepo
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.category', 'category')
+      .leftJoinAndSelect('product.files', 'files')
+      .leftJoinAndSelect('product.variants', 'variants')
+      .leftJoinAndSelect('product.reviews', 'reviews')
+      .where('product.id != :productId', { productId })
+      .andWhere('product.isActive = :isActive', { isActive: true })
+      .andWhere('(product.category_id = :categoryId OR LOWER(product.brand) = LOWER(:brand))', {
+        categoryId: product.category?.id,
+        brand: product.brand,
+      })
+      .orderBy('CASE WHEN product.category_id = :categoryId THEN 0 ELSE 1 END', 'ASC')
+      .addOrderBy('product.featured', 'DESC')
+      .addOrderBy('product.createdAt', 'DESC')
+      .setParameter('categoryId', product.category?.id)
+      .take(limit)
+      .getMany();
+
+    return relatedProducts.map(mapToProductDto);
   }
 }

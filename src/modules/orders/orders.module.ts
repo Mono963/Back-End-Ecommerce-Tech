@@ -7,7 +7,7 @@ import { OrderDetail } from './Entities/orderDetails.entity';
 import { Product } from '../products/Entities/products.entity';
 import { ProductVariant } from '../products/Entities/products_variant.entity';
 import { AuthsModule } from '../auths/auths.module';
-import { Users } from '../users/Entyties/users.entity';
+import { Users } from '../users/Entities/users.entity';
 import { Cart } from '../cart/entities/cart.entity';
 import { CartItem } from '../cart/entities/cart.item.entity';
 import { CartModule } from '../cart/cart.module';
@@ -23,6 +23,6 @@ import { OrderItem } from './Entities/order.item';
   ],
   controllers: [OrdersController],
   providers: [OrdersService],
-  exports: [OrdersService],
+  exports: [OrdersService, TypeOrmModule],
 })
 export class OrdersModule {}

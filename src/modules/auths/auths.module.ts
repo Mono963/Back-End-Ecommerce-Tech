@@ -11,12 +11,15 @@ import { GoogleStrategy } from './strategies/google.strategy';
 import google0authConfig from 'src/config/google-0auth.config';
 import { MailModule } from '../mail/mail.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Users } from '../users/Entyties/users.entity';
+import { Users } from '../users/Entities/users.entity';
+import { RolesModule } from '../roles/roles.module';
+import { Role } from '../roles/entities/role.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Users]),
+    TypeOrmModule.forFeature([Users, Role]),
     forwardRef(() => UsersModule),
+    forwardRef(() => RolesModule),
     PassportModule,
     MailModule,
     JwtModule.registerAsync({

@@ -11,15 +11,11 @@ export class FileValidationPipe implements PipeTransform<Express.Multer.File> {
     }
 
     if (!this.allowedMimeTypes.includes(file.mimetype)) {
-      throw new BadRequestException(
-        `Tipo de archivo no permitido. Permitidos: ${this.allowedMimeTypes.join(', ')}`,
-      );
+      throw new BadRequestException(`Tipo de archivo no permitido. Permitidos: ${this.allowedMimeTypes.join(', ')}`);
     }
 
     if (file.size > this.maxSizeInBytes) {
-      throw new BadRequestException(
-        `El tamaño del archivo no puede superar los 200 KB`,
-      );
+      throw new BadRequestException(`El tamaño del archivo no puede superar los 200 KB`);
     }
 
     return file;

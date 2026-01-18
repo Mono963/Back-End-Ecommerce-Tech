@@ -2,7 +2,8 @@ import { registerAs } from '@nestjs/config';
 import { config as dotenvConfig } from 'dotenv';
 import { DataSource, DataSourceOptions } from 'typeorm';
 
-dotenvConfig({ path: '.env.development' });
+const envFile = process.env.NODE_ENV === 'production' ? '.env' : '.env.development';
+dotenvConfig({ path: envFile });
 
 const config = {
   type: 'postgres',
@@ -13,7 +14,7 @@ const config = {
   password: process.env.DB_PASSWORD,
   autoLoadEntities: true,
   synchronize: true,
-  logging: true,
+  logging: process.env.NODE_ENV === 'production' ? ['error'] : ['error', 'warn', 'info'],
   entities: ['dist/**/*.entity{.ts,.js}'],
   migrations: ['dist/migrations/*{.ts,.js}'],
 };

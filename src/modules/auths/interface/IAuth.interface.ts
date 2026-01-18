@@ -1,13 +1,17 @@
+export interface GoogleUser {
+  id: string;
+  name: string;
+  email: string;
+  accessToken: string;
+}
+
 export interface IUserAuthResponse {
   id: string;
   name: string;
   email: string;
-  birthdate: Date;
-  address: string;
-  phone: number;
+  birthDate: Date;
+  phone: string;
   username: string;
-  isAdmin: boolean;
-  isSuperAdmin: boolean;
   password?: string;
 }
 
@@ -18,16 +22,9 @@ export interface AuthResponse {
     id: string;
     name: string;
     email: string;
-    birthdate?: Date;
-    address: string;
+    birthDate?: Date;
     username?: string;
-    phone?: number;
+    phone?: string;
+    role: string;
   };
-}
-
-export interface GoogleUser {
-  id: string;
-  name: string;
-  email: string;
-  accessToken: string;
 }

@@ -1,39 +1,46 @@
-import { Users } from '../Entyties/users.entity';
+import { OrderStatus } from 'src/modules/orders/Entities/order.entity';
+import { Users } from '../Entities/users.entity';
 
 export interface IUserResponseDto {
   id: string;
   name: string;
   email: string;
-  birthdate: Date;
-  phone: number;
-  address: string; // Cambiado de string | IAddress a solo string
+  birthDate: Date;
+  phone: string;
+  address: UserAddress | string;
   username: string;
-  isAdmin?: boolean;
-  isSuperAdmin?: boolean;
   createdAt: Date;
   deletedAt: Date | null;
   orders?: IOrderResponseDto[];
+  wishlistCount?: number;
   cart?: ICartResponseDto;
+  role?: string;
 }
 
 export interface AuthenticatedRequest extends Request {
   user: {
     sub: string;
+    email: string;
+    role: string;
   };
-}
-
-export enum OrderStatus {
-  ACTIVE = 'active',
-  CANCELLED = 'cancelled',
-  PROCESSED = 'processed',
-  FINALIZED = 'finalized',
 }
 
 export interface IOrderResponseDto {
   id: string;
-  date: Date;
+  orderNumber: string;
   status: OrderStatus;
-  orderDetail: any; // Mantener como any por ahora
+}
+
+// User Address Interface agregar en el futuro
+export interface UserAddress {
+  id: string;
+  label: string;
+  street: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  country: string;
+  isDefault: boolean;
 }
 
 export interface ICartResponseDto {
@@ -41,7 +48,7 @@ export interface ICartResponseDto {
   total: number;
   createdAt: Date;
   updatedAt: Date;
-  items: any[]; // Mantener como any[] por ahora
+  items: unknown[];
 }
 
 export class ResponseUserDto {
@@ -50,21 +57,22 @@ export class ResponseUserDto {
       id: user.id,
       name: user.name,
       email: user.email,
-      birthdate: user.birthdate,
+      birthDate: user.birthDate,
       phone: user.phone,
-      address: user.address || '', // Manejar posibles valores null
+      address: user.address || '',
       username: user.username,
-      isAdmin: user.isAdmin,
-      isSuperAdmin: user.isSuperAdmin,
+      role: user.role?.name,
       createdAt: user.createdAt ?? new Date(),
       deletedAt: user.deletedAt,
       orders:
         user.orders?.map((order) => ({
           id: order.id,
-          date: order.date,
-          status: order.status as OrderStatus,
+          orderNumber: order.orderNumber,
+          status: order.status,
           orderDetail: order.orderDetail,
         })) ?? [],
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+      wishlistCount: (user as any).wishlistCount ?? 0,
       cart: user.cart
         ? {
             id: user.cart.id,
@@ -73,7 +81,7 @@ export class ResponseUserDto {
             updatedAt: user.cart.updatedAt,
             items: user.cart.items ?? [],
           }
-        : undefined, // Cambiado a undefined en lugar de objeto vacío
+        : undefined,
     };
   }
 
@@ -83,8 +91,7 @@ export class ResponseUserDto {
 }
 
 export interface IUserResponseWithAdmin extends IUserResponseDto {
-  isSuperAdmin: boolean;
-  isAdmin: boolean;
+  role: string;
   password: string;
 }
 
@@ -92,8 +99,7 @@ export class ResponseUserWithAdminDto {
   static toDTO(user: Users): IUserResponseWithAdmin {
     return {
       ...ResponseUserDto.toDTO(user),
-      isSuperAdmin: user.isSuperAdmin,
-      isAdmin: user.isAdmin,
+      role: user.role?.name,
       password: user.password,
     };
   }

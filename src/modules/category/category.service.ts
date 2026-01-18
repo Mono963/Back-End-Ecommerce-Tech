@@ -4,7 +4,9 @@ import { Repository } from 'typeorm';
 
 import { Category } from './entities/category.entity';
 import { CreateCategoryDto } from './dto/create-category.dto';
-import { PRODUCTS_SEED } from '../products/data/products.data';
+import { PRODUCTS_SEED } from 'src/seeds/products.data';
+import { CategorySearchQueryDto } from './dto/PaginationQueryDto';
+import { IPaginatedResult } from './interface/IPaginatedResult';
 
 @Injectable()
 export class CategoriesService {
@@ -39,12 +41,42 @@ export class CategoriesService {
     throw new HttpException('Las categorías ya existen', HttpStatus.CONFLICT);
   }
 
-  async getCategories(): Promise<Category[]> {
-    return await this.categoryRepo.find({ relations: ['products'] });
-  }
+  async getCategories(query?: CategorySearchQueryDto): Promise<IPaginatedResult<Category>> {
+    const { page = 1, limit = 10, category } = query || {};
 
-  async getCategoriesSeeder(): Promise<Category[]> {
-    return await this.categoryRepo.find();
+    const queryBuilder = this.categoryRepo
+      .createQueryBuilder('category')
+      .leftJoinAndSelect('category.products', 'products')
+      .leftJoinAndSelect('products.category', 'productCategory')
+      .leftJoinAndSelect('products.variants', 'variants')
+      .leftJoinAndSelect('products.reviews', 'reviews')
+      .leftJoinAndSelect('reviews.user', 'reviewUser');
+
+    // Filtro por nombre de categoría
+    if (category) {
+      queryBuilder.andWhere('LOWER(category.categoryName) LIKE LOWER(:category)', {
+        category: `%${category}%`,
+      });
+    }
+
+    // Ordenamiento
+    queryBuilder
+      .orderBy('category.categoryName', 'ASC')
+      .addOrderBy('products.featured', 'DESC')
+      .addOrderBy('products.createdAt', 'DESC')
+      .addOrderBy('variants.sortOrder', 'ASC');
+
+    // Paginación
+    const [categories, total] = await queryBuilder
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      items: categories,
+      total,
+      pages: Math.ceil(total / limit),
+    };
   }
 
   async findByName(categoryName: string): Promise<Category | null> {
@@ -62,8 +94,9 @@ export class CategoriesService {
     });
     return await this.categoryRepo.save(category);
   }
+
   async getByIdCategory(id: string): Promise<Category> {
-    const exist = await this.categoryRepo.findOneBy({ id });
+    const exist = await this.categoryRepo.findOne({ where: { id }, relations: ['products', 'products.variants'] });
     if (!exist) {
       throw new Error('La categoria no existe');
     }

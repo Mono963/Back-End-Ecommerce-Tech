@@ -8,26 +8,14 @@ import { GoogleUser } from '../interface/IAuth.interface';
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor(private configService: ConfigService) {
     super({
-      clientID: GoogleStrategy.getRequiredEnvVar(
-        configService,
-        'GoogleOAuth.clientId',
-      ),
-      clientSecret: GoogleStrategy.getRequiredEnvVar(
-        configService,
-        'GoogleOAuth.clientSecret',
-      ),
-      callbackURL: GoogleStrategy.getRequiredEnvVar(
-        configService,
-        'GoogleOAuth.callbackUrl',
-      ),
+      clientID: GoogleStrategy.getRequiredEnvVar(configService, 'GoogleOAuth.clientId'),
+      clientSecret: GoogleStrategy.getRequiredEnvVar(configService, 'GoogleOAuth.clientSecret'),
+      callbackURL: GoogleStrategy.getRequiredEnvVar(configService, 'GoogleOAuth.callbackUrl'),
       scope: ['email', 'profile'],
     });
   }
 
-  private static getRequiredEnvVar(
-    configService: ConfigService,
-    key: string,
-  ): string {
+  private static getRequiredEnvVar(configService: ConfigService, key: string): string {
     const value = configService.get<string>(key);
     if (!value) {
       throw new Error(`Missing required environment variable: ${key}`);
@@ -35,14 +23,10 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     return value;
   }
 
-  validate(
-    accessToken: string,
-    refreshToken: string,
-    profile: Profile,
-  ): GoogleUser {
+  validate(accessToken: string, refreshToken: string, profile: Profile): GoogleUser {
     const { id, displayName, emails } = profile;
 
-    if (!emails || !emails[0]?.value) {
+    if (!emails?.[0]?.value) {
       throw new UnauthorizedException('No email found in Google profile');
     }
 

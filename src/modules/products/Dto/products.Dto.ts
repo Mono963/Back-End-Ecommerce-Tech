@@ -11,14 +11,14 @@ import {
   IsArray,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { VariantType } from '../Entities/products_variant.entity';
+import { LaptopSpecs, MouseSpecs, TechVariantType } from '../interface/products.interface';
 
 export class CreateVariantDto {
-  @ApiProperty({ enum: VariantType, example: VariantType.STORAGE })
-  @IsEnum(VariantType)
-  type: VariantType;
+  @ApiProperty({ enum: TechVariantType, example: TechVariantType.STORAGE })
+  @IsEnum(TechVariantType)
+  type: TechVariantType;
 
-  @ApiProperty({ example: '512GB SSD' })
+  @ApiProperty({ example: '512GB SSD NVMe' })
   @IsString()
   @Length(1, 100)
   name: string;
@@ -29,7 +29,7 @@ export class CreateVariantDto {
   @Length(0, 200)
   description?: string;
 
-  @ApiProperty({ example: 200.0 })
+  @ApiProperty({ example: 200.0, description: 'Modificador de precio (puede ser positivo o negativo)' })
   @IsNumber()
   priceModifier: number;
 
@@ -38,7 +38,7 @@ export class CreateVariantDto {
   @Min(0)
   stock: number;
 
-  @ApiPropertyOptional({ example: true })
+  @ApiPropertyOptional({ example: true, default: true })
   @IsOptional()
   @IsBoolean()
   isAvailable?: boolean;
@@ -46,47 +46,91 @@ export class CreateVariantDto {
   @ApiPropertyOptional({ example: 1 })
   @IsOptional()
   @IsNumber()
+  @Min(0)
   sortOrder?: number;
 }
 
 export class CreateProductDto {
-  @ApiProperty({ example: 'MacBook Pro 14"' })
+  @ApiProperty({ example: 'Dell Inspiron 15 3520' })
   @IsString()
-  @Length(3, 80)
+  @Length(3, 200)
   name: string;
 
-  @ApiProperty({ example: 'Powerful laptop for professionals' })
+  @ApiProperty({ example: 'Notebook ideal para trabajo y estudio con procesador Intel Core i5' })
   @IsString()
   @Length(10, 500)
   description: string;
 
-  @ApiProperty({ example: 1999.99 })
+  @ApiProperty({ example: 'Dell', description: 'Marca del producto' })
+  @IsString()
+  @Length(2, 50)
+  brand: string;
+
+  @ApiPropertyOptional({ example: 'Inspiron 15 3520', description: 'Modelo específico del producto' })
+  @IsOptional()
+  @IsString()
+  @Length(2, 100)
+  model?: string;
+
+  @ApiProperty({ example: 699.99 })
   @IsNumber()
   @Min(0.01)
   basePrice: number;
 
-  @ApiProperty({ example: 10 })
+  @ApiProperty({ example: 10, description: 'Stock base cuando no hay variantes' })
   @IsNumber()
   @Min(0)
   baseStock: number;
 
-  @ApiProperty({ example: 'Laptops' })
+  @ApiProperty({ example: 'notebooks', description: 'Nombre de la categoría' })
   @IsString()
   @Length(3, 50)
   categoryName: string;
 
   @ApiPropertyOptional({
-    example: { brand: 'Apple', warranty: '1 year', weight: '1.6kg' },
+    type: [String],
+    example: ['https://example.com/product1.jpg', 'https://example.com/product2.jpg'],
+    description: 'URLs de imágenes del producto',
   })
   @IsOptional()
-  specifications?: Record<string, any>;
+  @IsArray()
+  @IsString({ each: true })
+  imgUrls?: string[];
 
-  @ApiPropertyOptional({ example: true })
+  @ApiPropertyOptional({
+    example: false,
+    default: false,
+    description: 'Marcar como producto destacado',
+  })
+  @IsOptional()
+  @IsBoolean()
+  featured?: boolean;
+
+  @ApiPropertyOptional({
+    example: {
+      screenSize: '15.6"',
+      resolution: '1920x1080',
+      batteryLife: '8 horas',
+      warranty: '1 año',
+    },
+    description: 'Especificaciones técnicas del producto',
+  })
+  @IsOptional()
+  specifications?: LaptopSpecs | MouseSpecs | Record<string, unknown>;
+
+  @ApiPropertyOptional({
+    example: true,
+    default: false,
+    description: 'Indica si el producto tiene variantes',
+  })
   @IsOptional()
   @IsBoolean()
   hasVariants?: boolean;
 
-  @ApiPropertyOptional({ type: [CreateVariantDto] })
+  @ApiPropertyOptional({
+    type: [CreateVariantDto],
+    description: 'Lista de variantes del producto',
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
@@ -95,19 +139,31 @@ export class CreateProductDto {
 }
 
 export class UpdateProductDto {
-  @ApiPropertyOptional({ example: 'MacBook Pro 16"' })
+  @ApiPropertyOptional({ example: 'Dell Inspiron 15 3521' })
   @IsOptional()
   @IsString()
-  @Length(3, 80)
+  @Length(3, 200)
   name?: string;
 
-  @ApiPropertyOptional({ example: 'Updated description' })
+  @ApiPropertyOptional({ example: 'Descripción actualizada del producto' })
   @IsOptional()
   @IsString()
   @Length(10, 500)
   description?: string;
 
-  @ApiPropertyOptional({ example: 2199.99 })
+  @ApiPropertyOptional({ example: 'Dell' })
+  @IsOptional()
+  @IsString()
+  @Length(2, 50)
+  brand?: string;
+
+  @ApiPropertyOptional({ example: 'Inspiron 15 3521' })
+  @IsOptional()
+  @IsString()
+  @Length(2, 100)
+  model?: string;
+
+  @ApiPropertyOptional({ example: 749.99 })
   @IsOptional()
   @IsNumber()
   @Min(0.01)
@@ -119,15 +175,29 @@ export class UpdateProductDto {
   @Min(0)
   baseStock?: number;
 
-  @ApiPropertyOptional({ example: 'Electronics' })
+  @ApiPropertyOptional({ example: 'laptops' })
   @IsOptional()
   @IsString()
   @Length(3, 50)
   categoryName?: string;
 
+  @ApiPropertyOptional({
+    type: [String],
+    example: ['https://example.com/product1.jpg'],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  imgUrls?: string[];
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  featured?: boolean;
+
   @ApiPropertyOptional()
   @IsOptional()
-  specifications?: Record<string, any>;
+  specifications?: LaptopSpecs | MouseSpecs | Record<string, unknown>;
 
   @ApiPropertyOptional({ example: true })
   @IsOptional()
@@ -144,16 +214,16 @@ export class ResponseVariantDto {
   @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
   id: string;
 
-  @ApiProperty({ enum: VariantType, example: VariantType.STORAGE })
-  type: VariantType;
+  @ApiProperty({ enum: TechVariantType, example: TechVariantType.RAM })
+  type: TechVariantType;
 
-  @ApiProperty({ example: '256GB' })
+  @ApiProperty({ example: '16GB DDR4' })
   name: string;
 
-  @ApiProperty({ example: 'High-speed NVMe storage', required: false })
+  @ApiPropertyOptional({ example: 'High-speed DDR4 memory' })
   description?: string;
 
-  @ApiProperty({ example: 100.0 })
+  @ApiProperty({ example: 120.0 })
   priceModifier: number;
 
   @ApiProperty({ example: 25 })
@@ -164,27 +234,39 @@ export class ResponseVariantDto {
 
   @ApiProperty({ example: 1 })
   sortOrder: number;
+
+  @ApiProperty({ example: '2024-01-15T10:30:00Z' })
+  createdAt: Date;
+
+  @ApiProperty({ example: '2024-01-15T14:45:00Z' })
+  updatedAt: Date;
 }
 
 export class ResponseProductDto {
   @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
   id: string;
 
-  @ApiProperty({ example: 'iPhone 15 Pro' })
+  @ApiProperty({ example: 'Dell Inspiron 15 3520' })
   name: string;
 
-  @ApiProperty({ example: 'Latest flagship smartphone with advanced features' })
+  @ApiProperty({ example: 'Notebook ideal para trabajo y estudio' })
   description: string;
 
-  @ApiProperty({ example: 999.99 })
+  @ApiProperty({ example: 'Dell' })
+  brand: string;
+
+  @ApiPropertyOptional({ example: 'Inspiron 15 3520' })
+  model?: string;
+
+  @ApiProperty({ example: 699.99 })
   basePrice: number;
 
-  @ApiProperty({ example: 50 })
+  @ApiProperty({ example: 10 })
   baseStock: number;
 
   @ApiProperty({
-    example: 1099.99,
-    description: 'Precio calculado con variantes más baratas disponibles',
+    example: 699.99,
+    description: 'Precio final calculado con la variante más barata disponible',
   })
   finalPrice: number;
 
@@ -194,7 +276,7 @@ export class ResponseProductDto {
   })
   totalStock: number;
 
-  @ApiProperty({ example: 'smartphone' })
+  @ApiProperty({ example: 'notebooks' })
   category_name: string;
 
   @ApiProperty({
@@ -204,16 +286,23 @@ export class ResponseProductDto {
   imgUrls: string[];
 
   @ApiProperty({
-    example: { brand: 'Apple', warranty: '1 year', screenSize: '6.1"' },
-    required: false,
+    example: {
+      screenSize: '15.6"',
+      resolution: '1920x1080',
+      batteryLife: '8 horas',
+      warranty: '1 año',
+    },
   })
-  specifications?: Record<string, any>; // ✅ Corregido de null a any
+  specifications?: LaptopSpecs | MouseSpecs | Record<string, unknown>;
 
   @ApiProperty({ example: true })
   hasVariants: boolean;
 
   @ApiProperty({ example: true })
   isActive: boolean;
+
+  @ApiProperty({ example: false })
+  featured: boolean;
 
   @ApiProperty({
     type: [ResponseVariantDto],

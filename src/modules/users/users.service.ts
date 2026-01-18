@@ -5,7 +5,7 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { Users } from './Entyties/users.entity';
+import { Users } from './Entities/users.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateUserDbDto, UpdateUserDbDto } from './Dtos/CreateUserDto';
@@ -19,6 +19,13 @@ import { MailService } from '../mail/mail.service';
 import { UpdateRoleDto } from './Dtos/UpdateRoleDto';
 import { ResetPasswordDto } from './Dtos/reset-password.dto';
 import { IPaginatedResult } from './interface/IPaginatedResult';
+import { RolesService } from '../roles/roles.service';
+import { CreateAddressDto, UpdateAddressDto } from './Dtos/address.dto';
+import { UserAddress } from './interface/IUserResponseDto';
+import { v4 as uuidv4 } from 'uuid';
+import { Order } from '../orders/Entities/order.entity';
+import { Wishlist } from '../wishlist/entities/wishlist.entity';
+import { Review } from '../review/entities/review.entity';
 
 @Injectable()
 export class UsersService {
@@ -27,8 +34,15 @@ export class UsersService {
   constructor(
     @InjectRepository(Users)
     private readonly usersRepository: Repository<Users>,
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
+    @InjectRepository(Wishlist)
+    private readonly wishlistRepository: Repository<Wishlist>,
+    @InjectRepository(Review)
+    private readonly reviewRepository: Repository<Review>,
     private readonly configService: ConfigService,
     private readonly mailService: MailService,
+    private readonly rolesService: RolesService,
   ) {}
 
   async getUsers(searchQuery: UserSearchQueryDto): Promise<IPaginatedResult<Users>> {
@@ -38,19 +52,8 @@ export class UsersService {
       return await paginate(this.usersRepository, pagination, {
         order: { createdAt: 'DESC' },
         withDeleted: true,
-        select: [
-          'id',
-          'name',
-          'email',
-          'birthdate',
-          'phone',
-          'address',
-          'username',
-          'isAdmin',
-          'isSuperAdmin',
-          'createdAt',
-          'deletedAt',
-        ],
+        relations: ['role'],
+        select: ['id', 'name', 'email', 'birthDate', 'phone', 'address', 'username', 'createdAt', 'deletedAt'],
       });
     }
 
@@ -64,12 +67,11 @@ export class UsersService {
       'user.phone',
       'user.address',
       'user.username',
-      'user.isAdmin',
-      'user.isSuperAdmin',
       'user.createdAt',
       'user.deletedAt',
     ]);
 
+    queryBuilder.leftJoinAndSelect('user.role', 'role');
     queryBuilder.leftJoinAndSelect('user.orders', 'orders');
     queryBuilder.leftJoinAndSelect('user.cart', 'cart');
     queryBuilder.where('1 = 1');
@@ -101,37 +103,38 @@ export class UsersService {
     } as IPaginatedResult<Users>;
   }
 
-  async getUserById(id: string): Promise<Users> {
+  async getUserById(id: string): Promise<Users & { wishlistCount: number }> {
     const user = await this.usersRepository.findOne({
       where: { id },
-      relations: ['orders', 'cart'],
+      relations: ['orders', 'cart', 'role'],
+      select: [
+        'id',
+        'name',
+        'email',
+        'birthDate',
+        'phone',
+        'address',
+        'addresses',
+        'username',
+        'createdAt',
+        'deletedAt',
+      ],
     });
 
     if (!user) {
       throw new NotFoundException(`Usuario con id ${id} no encontrado.`);
     }
 
-    return user;
-  }
-
-  async findByEmail(email: string): Promise<Users | null> {
-    return await this.usersRepository.findOne({
-      where: { email },
-      select: [
-        'id',
-        'name',
-        'email',
-        'password',
-        'birthdate',
-        'phone',
-        'address',
-        'username',
-        'isAdmin',
-        'isSuperAdmin',
-        'createdAt',
-        'deletedAt',
-      ],
+    // Obtener el contador de wishlist
+    const wishlist = await this.wishlistRepository.findOne({
+      where: { user_id: id },
+      relations: ['items'],
     });
+
+    // Agregar el contador al objeto user (será usado por el DTO)
+    const userWithWishlist = Object.assign(user, { wishlistCount: wishlist?.items?.length ?? 0 });
+
+    return userWithWishlist;
   }
 
   async createUserService(dto: CreateUserDbDto): Promise<Users> {
@@ -230,16 +233,25 @@ export class UsersService {
     try {
       const user = await this.usersRepository.findOne({
         where: { id: userId },
+        relations: ['role'],
       });
 
       if (!user) {
         throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
       }
 
-      await this.usersRepository.update(user.id, dto);
+      const role = await this.rolesService.findRoleById(dto.roleId);
+
+      user.role = role;
+      await this.usersRepository.save(user);
+
+      this.logger.log(`Rol actualizado para usuario ${userId}: ${role.name}`);
     } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       this.logger.error('Error changing user role:', error);
-      throw new InternalServerErrorException('Error changing user role');
+      throw new InternalServerErrorException('Error al cambiar el rol del usuario');
     }
   }
 
@@ -335,5 +347,242 @@ export class UsersService {
     await this.usersRepository.save(user);
 
     await this.mailService.sendPasswordChangedConfirmationEmail(user.email, user.name);
+  }
+
+  // ==================== ADDRESS MANAGEMENT ====================
+
+  /**
+   * Obtiene todas las direcciones de un usuario
+   * @param userId - ID del usuario
+   * @returns Array de direcciones del usuario
+   */
+  async getAddresses(userId: string): Promise<UserAddress[]> {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'addresses'],
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+    }
+
+    return user.addresses || [];
+  }
+
+  /**
+   * Agrega una nueva dirección al usuario
+   * Genera un UUID único y actualiza el array JSONB
+   * Si isDefault es true, desmarca todas las demás direcciones como no-default
+   */
+  async addAddress(userId: string, dto: CreateAddressDto): Promise<UserAddress> {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'addresses'],
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+    }
+
+    // Generar UUID único para la nueva dirección
+    const newAddress: UserAddress = {
+      id: uuidv4(), // ← Genera UUID en Node.js
+      label: dto.label,
+      street: dto.street,
+      city: dto.city,
+      province: dto.province,
+      postalCode: dto.postalCode,
+      country: dto.country || 'Argentina',
+      isDefault: dto.isDefault ?? false,
+    };
+
+    // Si no hay direcciones, esta es la primera y debe ser default
+    const addresses = user.addresses || [];
+    if (addresses.length === 0) {
+      newAddress.isDefault = true;
+    }
+
+    // Si la nueva dirección es default, desmarcar las demás
+    if (newAddress.isDefault) {
+      addresses.forEach((addr) => (addr.isDefault = false));
+    }
+
+    // Agregar la nueva dirección al array
+    user.addresses = [...addresses, newAddress];
+
+    // Guardar en la base de datos (JSONB se actualiza completamente)
+    await this.usersRepository.save(user);
+
+    this.logger.log(`Dirección agregada para usuario ${userId}: ${newAddress.id}`);
+
+    return newAddress;
+  }
+
+  /**
+   * Actualiza una dirección existente
+   * Busca por addressId en el array JSONB y actualiza los campos
+   */
+  async updateAddress(userId: string, addressId: string, dto: UpdateAddressDto): Promise<UserAddress> {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'addresses'],
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+    }
+
+    const addresses = user.addresses || [];
+    const addressIndex = addresses.findIndex((addr) => addr.id === addressId);
+
+    if (addressIndex === -1) {
+      throw new NotFoundException(`Dirección con id ${addressId} no encontrada`);
+    }
+
+    // Si se está marcando como default, desmarcar las demás
+    if (dto.isDefault === true) {
+      addresses.forEach((addr, idx) => {
+        if (idx !== addressIndex) {
+          addr.isDefault = false;
+        }
+      });
+    }
+
+    // Actualizar los campos de la dirección
+    addresses[addressIndex] = {
+      ...addresses[addressIndex],
+      ...dto,
+    };
+
+    user.addresses = addresses;
+    await this.usersRepository.save(user);
+
+    this.logger.log(`Dirección actualizada para usuario ${userId}: ${addressId}`);
+
+    return addresses[addressIndex];
+  }
+
+  /**
+   * Elimina una dirección del usuario
+   * Si la dirección eliminada era default, marca la primera como default
+   */
+  async deleteAddress(userId: string, addressId: string): Promise<{ message: string }> {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'addresses'],
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+    }
+
+    const addresses = user.addresses || [];
+    const addressToDelete = addresses.find((addr) => addr.id === addressId);
+
+    if (!addressToDelete) {
+      throw new NotFoundException(`Dirección con id ${addressId} no encontrada`);
+    }
+
+    // Filtrar la dirección a eliminar
+    const updatedAddresses = addresses.filter((addr) => addr.id !== addressId);
+
+    // Si la dirección eliminada era default y hay más direcciones, marcar la primera como default
+    if (addressToDelete.isDefault && updatedAddresses.length > 0) {
+      updatedAddresses[0].isDefault = true;
+    }
+
+    user.addresses = updatedAddresses;
+    await this.usersRepository.save(user);
+
+    this.logger.log(`Dirección eliminada para usuario ${userId}: ${addressId}`);
+
+    return { message: 'Dirección eliminada exitosamente' };
+  }
+
+  /**
+   * Marca una dirección como predeterminada
+   * Desmarca todas las demás direcciones
+   */
+  async setDefaultAddress(userId: string, addressId: string): Promise<UserAddress> {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'addresses'],
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+    }
+
+    const addresses = user.addresses || [];
+    const targetAddress = addresses.find((addr) => addr.id === addressId);
+
+    if (!targetAddress) {
+      throw new NotFoundException(`Dirección con id ${addressId} no encontrada`);
+    }
+
+    // Desmarcar todas y marcar solo la seleccionada
+    addresses.forEach((addr) => {
+      addr.isDefault = addr.id === addressId;
+    });
+
+    user.addresses = addresses;
+    await this.usersRepository.save(user);
+
+    this.logger.log(`Dirección predeterminada actualizada para usuario ${userId}: ${addressId}`);
+
+    return targetAddress;
+  }
+
+  /**
+   * Obtiene las estadísticas personales del usuario
+   */
+  async getUserStats(userId: string): Promise<{
+    totalOrders: number;
+    totalSpent: number;
+    wishlistItemsCount: number;
+    reviewsCount: number;
+  }> {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+    }
+
+    // Contar órdenes y calcular total gastado
+    const orders = await this.orderRepository
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.orderDetail', 'orderDetail')
+      .where('order.user_id = :userId', { userId })
+      .andWhere('order.status != :cancelledStatus', { cancelledStatus: 'cancelled' })
+      .getMany();
+
+    const totalOrders = orders.length;
+    const totalSpent = orders.reduce((sum, order) => {
+      return sum + (order.orderDetail?.total || 0);
+    }, 0);
+
+    // Contar items en wishlist
+    const wishlist = await this.wishlistRepository.findOne({
+      where: { user_id: userId },
+      relations: ['items'],
+    });
+
+    const wishlistItemsCount = wishlist?.items?.length || 0;
+
+    // Contar reviews
+    const reviewsCount = await this.reviewRepository.count({
+      where: { user: { id: userId } },
+    });
+
+    this.logger.log(`Estadísticas obtenidas para usuario ${userId}`);
+
+    return {
+      totalOrders,
+      totalSpent: Math.round(totalSpent * 100) / 100,
+      wishlistItemsCount,
+      reviewsCount,
+    };
   }
 }

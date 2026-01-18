@@ -1,15 +1,21 @@
 import { Cart } from 'src/modules/cart/entities/cart.entity';
 import { Order } from 'src/modules/orders/Entities/order.entity';
+import { Role } from 'src/modules/roles/entities/role.entity';
 import {
   Column,
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { UserAddress } from '../interface/IUserResponseDto';
+import { Review } from 'src/modules/review/entities/review.entity';
 
 @Entity({
   name: 'users',
@@ -22,10 +28,11 @@ export class Users {
   name: string;
 
   @Column({ type: 'varchar', length: 50, unique: true, nullable: false })
+  @Index()
   email: string;
 
   @Column({ type: 'date', nullable: false })
-  birthdate: Date;
+  birthDate: Date;
 
   @Column({ type: 'varchar', length: 50, unique: true, nullable: false })
   username: string;
@@ -37,13 +44,10 @@ export class Users {
   password: string;
 
   @Column({ type: 'bigint', nullable: false })
-  phone: number;
+  phone: string;
 
-  @Column({ type: 'boolean', default: false })
-  isAdmin: boolean;
-
-  @Column({ type: 'boolean', default: false })
-  isSuperAdmin: boolean;
+  @Column({ type: 'jsonb', nullable: true, default: [] })
+  addresses: UserAddress[];
 
   @CreateDateColumn()
   createdAt?: Date;
@@ -59,4 +63,12 @@ export class Users {
 
   @OneToOne(() => Cart, (cart) => cart.user)
   cart: Cart;
+
+  @ManyToOne(() => Role, (role) => role.users)
+  @JoinColumn({ name: 'role_id' })
+  @Index()
+  role: Role;
+
+  @OneToMany(() => Review, (review) => review.user)
+  reviews: Review[];
 }
