@@ -29,9 +29,20 @@ export class ProductsService {
   ) {}
 
   async getProducts(searchQuery: ProductsSearchQueryDto): Promise<IPaginatedResultProducts<ResponseProductDto>> {
-    const { name, price, brand, featured, ...pagination } = searchQuery;
+    const { name, price, minPrice, maxPrice, brand, categoryId, color, featured, ...pagination } = searchQuery;
 
-    if (!name && !price && !brand && featured === undefined) {
+    const hasFilters: boolean = Boolean(
+      name ||
+        price ||
+        minPrice !== undefined ||
+        maxPrice !== undefined ||
+        brand ||
+        categoryId ||
+        color ||
+        featured !== undefined,
+    );
+
+    if (!hasFilters) {
       const result = await paginate(this.productRepo, pagination, {
         relations: ['category', 'files', 'variants', 'reviews'],
         order: { createdAt: 'DESC' },
@@ -64,11 +75,32 @@ export class ProductsService {
       });
     }
 
+    if (categoryId) {
+      queryBuilder.andWhere('product.category_id = :categoryId', { categoryId: String(categoryId) });
+    }
+
     if (featured !== undefined) {
       queryBuilder.andWhere('product.featured = :featured', { featured });
     }
 
-    if (price) {
+    if (color) {
+      queryBuilder.andWhere(
+        'EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = product.id ' +
+          "AND pv.type = 'color' AND LOWER(pv.name) LIKE LOWER(:colorName))",
+        { colorName: `%${color}%` },
+      );
+    }
+
+    if (minPrice !== undefined && maxPrice !== undefined) {
+      queryBuilder.andWhere('product.basePrice BETWEEN :minPriceRange AND :maxPriceRange', {
+        minPriceRange: Number(minPrice),
+        maxPriceRange: Number(maxPrice),
+      });
+    } else if (minPrice !== undefined) {
+      queryBuilder.andWhere('product.basePrice >= :minPriceRange', { minPriceRange: Number(minPrice) });
+    } else if (maxPrice !== undefined) {
+      queryBuilder.andWhere('product.basePrice <= :maxPriceRange', { maxPriceRange: Number(maxPrice) });
+    } else if (price) {
       queryBuilder.andWhere(
         '(product.basePrice BETWEEN :minPrice AND :maxPrice OR ' +
           'EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = product.id AND ' +
@@ -389,7 +421,7 @@ export class ProductsService {
         featured: true,
         isActive: true,
       },
-      relations: ['category', 'variants', 'files'],
+      relations: ['category', 'variants', 'files', 'reviews'],
       take: limit,
       order: { createdAt: 'DESC' },
     });
@@ -403,7 +435,7 @@ export class ProductsService {
         brand: ILike(`%${brand}%`),
         isActive: true,
       },
-      relations: ['category', 'variants', 'files'],
+      relations: ['category', 'variants', 'files', 'reviews'],
       order: { name: 'ASC' },
     });
 
@@ -454,7 +486,7 @@ export class ProductsService {
     const created: Product[] = [];
 
     const categoriasSeeder = await this.categoriesService.getCategories();
-    if (!categoriasSeeder || categoriasSeeder.length === 0) {
+    if (!categoriasSeeder || categoriasSeeder.items.length === 0) {
       return {
         message: 'No hay categorías. Primero precarga las categorías.',
         total: 0,
@@ -550,5 +582,82 @@ export class ProductsService {
       message: `Productos precargados correctamente. Creados: ${created.length}/${PRODUCTS_SEED.length}`,
       total: created.length,
     };
+  }
+
+  async getProductsByCategory(categoryId: string): Promise<ResponseProductDto[]> {
+    const category = await this.categoriesService.getByIdCategory(categoryId);
+
+    if (!category) {
+      throw new NotFoundException(`Categoría con ID ${categoryId} no encontrada`);
+    }
+
+    const products = await this.productRepo.find({
+      where: {
+        category: { id: categoryId },
+        isActive: true,
+      },
+      relations: ['category', 'files', 'variants', 'reviews'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return products.map(mapToProductDto);
+  }
+
+  async searchProducts(query: string, limit: number = 10): Promise<ResponseProductDto[]> {
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+
+    const searchTerm = `%${query.trim()}%`;
+
+    const products = await this.productRepo
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.category', 'category')
+      .leftJoinAndSelect('product.files', 'files')
+      .leftJoinAndSelect('product.variants', 'variants')
+      .leftJoinAndSelect('product.reviews', 'reviews')
+      .where('product.isActive = :isActive', { isActive: true })
+      .andWhere(
+        '(LOWER(product.name) LIKE LOWER(:searchTerm) OR LOWER(product.brand) LIKE LOWER(:searchTerm) OR LOWER(product.description) LIKE LOWER(:searchTerm))',
+        { searchTerm },
+      )
+      .orderBy('product.featured', 'DESC')
+      .addOrderBy('product.createdAt', 'DESC')
+      .take(limit)
+      .getMany();
+
+    return products.map(mapToProductDto);
+  }
+
+  async getRelatedProducts(productId: string, limit: number = 6): Promise<ResponseProductDto[]> {
+    const product = await this.productRepo.findOne({
+      where: { id: productId },
+      relations: ['category'],
+    });
+
+    if (!product) {
+      throw new NotFoundException(`Producto con ID ${productId} no encontrado`);
+    }
+
+    const relatedProducts = await this.productRepo
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.category', 'category')
+      .leftJoinAndSelect('product.files', 'files')
+      .leftJoinAndSelect('product.variants', 'variants')
+      .leftJoinAndSelect('product.reviews', 'reviews')
+      .where('product.id != :productId', { productId })
+      .andWhere('product.isActive = :isActive', { isActive: true })
+      .andWhere('(product.category_id = :categoryId OR LOWER(product.brand) = LOWER(:brand))', {
+        categoryId: product.category?.id,
+        brand: product.brand,
+      })
+      .orderBy('CASE WHEN product.category_id = :categoryId THEN 0 ELSE 1 END', 'ASC')
+      .addOrderBy('product.featured', 'DESC')
+      .addOrderBy('product.createdAt', 'DESC')
+      .setParameter('categoryId', product.category?.id)
+      .take(limit)
+      .getMany();
+
+    return relatedProducts.map(mapToProductDto);
   }
 }

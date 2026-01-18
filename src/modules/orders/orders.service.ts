@@ -8,7 +8,7 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, Between, FindManyOptions, QueryRunner } from 'typeorm';
+import { Repository, DataSource, QueryRunner } from 'typeorm'; // Corregido: Se eliminaron Between y FindManyOptions
 import { Order, OrderStatus } from './Entities/order.entity';
 import { OrderDetail } from './Entities/orderDetails.entity';
 import { OrderItem } from './Entities/order.item';
@@ -120,7 +120,10 @@ export class OrdersService {
           };
           this.logger.log(`Usando dirección guardada ${shippingAddressId} para orden`);
         } else {
-          this.logger.warn(`Dirección ${cart.selectedAddressId} no encontrada, usando dirección temporal si se proveyó`);
+          // Corregido: Formato de línea larga
+          this.logger.warn(
+            `Dirección ${cart.selectedAddressId} no encontrada, usando dirección temporal si se proveyo`,
+          );
         }
       }
 
@@ -304,9 +307,11 @@ export class OrdersService {
     variantIds: string[],
     quantity: number,
   ): Promise<void> {
+    // 🔒 Pessimistic write lock para evitar race conditions en stock
     const product = await queryRunner.manager.findOne(Product, {
       where: { id: productId },
       relations: ['variants'],
+      lock: { mode: 'pessimistic_write' },
     });
 
     if (!product) {
@@ -323,8 +328,10 @@ export class OrdersService {
     } else {
       // Actualizar stock de las variantes seleccionadas
       for (const variantId of variantIds) {
+        // 🔒 Lock también en cada variante
         const variant = await queryRunner.manager.findOne(ProductVariant, {
           where: { id: variantId },
+          lock: { mode: 'pessimistic_write' },
         });
 
         if (!variant) {
@@ -366,39 +373,91 @@ export class OrdersService {
    * @param filters - Filtros de búsqueda
    * @returns Lista paginada de órdenes
    */
-  async getAllOrders(filters: OrderFiltersDto): Promise<ResponseOrderDto[]> {
-    const { status, startDate, endDate, page = 1, limit = 10 } = filters;
+  async getAllOrders(filters: OrderFiltersDto): Promise<{
+    items: ResponseOrderDto[];
+    total: number;
+    pages: number;
+  }> {
+    const { status, startDate, endDate, orderNumber, userEmail, page = 1, limit = 10 } = filters;
 
-    const where: Record<string, unknown> = {};
+    // Si no hay filtros, usar findAndCount directo
+    if (!status && !startDate && !endDate && !orderNumber && !userEmail) {
+      const [orders, total] = await this.orderRepo.findAndCount({
+        // Corregido: Formato de array largo
+        relations: [
+          'user',
+          'orderDetail',
+          'orderDetail.items',
+          'orderDetail.items.product',
+          'orderDetail.items.variants',
+        ],
+        order: { createdAt: 'DESC' },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
+
+      const pages = Math.ceil(total / limit);
+
+      return {
+        items: orders.map((order) => this.mapOrderToDto(order)),
+        total,
+        pages,
+      };
+    }
+
+    // Si hay filtros, usar QueryBuilder
+    const queryBuilder = this.orderRepo.createQueryBuilder('order');
+    queryBuilder.leftJoinAndSelect('order.user', 'user');
+    queryBuilder.leftJoinAndSelect('order.orderDetail', 'orderDetail');
+    queryBuilder.leftJoinAndSelect('orderDetail.items', 'items');
+    queryBuilder.leftJoinAndSelect('items.product', 'product');
+    queryBuilder.leftJoinAndSelect('items.variants', 'variants');
+    queryBuilder.where('1 = 1');
 
     // Aplicar filtro de estado
     if (status) {
-      where.status = status;
+      queryBuilder.andWhere('order.status = :status', { status });
     }
 
     // Aplicar filtro de fechas
     if (startDate && endDate) {
-      where.createdAt = Between(new Date(startDate), new Date(endDate));
+      queryBuilder.andWhere('order.createdAt BETWEEN :startDate AND :endDate', {
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+      });
     } else if (startDate) {
-      where.createdAt = Between(new Date(startDate), new Date());
+      queryBuilder.andWhere('order.createdAt >= :startDate', {
+        startDate: new Date(startDate),
+      });
     }
 
-    const options: FindManyOptions<Order> = {
-      where,
-      relations: [
-        'user',
-        'orderDetail',
-        'orderDetail.items',
-        'orderDetail.items.product',
-        'orderDetail.items.variants',
-      ],
-      order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    };
+    // Filtro por número de orden
+    if (orderNumber) {
+      queryBuilder.andWhere('LOWER(order.orderNumber) LIKE LOWER(:orderNumber)', {
+        orderNumber: `%${orderNumber}%`,
+      });
+    }
 
-    const orders = await this.orderRepo.find(options);
-    return orders.map((order) => this.mapOrderToDto(order));
+    // Filtro por email del usuario
+    if (userEmail) {
+      queryBuilder.andWhere('LOWER(user.email) LIKE LOWER(:userEmail)', {
+        userEmail: `%${userEmail}%`,
+      });
+    }
+
+    queryBuilder.orderBy('order.createdAt', 'DESC');
+
+    const skip = (page - 1) * limit;
+    queryBuilder.skip(skip).take(limit);
+
+    const [orders, total] = await queryBuilder.getManyAndCount();
+    const pages = Math.ceil(total / limit);
+
+    return {
+      items: orders.map((order) => this.mapOrderToDto(order)),
+      total,
+      pages,
+    };
   }
 
   async updateOrderStatus(orderId: string, status: OrderStatus, paymentMethod?: string): Promise<ResponseOrderDto> {
@@ -459,34 +518,61 @@ export class OrdersService {
    * @param orderId - ID de la orden a cancelar
    */
   private async restoreStock(orderId: string): Promise<void> {
-    const order = await this.orderRepo.findOne({
-      where: { id: orderId },
-      relations: ['orderDetail', 'orderDetail.items', 'orderDetail.items.variants'],
-    });
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    if (!order) return;
-
-    for (const item of order.orderDetail.items) {
-      const product = await this.productRepo.findOne({
-        where: { id: item.product_id },
+    try {
+      const order = await queryRunner.manager.findOne(Order, {
+        where: { id: orderId },
+        relations: ['orderDetail', 'orderDetail.items', 'orderDetail.items.variants'],
       });
 
-      if (!product) continue;
+      if (!order) {
+        await queryRunner.rollbackTransaction();
+        return;
+      }
 
-      if (!product.hasVariants || item.variants.length === 0) {
-        // Restaurar stock base del producto
-        product.baseStock += item.quantity;
-        await this.productRepo.save(product);
-      } else {
-        // Restaurar stock de variantes
-        for (const variant of item.variants) {
-          variant.stock += item.quantity;
-          if (variant.stock > 0) {
-            variant.isAvailable = true;
+      for (const item of order.orderDetail.items) {
+        // 🔒 Lock para evitar race conditions al restaurar stock
+        const product = await queryRunner.manager.findOne(Product, {
+          where: { id: item.product_id },
+          lock: { mode: 'pessimistic_write' },
+        });
+
+        if (!product) continue;
+
+        if (!product.hasVariants || item.variants.length === 0) {
+          // Restaurar stock base del producto
+          product.baseStock += item.quantity;
+          await queryRunner.manager.save(Product, product);
+        } else {
+          // Restaurar stock de variantes
+          for (const variant of item.variants) {
+            // 🔒 Lock en cada variante
+            const lockedVariant = await queryRunner.manager.findOne(ProductVariant, {
+              where: { id: variant.id },
+              lock: { mode: 'pessimistic_write' },
+            });
+
+            if (!lockedVariant) continue;
+
+            lockedVariant.stock += item.quantity;
+            if (lockedVariant.stock > 0) {
+              lockedVariant.isAvailable = true;
+            }
+            await queryRunner.manager.save(ProductVariant, lockedVariant);
           }
-          await this.variantRepo.save(variant);
         }
       }
+
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error('Error al restaurar stock:', error);
+      throw new InternalServerErrorException('Error al restaurar stock');
+    } finally {
+      await queryRunner.release();
     }
   }
 

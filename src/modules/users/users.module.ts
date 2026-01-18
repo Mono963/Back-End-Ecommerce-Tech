@@ -7,9 +7,16 @@ import { AuthsModule } from '../auths/auths.module';
 import { MailModule } from '../mail/mail.module';
 import { RolesModule } from '../roles/roles.module';
 import { Review } from '../review/entities/review.entity';
+import { Order } from '../orders/Entities/order.entity';
+import { Wishlist } from '../wishlist/entities/wishlist.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Users, Review]), forwardRef(() => AuthsModule), MailModule, RolesModule],
+  imports: [
+    TypeOrmModule.forFeature([Users, Review, Order, Wishlist]),
+    forwardRef(() => AuthsModule),
+    MailModule,
+    RolesModule,
+  ],
   providers: [UsersService],
   controllers: [UsersController],
   exports: [UsersService],

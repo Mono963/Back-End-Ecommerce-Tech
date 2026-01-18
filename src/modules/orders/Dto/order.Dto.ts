@@ -339,6 +339,22 @@ export class OrderFiltersDto {
   endDate?: string;
 
   @ApiPropertyOptional({
+    example: 'ORD-2024-01-0001',
+    description: 'Buscar por número de orden',
+  })
+  @IsOptional()
+  @IsString()
+  orderNumber?: string;
+
+  @ApiPropertyOptional({
+    example: 'juan@example.com',
+    description: 'Buscar por email del usuario',
+  })
+  @IsOptional()
+  @IsString()
+  userEmail?: string;
+
+  @ApiPropertyOptional({
     example: 10,
     description: 'Límite de resultados',
     default: 10,
@@ -360,6 +376,17 @@ export class OrderFiltersDto {
   @Type(() => Number)
   @Min(1)
   page?: number;
+}
+
+export class PaginatedOrdersDto {
+  @ApiProperty({ type: [ResponseOrderDto] })
+  items: ResponseOrderDto[];
+
+  @ApiProperty({ example: 100, description: 'Total de órdenes' })
+  total: number;
+
+  @ApiProperty({ example: 10, description: 'Total de páginas' })
+  pages: number;
 }
 
 export class CreateOrderFromCartDto {

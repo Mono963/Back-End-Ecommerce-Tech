@@ -12,6 +12,7 @@ export interface IUserResponseDto {
   createdAt: Date;
   deletedAt: Date | null;
   orders?: IOrderResponseDto[];
+  wishlistCount?: number;
   cart?: ICartResponseDto;
   role?: string;
 }
@@ -70,6 +71,8 @@ export class ResponseUserDto {
           status: order.status,
           orderDetail: order.orderDetail,
         })) ?? [],
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+      wishlistCount: (user as any).wishlistCount ?? 0,
       cart: user.cart
         ? {
             id: user.cart.id,

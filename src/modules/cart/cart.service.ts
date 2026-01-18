@@ -188,8 +188,15 @@ export class CartService {
       }
 
       if (dto.quantity === 0) {
-        await queryRunner.manager.remove(cartItem);
-        cart.items = cart.items.filter((item) => item.id !== cartItemId);
+        // Eliminar el item directamente sin usar cascade
+        await queryRunner.manager.delete(CartItem, { id: cartItemId });
+
+        // Calcular el nuevo total sin el item eliminado
+        const remainingItems = cart.items.filter((item) => item.id !== cartItemId);
+        const newTotal = parseFloat(remainingItems.reduce((sum, item) => sum + Number(item.subtotal), 0).toFixed(2));
+
+        // Actualizar solo el total del carrito
+        await queryRunner.manager.update(Cart, cart.id, { total: newTotal });
       } else {
         const variantIds = cartItem.variants?.map((v) => v.id) || [];
         const availableStock = await this.productsService.getAvailableStock(cartItem.product.id, variantIds);
@@ -203,9 +210,9 @@ export class CartService {
         cartItem.quantity = dto.quantity;
         cartItem.subtotal = parseFloat((dto.quantity * Number(cartItem.priceAtAddition)).toFixed(2));
         await queryRunner.manager.save(cartItem);
-      }
 
-      await this.recalculateCartTotal(queryRunner, cart);
+        await this.recalculateCartTotal(queryRunner, cart);
+      }
 
       await queryRunner.commitTransaction();
       return await this.getCartById(userId);
@@ -240,10 +247,15 @@ export class CartService {
         throw new NotFoundException(`Item del carrito no encontrado`);
       }
 
-      await queryRunner.manager.remove(cartItem);
-      cart.items = cart.items.filter((item) => item.id !== cartItemId);
+      // Eliminar el item directamente de la base de datos
+      await queryRunner.manager.delete(CartItem, { id: cartItemId });
 
-      await this.recalculateCartTotal(queryRunner, cart);
+      // Calcular el nuevo total sin el item eliminado
+      const remainingItems = cart.items.filter((item) => item.id !== cartItemId);
+      const newTotal = parseFloat(remainingItems.reduce((sum, item) => sum + Number(item.subtotal), 0).toFixed(2));
+
+      // Actualizar solo el total del carrito sin usar cascade
+      await queryRunner.manager.update(Cart, cart.id, { total: newTotal });
 
       await queryRunner.commitTransaction();
 
@@ -279,13 +291,12 @@ export class CartService {
       }
 
       if (cart.items && cart.items.length > 0) {
-        await queryRunner.manager.remove(CartItem, cart.items);
+        // Eliminar todos los items directamente sin usar cascade
+        await queryRunner.manager.delete(CartItem, { cart_id: cart.id });
       }
 
-      cart.items = [];
-      cart.total = 0;
-
-      await queryRunner.manager.save(cart);
+      // Actualizar solo el total del carrito sin usar save con cascade
+      await queryRunner.manager.update(Cart, cart.id, { total: 0 });
 
       await queryRunner.commitTransaction();
 

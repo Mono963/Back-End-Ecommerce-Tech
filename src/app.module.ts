@@ -18,6 +18,7 @@ import { throttlerConfig } from './config/throttler.config';
 import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { ReviewModule } from './modules/review/review.module';
+import { WishlistModule } from './modules/wishlist/wishlist.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { ReviewModule } from './modules/review/review.module';
     RolesModule,
     SeedsModule,
     ReviewModule,
+    WishlistModule,
   ],
   controllers: [AppController],
   providers: [

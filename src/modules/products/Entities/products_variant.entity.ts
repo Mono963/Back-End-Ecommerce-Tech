@@ -7,25 +7,12 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
-  Index, // 👈 Importar Index
+  Index,
 } from 'typeorm';
 import { Product } from './products.entity';
 import { CartItem } from '../../cart/entities/cart.item.entity';
 import { OrderItem } from 'src/modules/orders/Entities/order.item';
-
-export enum TechVariantType {
-  RAM = 'ram',
-  STORAGE = 'storage',
-  PROCESSOR = 'processor',
-  GRAPHICS = 'graphics',
-  COLOR = 'color',
-  CONNECTIVITY = 'connectivity',
-  SCREEN_SIZE = 'screen_size',
-  RESOLUTION = 'resolution',
-  REFRESH_RATE = 'refresh_rate',
-  WARRANTY = 'warranty',
-  CONDITION = 'condition',
-}
+import { TechVariantType } from '../interface/products.interface';
 
 @Index(['product_id', 'type'])
 @Index(['isAvailable', 'stock'])

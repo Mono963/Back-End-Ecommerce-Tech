@@ -21,11 +21,14 @@ import { ICartResponseDTO, IResponseCartSummaryDTO, IStockValidationResult } fro
 import { IShippingAddressDto } from '../orders/interfaces/orders.interface';
 import { ResponseOrderDto } from '../orders/Dto/order.Dto';
 import { SelectAddressDto } from './dto/select-address.dto';
+import { RoleGuard } from 'src/guards/auth.guards.role';
+import { Roles, UserRole } from 'src/decorator/role.decorator';
 
 @ApiTags('Cart')
 @Controller('cart')
 @ApiBearerAuth()
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RoleGuard)
+@Roles(UserRole.CLIENT)
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 

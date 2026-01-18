@@ -23,6 +23,9 @@ import { RolesService } from '../roles/roles.service';
 import { CreateAddressDto, UpdateAddressDto } from './Dtos/address.dto';
 import { UserAddress } from './interface/IUserResponseDto';
 import { v4 as uuidv4 } from 'uuid';
+import { Order } from '../orders/Entities/order.entity';
+import { Wishlist } from '../wishlist/entities/wishlist.entity';
+import { Review } from '../review/entities/review.entity';
 
 @Injectable()
 export class UsersService {
@@ -31,6 +34,12 @@ export class UsersService {
   constructor(
     @InjectRepository(Users)
     private readonly usersRepository: Repository<Users>,
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
+    @InjectRepository(Wishlist)
+    private readonly wishlistRepository: Repository<Wishlist>,
+    @InjectRepository(Review)
+    private readonly reviewRepository: Repository<Review>,
     private readonly configService: ConfigService,
     private readonly mailService: MailService,
     private readonly rolesService: RolesService,
@@ -94,7 +103,7 @@ export class UsersService {
     } as IPaginatedResult<Users>;
   }
 
-  async getUserById(id: string): Promise<Users> {
+  async getUserById(id: string): Promise<Users & { wishlistCount: number }> {
     const user = await this.usersRepository.findOne({
       where: { id },
       relations: ['orders', 'cart', 'role'],
@@ -116,7 +125,16 @@ export class UsersService {
       throw new NotFoundException(`Usuario con id ${id} no encontrado.`);
     }
 
-    return user;
+    // Obtener el contador de wishlist
+    const wishlist = await this.wishlistRepository.findOne({
+      where: { user_id: id },
+      relations: ['items'],
+    });
+
+    // Agregar el contador al objeto user (será usado por el DTO)
+    const userWithWishlist = Object.assign(user, { wishlistCount: wishlist?.items?.length ?? 0 });
+
+    return userWithWishlist;
   }
 
   async createUserService(dto: CreateUserDbDto): Promise<Users> {
@@ -513,5 +531,58 @@ export class UsersService {
     this.logger.log(`Dirección predeterminada actualizada para usuario ${userId}: ${addressId}`);
 
     return targetAddress;
+  }
+
+  /**
+   * Obtiene las estadísticas personales del usuario
+   */
+  async getUserStats(userId: string): Promise<{
+    totalOrders: number;
+    totalSpent: number;
+    wishlistItemsCount: number;
+    reviewsCount: number;
+  }> {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+    }
+
+    // Contar órdenes y calcular total gastado
+    const orders = await this.orderRepository
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.orderDetail', 'orderDetail')
+      .where('order.user_id = :userId', { userId })
+      .andWhere('order.status != :cancelledStatus', { cancelledStatus: 'cancelled' })
+      .getMany();
+
+    const totalOrders = orders.length;
+    const totalSpent = orders.reduce((sum, order) => {
+      return sum + (order.orderDetail?.total || 0);
+    }, 0);
+
+    // Contar items en wishlist
+    const wishlist = await this.wishlistRepository.findOne({
+      where: { user_id: userId },
+      relations: ['items'],
+    });
+
+    const wishlistItemsCount = wishlist?.items?.length || 0;
+
+    // Contar reviews
+    const reviewsCount = await this.reviewRepository.count({
+      where: { user: { id: userId } },
+    });
+
+    this.logger.log(`Estadísticas obtenidas para usuario ${userId}`);
+
+    return {
+      totalOrders,
+      totalSpent: Math.round(totalSpent * 100) / 100,
+      wishlistItemsCount,
+      reviewsCount,
+    };
   }
 }

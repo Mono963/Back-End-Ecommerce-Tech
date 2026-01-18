@@ -19,7 +19,13 @@ import { RoleGuard } from '../../guards/auth.guards.role';
 import { Roles, UserRole } from '../../decorator/role.decorator';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { OrderStatus } from './Entities/order.entity';
-import { OrderFiltersDto, OrderStatsDto, ResponseOrderDto, UpdateOrderStatusDto } from './Dto/order.Dto';
+import {
+  OrderFiltersDto,
+  OrderStatsDto,
+  PaginatedOrdersDto,
+  ResponseOrderDto,
+  UpdateOrderStatusDto,
+} from './Dto/order.Dto';
 import { AuthenticatedRequest } from '../users/interface/IUserResponseDto';
 
 @ApiTags('Orders')
@@ -30,8 +36,9 @@ export class OrdersController {
   @Get()
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Obtener todas las órdenes',
-    description: 'Retorna todas las órdenes con filtros opcionales (Solo Admin)',
+    summary: 'Obtener todas las órdenes con paginación y filtros',
+    description:
+      'Retorna todas las órdenes con metadata de paginación, filtros por estado, fecha, número de orden y email del usuario (Solo Admin)',
   })
   @ApiQuery({
     name: 'status',
@@ -52,6 +59,20 @@ export class OrdersController {
     description: 'Fecha de fin (YYYY-MM-DD)',
   })
   @ApiQuery({
+    name: 'orderNumber',
+    required: false,
+    type: 'string',
+    description: 'Buscar por número de orden',
+    example: 'ORD-2024-01-0001',
+  })
+  @ApiQuery({
+    name: 'userEmail',
+    required: false,
+    type: 'string',
+    description: 'Buscar por email del usuario',
+    example: 'juan@example.com',
+  })
+  @ApiQuery({
     name: 'page',
     required: false,
     type: 'number',
@@ -67,12 +88,12 @@ export class OrdersController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Lista de órdenes',
-    type: [ResponseOrderDto],
+    description: 'Lista paginada de órdenes con metadata',
+    type: PaginatedOrdersDto,
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
-  async getAllOrders(@Query() filters: OrderFiltersDto): Promise<ResponseOrderDto[]> {
+  async getAllOrders(@Query() filters: OrderFiltersDto): Promise<PaginatedOrdersDto> {
     return await this.ordersService.getAllOrders(filters);
   }
 
@@ -259,7 +280,7 @@ export class OrdersController {
     @Body() body: { paymentMethod: string; transactionId?: string },
     @Req() req: AuthenticatedRequest,
   ): Promise<ResponseOrderDto> {
-    const isAdminUser = req.user && req.user['role'] === UserRole.ADMIN;
+    const isAdminUser = req.user && (req.user.role as UserRole) === UserRole.ADMIN;
     const userId = isAdminUser ? undefined : req.user.sub;
 
     const order = await this.ordersService.getOrder(id, userId);
