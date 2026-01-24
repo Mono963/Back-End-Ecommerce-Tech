@@ -15,6 +15,8 @@ import {
   HttpStatus,
   ParseIntPipe,
   DefaultValuePipe,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { AuthGuard } from '../../guards/auth.guards';
@@ -25,6 +27,8 @@ import { ProductsSearchQueryDto } from './Dto/PaginationQueryDto';
 import { PaginatedProductsDto } from './Dto/paginated-products.dto';
 import { ProductVariant } from './Entities/products_variant.entity';
 import { CreateProductDto, CreateVariantDto, ResponseProductDto, UpdateProductDto } from './Dto/products.Dto';
+import { HybridSearchResponse } from './interface/products.interface';
+import { Observable } from 'rxjs';
 
 @ApiTags('Products')
 @Controller('products')
@@ -179,33 +183,73 @@ export class ProductsController {
 
   @Get('search')
   @ApiOperation({
-    summary: 'Búsqueda de productos con autocompletado',
-    description: 'Busca productos por nombre, marca o descripción con resultados rápidos',
+    summary: 'Búsqueda híbrida de productos',
+    description: 'Búsqueda instantánea desde 1 letra. Con ai=true también incluye resultados de IA.',
   })
   @ApiQuery({
     name: 'q',
     required: true,
     type: String,
-    description: 'Término de búsqueda',
+    description: 'Texto de búsqueda (mínimo 1 carácter)',
     example: 'laptop',
+  })
+  @ApiQuery({
+    name: 'ai',
+    required: false,
+    type: Boolean,
+    description: 'Incluir resultados de búsqueda con IA (default: false)',
+    example: false,
   })
   @ApiQuery({
     name: 'limit',
     required: false,
     type: Number,
-    description: 'Límite de resultados',
-    example: 10,
+    description: 'Cantidad de resultados (default: 8)',
+    example: 8,
   })
   @ApiResponse({
     status: 200,
     description: 'Resultados de búsqueda',
-    type: [ResponseProductDto],
+    schema: {
+      type: 'object',
+      properties: {
+        results: {
+          type: 'array',
+          description: 'Resultados instantáneos locales',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              brand: { type: 'string' },
+              price: { type: 'number' },
+              image: { type: 'string', nullable: true },
+              category: { type: 'string', nullable: true },
+            },
+          },
+        },
+        aiResults: {
+          type: 'array',
+          description: 'Resultados de IA (solo si ai=true)',
+          nullable: true,
+        },
+        aiMessage: { type: 'string', nullable: true },
+        source: { type: 'string', enum: ['local', 'hybrid'] },
+      },
+    },
   })
-  async searchProducts(
+  async search(
     @Query('q') query: string,
-    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
-  ): Promise<ResponseProductDto[]> {
-    return await this.productsService.searchProducts(query, limit);
+    @Query('ai') ai?: string,
+    @Query('limit', new DefaultValuePipe(8), ParseIntPipe) limit?: number,
+  ): Promise<HybridSearchResponse> {
+    const useAi = ai === 'true';
+    return await this.productsService.hybridSearch(query, useAi, limit);
+  }
+
+  @Sse('search/hybrid')
+  hybridSearch(@Query('q') query: string): Observable<MessageEvent> {
+    return this.productsService.hybridSearchStream(query);
   }
 
   @Get(':id/related')

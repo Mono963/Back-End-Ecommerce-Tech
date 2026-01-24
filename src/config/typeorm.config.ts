@@ -14,9 +14,10 @@ const config = {
   password: process.env.DB_PASSWORD,
   autoLoadEntities: true,
   synchronize: true,
-  logging: process.env.NODE_ENV === 'production' ? ['error'] : ['error', 'warn', 'info'],
+  logging: ['error', 'warn', 'info'],
   entities: ['dist/**/*.entity{.ts,.js}'],
   migrations: ['dist/migrations/*{.ts,.js}'],
+  ssl: { rejectUnauthorized: false },
 };
 
 export default registerAs('typeorm', () => config);

@@ -10,6 +10,15 @@ import { IPaginatedResultProducts } from './interface/IPaginatedResult';
 import { CreateProductDto, CreateVariantDto, ResponseProductDto, UpdateProductDto } from './Dto/products.Dto';
 import { mapToProductDto } from './Dto/products.validate';
 import { PRODUCTS_SEED } from 'src/seeds/products.data';
+import { N8nService } from '../N8N/n8n.service';
+import { AiSearchResponse } from '../N8N/interface/n8n.interface';
+import {
+  AiProduct,
+  AutocompleteResult,
+  HybridSearchResponse,
+  HybridSearchStreamPayload,
+} from './interface/products.interface';
+import { Observable } from 'rxjs';
 
 @Injectable()
 export class ProductsService {
@@ -26,6 +35,8 @@ export class ProductsService {
     private readonly categoriesService: CategoriesService,
 
     private readonly dataSource: DataSource,
+
+    private readonly n8nService: N8nService,
   ) {}
 
   async getProducts(searchQuery: ProductsSearchQueryDto): Promise<IPaginatedResultProducts<ResponseProductDto>> {
@@ -603,12 +614,13 @@ export class ProductsService {
     return products.map(mapToProductDto);
   }
 
+  /**
+   * Búsqueda local simple
+   */
   async searchProducts(query: string, limit: number = 10): Promise<ResponseProductDto[]> {
-    if (!query || query.trim().length < 2) {
-      return [];
-    }
+    if (!query?.trim()) return [];
 
-    const searchTerm = `%${query.trim()}%`;
+    const searchTerm = `%${query.trim().toLowerCase()}%`;
 
     const products = await this.productRepo
       .createQueryBuilder('product')
@@ -618,7 +630,7 @@ export class ProductsService {
       .leftJoinAndSelect('product.reviews', 'reviews')
       .where('product.isActive = :isActive', { isActive: true })
       .andWhere(
-        '(LOWER(product.name) LIKE LOWER(:searchTerm) OR LOWER(product.brand) LIKE LOWER(:searchTerm) OR LOWER(product.description) LIKE LOWER(:searchTerm))',
+        '(LOWER(product.name) LIKE :searchTerm OR LOWER(product.brand) LIKE :searchTerm OR LOWER(product.description) LIKE :searchTerm)',
         { searchTerm },
       )
       .orderBy('product.featured', 'DESC')
@@ -627,6 +639,154 @@ export class ProductsService {
       .getMany();
 
     return products.map(mapToProductDto);
+  }
+
+  /**
+   * Autocomplete optimizado: startsWith + contains en un solo query
+   */
+  async autocomplete(query: string, limit: number = 8): Promise<AutocompleteResult[]> {
+    if (!query || query.trim().length < 1) return [];
+
+    const likeTerm = `%${query.trim().toLowerCase()}%`;
+    const startsWith = query.trim().toLowerCase();
+
+    const products = await this.productRepo
+      .createQueryBuilder('product')
+      .leftJoin('product.category', 'category')
+      .select([
+        'product.id',
+        'product.name',
+        'product.brand',
+        'product.basePrice',
+        'product.imgUrls',
+        'product.featured',
+        'category.categoryName',
+      ])
+      .where('product.isActive = :isActive', { isActive: true })
+      .andWhere(
+        '(LOWER(product.name) LIKE :likeTerm OR LOWER(product.brand) LIKE :likeTerm OR LOWER(product.description) LIKE :likeTerm)',
+        { likeTerm },
+      )
+      .take(limit)
+      .getMany();
+
+    // Orden en memoria: primero startsWith, luego featured
+    const sorted = products.sort((a, b) => {
+      const aStarts = a.name.toLowerCase().startsWith(startsWith) ? 0 : 1;
+      const bStarts = b.name.toLowerCase().startsWith(startsWith) ? 0 : 1;
+      if (aStarts !== bStarts) return aStarts - bStarts;
+      return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
+    });
+
+    return sorted.map((p) => ({
+      id: p.id,
+      name: p.name,
+      brand: p.brand,
+      price: Number(p.basePrice),
+      image: p.imgUrls?.[0] || null,
+      category: p.category?.categoryName || null,
+    }));
+  }
+
+  /**
+   * Búsqueda vía AI (n8n) con fallback local
+   */
+  async aiSearch(query: string): Promise<AiSearchResponse> {
+    if (!query?.trim() || query.trim().length < 3) {
+      return { products: [], message: 'Consulta muy corta' };
+    }
+
+    try {
+      if (!this.n8nService.isEnabled) {
+        return { products: await this.searchProducts(query, 10) };
+      }
+      return await this.n8nService.productSearch(query.trim());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error desconocido';
+      this.logger.warn(`AI search failed: ${message}`);
+      return { products: await this.searchProducts(query, 10), fallback: true };
+    }
+  }
+
+  /**
+   * Búsqueda híbrida: local + AI
+   */
+  async hybridSearch(query: string, useAi: boolean = false, limit: number = 8): Promise<HybridSearchResponse> {
+    if (!query?.trim()) return { results: [], source: 'local' };
+
+    const localResults = await this.autocomplete(query, limit);
+
+    if (!useAi || !this.n8nService.isEnabled || query.trim().length < 3) {
+      return { results: localResults, source: 'local' };
+    }
+
+    try {
+      const aiResponse = await this.n8nService.productSearch(query.trim());
+
+      const aiResults: AutocompleteResult[] = (aiResponse.products as AiProduct[]).map((p) => ({
+        id: p.id,
+        name: p.name,
+        brand: p.brand,
+        price: Number(p.basePrice),
+        image: p.imgUrls?.[0] || null,
+        category: p.category_name || null,
+      }));
+
+      return {
+        results: localResults,
+        aiResults,
+        aiMessage: aiResponse.message,
+        source: 'hybrid',
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error desconocido';
+      this.logger.warn(`Hybrid AI search failed: ${message}`);
+      return { results: localResults, source: 'local' };
+    }
+  }
+
+  hybridSearchStream(query: string): Observable<{ data: HybridSearchStreamPayload }> {
+    return new Observable<{ data: HybridSearchStreamPayload }>((subscriber) => {
+      // 🔹 BÚSQUEDA LOCAL (rápida)
+      this.autocomplete(query, 8)
+        .then((localResults) => {
+          subscriber.next({
+            data: {
+              source: 'local',
+              results: localResults,
+            },
+          });
+        })
+        .catch(() => {
+          // opcional: no rompemos el stream
+        });
+
+      // 🔹 BÚSQUEDA AI (lenta)
+      this.n8nService
+        .productSearch(query)
+        .then((aiResponse) => {
+          const aiResults: AutocompleteResult[] = (aiResponse.products as AiProduct[]).map((p) => ({
+            id: p.id,
+            name: p.name,
+            brand: p.brand,
+            price: Number(p.basePrice),
+            image: p.imgUrls?.[0] || null,
+            category: p.category_name || null,
+          }));
+
+          subscriber.next({
+            data: {
+              source: 'ai',
+              results: aiResults,
+            },
+          });
+
+          subscriber.complete();
+        })
+        .catch(() => {
+          subscriber.complete();
+        });
+    });
   }
 
   async getRelatedProducts(productId: string, limit: number = 6): Promise<ResponseProductDto[]> {

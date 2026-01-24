@@ -4,7 +4,7 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { RegisterDateMiddleware } from './middlewares/registerDate.middleware';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import typeOrmConfig from './config/typeorm';
+import typeOrmConfig from './config/typeorm.config';
 import { DataSourceOptions } from 'typeorm';
 import { CategoriesModule } from './modules/category/category.module';
 import { FileModule } from './modules/file/file.module';
@@ -19,6 +19,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { ReviewModule } from './modules/review/review.module';
 import { WishlistModule } from './modules/wishlist/wishlist.module';
+import { N8nModule } from './modules/N8N/n8n.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { WishlistModule } from './modules/wishlist/wishlist.module';
     SeedsModule,
     ReviewModule,
     WishlistModule,
+    N8nModule,
   ],
   controllers: [AppController],
   providers: [

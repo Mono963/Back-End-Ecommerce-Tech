@@ -82,3 +82,42 @@ export type MouseSpecs = {
   maxDPI: number;
   wireless?: boolean;
 };
+
+export interface AutocompleteResult {
+  id: string;
+  name: string;
+  brand: string;
+  price: number;
+  image: string | null;
+  category: string | null;
+}
+
+export interface HybridSearchResponse {
+  results: AutocompleteResult[];
+  aiResults?: AutocompleteResult[];
+  aiMessage?: string;
+  source: 'local' | 'hybrid';
+}
+
+export interface AiProduct {
+  id: string;
+  name: string;
+  brand: string;
+  basePrice: number;
+  imgUrls?: string[];
+  category_name?: string | null;
+}
+
+export interface AutocompleteResult {
+  id: string;
+  name: string;
+  brand: string;
+  price: number;
+  image: string | null;
+  category: string | null;
+}
+
+export interface HybridSearchStreamPayload {
+  source: 'local' | 'ai';
+  results: AutocompleteResult[];
+}

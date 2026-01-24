@@ -7,12 +7,14 @@ import { ProductsService } from './products.service';
 import { CategoriesModule } from '../category/category.module';
 import { AuthsModule } from '../auths/auths.module';
 import { Review } from '../review/entities/review.entity';
+import { N8nModule } from '../N8N/n8n.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Product, ProductVariant, Review]),
     forwardRef(() => CategoriesModule),
     forwardRef(() => AuthsModule),
+    forwardRef(() => N8nModule),
   ],
   controllers: [ProductsController],
   providers: [ProductsService],

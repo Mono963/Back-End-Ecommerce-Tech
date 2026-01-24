@@ -9,7 +9,7 @@ import { Product } from '../products/Entities/products.entity';
 import { ProductsModule } from '../products/products.module';
 import { AuthsModule } from '../auths/auths.module';
 
-import { CloudinaryProvider } from '../../config/cloudinary';
+import { CloudinaryProvider } from '../../config/cloudinary.config';
 
 @Module({
   imports: [TypeOrmModule.forFeature([File, Product]), forwardRef(() => ProductsModule), forwardRef(() => AuthsModule)],
