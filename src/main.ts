@@ -4,29 +4,33 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import compression from 'compression';
 import { AppModule } from './app.module';
+import { WinstonModule } from 'nest-winston';
+import { loggerConfig } from './config/logger.config';
 
 async function bootstrap(): Promise<void> {
+  const app = await NestFactory.create(AppModule, {
+    logger: WinstonModule.createLogger(loggerConfig),
+  });
+
   const logger = new Logger('Bootstrap');
 
-  const app = await NestFactory.create(AppModule);
-
-  // ✅ Security Headers (Helmet)
-  app.use(
-    helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Para Swagger
-          imgSrc: ["'self'", 'data:', 'https:'],
-        },
+  // Helmet (tipado explícito)
+  const helmetMiddleware = helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Para Swagger
+        imgSrc: ["'self'", 'data:', 'https:'],
       },
-      crossOriginEmbedderPolicy: false, // Para Swagger
-    }),
-  );
+    },
+    crossOriginEmbedderPolicy: false, // Para Swagger
+  });
+  app.use(helmetMiddleware);
 
-  // ✅ Compression
-  app.use(compression());
+  // Compression (tipado explícito)
+  const compressionMiddleware = compression();
+  app.use(compressionMiddleware);
 
   // Validation
   app.useGlobalPipes(

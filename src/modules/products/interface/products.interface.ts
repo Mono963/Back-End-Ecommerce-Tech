@@ -87,7 +87,7 @@ export interface AutocompleteResult {
   id: string;
   name: string;
   brand: string;
-  price: number;
+  basePrice: number;
   image: string | null;
   category: string | null;
 }
@@ -112,7 +112,7 @@ export interface AutocompleteResult {
   id: string;
   name: string;
   brand: string;
-  price: number;
+  basePrice: number;
   image: string | null;
   category: string | null;
 }
@@ -120,4 +120,5 @@ export interface AutocompleteResult {
 export interface HybridSearchStreamPayload {
   source: 'local' | 'ai';
   results: AutocompleteResult[];
+  message?: string;
 }

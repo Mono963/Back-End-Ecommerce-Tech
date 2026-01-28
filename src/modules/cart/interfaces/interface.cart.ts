@@ -1,4 +1,4 @@
-import { ProductVariant } from 'src/modules/products/Entities/products_variant.entity';
+import { ProductVariant } from '../../products/entities/products_variant.entity';
 
 export class ICartItemVariantDTO {
   id: string;

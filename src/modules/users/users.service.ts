@@ -5,7 +5,7 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { Users } from './Entities/users.entity';
+import { Users } from './entities/users.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateUserDbDto, UpdateUserDbDto } from './Dtos/CreateUserDto';
@@ -23,7 +23,7 @@ import { RolesService } from '../roles/roles.service';
 import { CreateAddressDto, UpdateAddressDto } from './Dtos/address.dto';
 import { UserAddress } from './interface/IUserResponseDto';
 import { v4 as uuidv4 } from 'uuid';
-import { Order } from '../orders/Entities/order.entity';
+import { Order } from '../orders/entities/order.entity';
 import { Wishlist } from '../wishlist/entities/wishlist.entity';
 import { Review } from '../review/entities/review.entity';
 
@@ -155,7 +155,7 @@ export class UsersService {
 
     for (const campo of camposRestringidos) {
       if (Object.prototype.hasOwnProperty.call(dto, campo)) {
-        delete dto[campo];
+        delete (dto as Record<string, unknown>)[campo];
       }
     }
 

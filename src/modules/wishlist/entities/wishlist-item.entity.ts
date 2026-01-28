@@ -1,6 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, JoinColumn, Index } from 'typeorm';
+import { Product } from '../../products/entities/products.entity';
 import { Wishlist } from './wishlist.entity';
-import { Product } from '../../products/Entities/products.entity';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, JoinColumn, Index } from 'typeorm';
 
 @Entity('wishlist_items')
 @Index(['wishlist', 'product'], { unique: true })

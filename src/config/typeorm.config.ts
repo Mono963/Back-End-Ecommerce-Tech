@@ -5,6 +5,8 @@ import { DataSource, DataSourceOptions } from 'typeorm';
 const envFile = process.env.NODE_ENV === 'production' ? '.env' : '.env.development';
 dotenvConfig({ path: envFile });
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const config = {
   type: 'postgres',
   host: process.env.DB_HOST,
@@ -13,13 +15,10 @@ const config = {
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   autoLoadEntities: true,
-  synchronize: true,
-  logging: ['error', 'warn', 'info'],
-  entities: ['dist/**/*.entity{.ts,.js}'],
-  migrations: ['dist/migrations/*{.ts,.js}'],
-  ssl: { rejectUnauthorized: false },
+  synchronize: !isProduction,
+  logging: isProduction ? ['error'] : ['error', 'warn', 'info'],
+  ssl: isProduction ? { rejectUnauthorized: true } : { rejectUnauthorized: false },
 };
 
 export default registerAs('typeorm', () => config);
-
 export const connectionSource = new DataSource(config as DataSourceOptions);

@@ -20,6 +20,10 @@ import { AppController } from './app.controller';
 import { ReviewModule } from './modules/review/review.module';
 import { WishlistModule } from './modules/wishlist/wishlist.module';
 import { N8nModule } from './modules/N8N/n8n.module';
+import { CacheModule } from '@nestjs/cache-manager';
+import { BullModule } from '@nestjs/bull';
+import { cacheConfig } from './config/cache.config';
+import { bullConfig } from './config/bull.config';
 
 @Module({
   imports: [
@@ -38,6 +42,8 @@ import { N8nModule } from './modules/N8N/n8n.module';
       },
     }),
     ThrottlerModule.forRoot(throttlerConfig),
+    CacheModule.register(cacheConfig),
+    BullModule.forRoot(bullConfig),
     UsersModule,
     ProductsModule,
     OrdersModule,

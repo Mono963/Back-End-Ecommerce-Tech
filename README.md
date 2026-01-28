@@ -1,6 +1,8 @@
 # 🛒 E-commerce Backend API
 
-Backend completo de e-commerce construido con NestJS, TypeORM y PostgreSQL. Sistema robusto con autenticación JWT, gestión de productos con variantes, carrito de compras, órdenes, reviews y wishlist.
+Backend completo de e-commerce construido con NestJS, TypeORM y PostgreSQL. Sistema robusto con
+autenticación JWT, gestión de productos con variantes, carrito de compras, órdenes, reviews y
+wishlist.
 
 [![NestJS](https://img.shields.io/badge/NestJS-11.x-red.svg)](https://nestjs.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue.svg)](https://www.typescriptlang.org/)
@@ -32,6 +34,7 @@ Backend completo de e-commerce construido con NestJS, TypeORM y PostgreSQL. Sist
 ## ✨ Características
 
 ### 🔐 Autenticación y Autorización
+
 - **JWT Authentication** con tokens firmados
 - **Google OAuth 2.0** para login social
 - **Role-Based Access Control (RBAC)** con 3 niveles:
@@ -41,6 +44,7 @@ Backend completo de e-commerce construido con NestJS, TypeORM y PostgreSQL. Sist
 - Guards personalizados con jerarquía de roles
 
 ### 🛍️ Gestión de Productos
+
 - CRUD completo de productos
 - **Sistema de variantes** (RAM, Storage, Color, Warranty, etc.)
 - Cálculo dinámico de precios con variantes
@@ -51,6 +55,7 @@ Backend completo de e-commerce construido con NestJS, TypeORM y PostgreSQL. Sist
 - Soft delete (desactivación sin borrado físico)
 
 ### 🛒 Carrito de Compras
+
 - Agregar/actualizar/eliminar items
 - Selección de variantes por item
 - Cálculo automático de subtotales
@@ -58,6 +63,7 @@ Backend completo de e-commerce construido con NestJS, TypeORM y PostgreSQL. Sist
 - Resumen optimizado para navbar (count + total)
 
 ### 📦 Sistema de Órdenes
+
 - Creación de órdenes desde carrito
 - Estados de orden: `PENDING` → `PAID` → `PROCESSING` → `SHIPPED` → `DELIVERED`
 - Cancelación con restauración de stock
@@ -69,16 +75,19 @@ Backend completo de e-commerce construido con NestJS, TypeORM y PostgreSQL. Sist
 - Estadísticas de revenue y conversión
 
 ### ⭐ Reviews y Ratings
+
 - Sistema de calificaciones (1-5 estrellas)
 - Una review por usuario por producto
 - CRUD completo con validaciones
 
 ### ❤️ Wishlist
+
 - Lista de deseos por usuario
 - Agregar/eliminar productos
 - Resumen optimizado (count)
 
 ### 👥 Gestión de Usuarios
+
 - CRUD completo de usuarios
 - Gestión de direcciones múltiples
 - Cambio de contraseña seguro
@@ -87,20 +96,24 @@ Backend completo de e-commerce construido con NestJS, TypeORM y PostgreSQL. Sist
 - Paginación de listados
 
 ### 📂 Categorías
+
 - CRUD de categorías de productos
 - Productos agrupados por categoría
 
 ### 🖼️ Gestión de Archivos
+
 - Upload de imágenes a **Cloudinary**
 - Gestión de imágenes por producto
 - Validación de tipo y tamaño
 
 ### 📧 Sistema de Emails
+
 - Envío de emails con **Nodemailer**
 - Templates con **Handlebars**
 - CSS inlining con **Juice**
 
 ### 🔒 Seguridad
+
 - **Helmet** para headers de seguridad
 - **CORS** configurado
 - **Rate Limiting** (Throttler)
@@ -113,6 +126,7 @@ Backend completo de e-commerce construido con NestJS, TypeORM y PostgreSQL. Sist
 ## 🏗️ Arquitectura
 
 ### Stack Tecnológico
+
 - **Framework**: NestJS 11.x
 - **Lenguaje**: TypeScript 5.8
 - **ORM**: TypeORM 0.3.25
@@ -127,6 +141,7 @@ Backend completo de e-commerce construido con NestJS, TypeORM y PostgreSQL. Sist
 - **Containerización**: Docker + Docker Compose
 
 ### Patrones de Diseño
+
 - **Módulos por dominio** (feature modules)
 - **Repository Pattern** via TypeORM
 - **DTO Pattern** para validación
@@ -154,17 +169,20 @@ Backend completo de e-commerce construido con NestJS, TypeORM y PostgreSQL. Sist
 ## 🚀 Instalación
 
 ### 1. Clonar el repositorio
+
 ```bash
 git clone <repository-url>
 cd Back-end-ecommerce
 ```
 
 ### 2. Instalar dependencias
+
 ```bash
 npm install
 ```
 
 ### 3. Configurar variables de entorno
+
 ```bash
 # Copiar el archivo de ejemplo
 cp .env.example .env.development
@@ -173,6 +191,7 @@ cp .env.example .env.development
 ```
 
 ### 4. Crear base de datos PostgreSQL
+
 ```bash
 # Conectarse a PostgreSQL
 psql -U postgres
@@ -185,6 +204,7 @@ CREATE DATABASE ecommerce;
 ```
 
 ### 5. Ejecutar la aplicación
+
 ```bash
 # Modo desarrollo (con hot-reload)
 npm run start:dev
@@ -195,6 +215,7 @@ npm start
 ```
 
 La aplicación estará disponible en:
+
 - **API**: http://localhost:3001
 - **Swagger Docs**: http://localhost:3001/api/docs
 
@@ -250,17 +271,20 @@ NODE_ENV=development
 ### Obtener Credenciales
 
 #### Google OAuth
+
 1. Ir a [Google Cloud Console](https://console.cloud.google.com/)
 2. Crear proyecto → APIs & Services → Credentials
 3. Create OAuth 2.0 Client ID
 4. Authorized redirect URIs: `http://localhost:3001/auth/google/callback`
 
 #### Cloudinary
+
 1. Registrarse en [Cloudinary](https://cloudinary.com/)
 2. Dashboard → Account Details
 3. Copiar Cloud Name, API Key, API Secret
 
 #### Gmail SMTP (App Password)
+
 1. Habilitar 2FA en tu cuenta de Google
 2. Google Account → Security → 2-Step Verification → App passwords
 3. Generar contraseña para "Mail"
@@ -270,6 +294,7 @@ NODE_ENV=development
 ## 📜 Scripts Disponibles
 
 ### Desarrollo
+
 ```bash
 npm run start:dev          # Modo desarrollo con hot-reload
 npm run start:debug        # Modo debug
@@ -277,12 +302,14 @@ npm start                  # Modo producción (requiere build)
 ```
 
 ### Build
+
 ```bash
 npm run build              # Compilar TypeScript
 npm run build:prod         # Build optimizado con webpack
 ```
 
 ### Code Quality
+
 ```bash
 npm run lint               # Verificar errores de ESLint
 npm run lint:fix           # Corregir errores automáticamente
@@ -294,6 +321,7 @@ npm run code:fix           # Lint fix + format
 ```
 
 ### Testing
+
 ```bash
 npm test                   # Ejecutar tests unitarios
 npm run test:watch         # Tests en modo watch
@@ -303,6 +331,7 @@ npm run test:debug         # Debug de tests
 ```
 
 ### Base de Datos
+
 ```bash
 npm run migration:generate # Generar migración desde cambios en entities
 npm run migration:create   # Crear migración vacía
@@ -312,6 +341,7 @@ npm run migration:show     # Ver estado de migraciones
 ```
 
 ### Pre-deploy
+
 ```bash
 npm run pre-deploy         # code:check + test + build
 ```
@@ -321,9 +351,11 @@ npm run pre-deploy         # code:check + test + build
 ## 🌱 Seeding de Datos
 
 ### 1. Seed de Roles (Automático al iniciar)
+
 Los roles `CLIENT`, `ADMIN`, `SUPER_ADMIN` se crean automáticamente al iniciar la aplicación.
 
 ### 2. Seed de Categorías
+
 Crear categorías manualmente vía API o directamente en la base de datos:
 
 ```bash
@@ -335,6 +367,7 @@ Crear categorías manualmente vía API o directamente en la base de datos:
 ```
 
 Categorías sugeridas:
+
 - Laptops
 - Mouses
 - Teclados
@@ -342,6 +375,7 @@ Categorías sugeridas:
 - Accesorios
 
 ### 3. Seed de Productos
+
 El proyecto incluye datos de seed en `src/seeds/products.data.ts` con 10+ productos.
 
 **Endpoint:** `GET /products/seed` (requiere autenticación ADMIN)
@@ -371,6 +405,7 @@ Authorization: Bearer <token>
 ```
 
 Productos incluidos en seed:
+
 - Dell XPS 15 (con variantes de RAM y Storage)
 - HP Pavilion Gaming
 - MSI Katana GF66
@@ -383,11 +418,13 @@ Productos incluidos en seed:
 ## 📚 API Documentation
 
 ### Swagger UI
+
 Documentación interactiva disponible en: **http://localhost:3001/api/docs**
 
 ### Endpoints Principales
 
 #### Autenticación
+
 ```
 POST   /auth/signup              - Registro de usuario
 POST   /auth/signin/user         - Login con email/password
@@ -396,6 +433,7 @@ GET    /auth/google/callback     - Callback de Google OAuth
 ```
 
 #### Usuarios
+
 ```
 GET    /users                    - Listar usuarios (ADMIN)
 GET    /users/:id                - Obtener usuario por ID
@@ -411,6 +449,7 @@ DELETE /users/addresses/:id      - Eliminar dirección
 ```
 
 #### Productos
+
 ```
 GET    /products                 - Listar productos (paginado, búsqueda)
 GET    /products/featured        - Productos destacados
@@ -425,6 +464,7 @@ GET    /products/seed            - Precargar datos (ADMIN)
 ```
 
 #### Carrito
+
 ```
 GET    /cart/id                  - Obtener mi carrito
 GET    /cart/summary             - Resumen (count + total)
@@ -436,6 +476,7 @@ PUT    /cart/address             - Seleccionar dirección de envío
 ```
 
 #### Órdenes
+
 ```
 GET    /orders                   - Listar órdenes (ADMIN, con filtros)
 GET    /orders/my-orders         - Mis órdenes
@@ -447,6 +488,7 @@ GET    /orders/stats             - Estadísticas de revenue (ADMIN)
 ```
 
 #### Reviews
+
 ```
 POST   /review                   - Crear review
 GET    /review                   - Listar reviews (ADMIN)
@@ -456,6 +498,7 @@ DELETE /review/:id               - Eliminar review
 ```
 
 #### Wishlist
+
 ```
 GET    /wishlist/my-wishlist     - Obtener mi wishlist
 GET    /wishlist/summary         - Resumen (count)
@@ -464,6 +507,7 @@ DELETE /wishlist/remove/:productId - Eliminar producto
 ```
 
 #### Categorías
+
 ```
 GET    /categories               - Listar categorías
 POST   /categories               - Crear categoría (ADMIN)
@@ -472,6 +516,7 @@ DELETE /categories/:id           - Eliminar categoría (ADMIN)
 ```
 
 #### Health Check
+
 ```
 GET    /health                   - Estado del servidor
 ```
@@ -524,7 +569,7 @@ src/
 │   │   ├── users.controller.ts
 │   │   ├── users.service.ts
 │   │   ├── users.module.ts
-│   │   ├── Entities/
+│   │   ├── entities/
 │   │   ├── Dtos/
 │   │   └── interface/
 │   │
@@ -532,7 +577,7 @@ src/
 │   │   ├── products.controller.ts
 │   │   ├── products.service.ts
 │   │   ├── products.module.ts
-│   │   ├── Entities/
+│   │   ├── entities/
 │   │   │   ├── products.entity.ts
 │   │   │   └── products_variant.entity.ts
 │   │   ├── Dto/
@@ -542,7 +587,7 @@ src/
 │   │   ├── orders.controller.ts
 │   │   ├── orders.service.ts
 │   │   ├── orders.module.ts
-│   │   ├── Entities/
+│   │   ├── entities/
 │   │   │   ├── order.entity.ts
 │   │   │   ├── orderDetails.entity.ts
 │   │   │   └── order.item.ts
@@ -580,6 +625,7 @@ src/
 ## 🔐 Autenticación y Autorización
 
 ### JWT Payload
+
 ```typescript
 {
   sub: string;           // User ID
@@ -594,6 +640,7 @@ src/
 ```
 
 ### Jerarquía de Roles
+
 ```
 SUPER_ADMIN (acceso total)
     ↓
@@ -603,6 +650,7 @@ CLIENT (operaciones de compra)
 ```
 
 ### Uso en Controllers
+
 ```typescript
 import { Roles } from '@/decorator/role.decorator';
 import { AuthGuard } from '@/guards/auth.guards';
@@ -611,7 +659,6 @@ import { RoleGuard } from '@/guards/auth.guards.role';
 @Controller('products')
 @UseGuards(AuthGuard, RoleGuard)
 export class ProductsController {
-
   @Get()
   @SkipThrottle()
   getProducts() {
@@ -627,6 +674,7 @@ export class ProductsController {
 ```
 
 ### Ejemplo de Login
+
 ```bash
 # 1. Registro
 POST http://localhost:3001/auth/signup
@@ -718,7 +766,9 @@ npm run migration:show
 ```
 
 ### Soft Deletes
+
 Los siguientes entities usan soft delete (no se borran físicamente):
+
 - `Product` (campo `isActive`)
 - `User` (campo `deletedAt`)
 
@@ -760,6 +810,7 @@ docker run -p 3001:3000 \
 ## 🧪 Testing
 
 ### Ejecutar Tests
+
 ```bash
 # Todos los tests
 npm test
@@ -775,6 +826,7 @@ npm run test:e2e
 ```
 
 ### Estructura de Tests (Pendiente de implementar)
+
 ```
 src/modules/auths/
   ├── auths.service.spec.ts
@@ -935,18 +987,21 @@ Authorization: Bearer {token}
 ## 📝 Notas de Desarrollo
 
 ### ⚠️ Importante
+
 - **Este proyecto está en fase de DESARROLLO**
 - `synchronize: true` está habilitado para auto-sincronización de schema
 - En PRODUCCIÓN se debe usar `synchronize: false` + migraciones
 - Rate limiting configurado en 10 req/min (ajustar para producción)
 
 ### 🔧 Configuraciones de Desarrollo
+
 - Hot-reload habilitado con `start:dev`
 - Logging de queries habilitado en desarrollo
 - Swagger disponible en desarrollo
 - CORS permisivo para localhost
 
 ### 📊 Próximas Implementaciones
+
 - [ ] Tests unitarios y E2E
 - [ ] Integración de pagos (Mercadopago)
 - [ ] Sistema de cupones/descuentos

@@ -1,5 +1,5 @@
-import { OrderStatus } from 'src/modules/orders/Entities/order.entity';
-import { Users } from '../Entities/users.entity';
+import { OrderStatus } from '../../orders/entities/order.entity';
+import { Users } from '../entities/users.entity';
 
 export interface IUserResponseDto {
   id: string;

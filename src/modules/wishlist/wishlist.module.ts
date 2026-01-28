@@ -4,8 +4,8 @@ import { WishlistController } from './wishlist.controller';
 import { WishlistService } from './wishlist.service';
 import { Wishlist } from './entities/wishlist.entity';
 import { WishlistItem } from './entities/wishlist-item.entity';
-import { Product } from '../products/Entities/products.entity';
-import { Users } from '../users/Entities/users.entity';
+import { Product } from '../products/entities/products.entity';
+import { Users } from '../users/entities/users.entity';
 import { JwtModule } from '@nestjs/jwt';
 
 @Module({

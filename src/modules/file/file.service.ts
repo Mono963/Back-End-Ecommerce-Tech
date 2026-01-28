@@ -7,7 +7,7 @@ import { v2 as CloudinaryType } from 'cloudinary';
 import { ProductsService } from '../products/products.service';
 import { File } from './entities/file.entity';
 import { CloudinaryUploadResult } from './interface/file.interface';
-import { Product } from '../products/Entities/products.entity';
+import { Product } from '../products/entities/products.entity';
 
 @Injectable()
 export class FileService {

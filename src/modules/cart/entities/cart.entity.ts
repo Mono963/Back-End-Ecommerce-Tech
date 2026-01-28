@@ -1,3 +1,5 @@
+import { CartItem } from './cart.item.entity';
+import { Users } from '../../users/entities/users.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -9,8 +11,6 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { CartItem } from './cart.item.entity';
-import { Users } from 'src/modules/users/Entities/users.entity';
 
 @Index(['updatedAt'])
 @Index(['user_id'], { unique: true })

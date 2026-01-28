@@ -25,10 +25,11 @@ import { Roles, UserRole } from '../../decorator/role.decorator';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import { ProductsSearchQueryDto } from './Dto/PaginationQueryDto';
 import { PaginatedProductsDto } from './Dto/paginated-products.dto';
-import { ProductVariant } from './Entities/products_variant.entity';
+import { ProductVariant } from './entities/products_variant.entity';
 import { CreateProductDto, CreateVariantDto, ResponseProductDto, UpdateProductDto } from './Dto/products.Dto';
 import { HybridSearchResponse } from './interface/products.interface';
 import { Observable } from 'rxjs';
+import { SkipThrottle } from '@nestjs/throttler';
 
 @ApiTags('Products')
 @Controller('products')
@@ -181,6 +182,7 @@ export class ProductsController {
     return await this.productsService.getProductsByCategory(categoryId);
   }
 
+  @SkipThrottle()
   @Get('search')
   @ApiOperation({
     summary: 'Búsqueda híbrida de productos',
@@ -238,6 +240,7 @@ export class ProductsController {
       },
     },
   })
+  @SkipThrottle()
   async search(
     @Query('q') query: string,
     @Query('ai') ai?: string,
@@ -247,6 +250,7 @@ export class ProductsController {
     return await this.productsService.hybridSearch(query, useAi, limit);
   }
 
+  @SkipThrottle()
   @Sse('search/hybrid')
   hybridSearch(@Query('q') query: string): Observable<MessageEvent> {
     return this.productsService.hybridSearchStream(query);

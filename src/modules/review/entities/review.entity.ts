@@ -1,5 +1,3 @@
-import { Product } from 'src/modules/products/Entities/products.entity';
-import { Users } from 'src/modules/users/Entities/users.entity';
 import {
   Column,
   CreateDateColumn,
@@ -12,6 +10,8 @@ import {
   Unique,
 } from 'typeorm';
 import { Rating } from '../interface/IReview.interface';
+import { Users } from '../../users/entities/users.entity';
+import { Product } from '../../products/entities/products.entity';
 
 @Entity('reviews')
 @Unique(['user', 'product'])
@@ -36,11 +36,11 @@ export class Review {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @ManyToOne(() => Users)
+  @ManyToOne(() => Users, (user) => user.reviews)
   @JoinColumn({ name: 'user_id' })
   user: Users;
 
-  @ManyToOne(() => Product)
+  @ManyToOne(() => Product, (product) => product.reviews)
   @JoinColumn({ name: 'product_id' })
   product: Product;
 }

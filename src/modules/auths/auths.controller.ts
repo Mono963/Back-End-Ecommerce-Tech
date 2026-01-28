@@ -81,6 +81,70 @@ export class AuthsController {
     const frontendUrl = this.configService.get<string>('GoogleOAuth.frontendUrl');
 
     const result = await this.authService.googleLogin(googleUser);
-    res.redirect(`${frontendUrl}/auth/callback?token=${result.accessToken}&userId=${result.user.id}`);
+
+    // Generar código temporal en lugar de enviar el token directamente en la URL
+    const authCode = this.authService.generateAuthCode(result.user.id, result.accessToken);
+
+    // Redirigir con código temporal (30 seg de vida, un solo uso)
+    // El frontend debe intercambiar este código por el token real via POST /auth/exchange-code
+    res.redirect(`${frontendUrl}/auth/callback?code=${authCode}`);
+  }
+
+  @ApiOperation({ summary: 'Exchange authorization code for access token' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string', description: 'Authorization code from OAuth redirect' },
+      },
+      required: ['code'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Token exchanged successfully. Access token set in HttpOnly cookie.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid or expired authorization code',
+  })
+  @SkipThrottle()
+  @Post('exchange-code')
+  exchangeCode(
+    @Body('code') code: string,
+    @Res({ passthrough: true }) res: Response,
+  ): { userId: string; success: boolean } {
+    const tokenData = this.authService.exchangeAuthCode(code);
+
+    // Establecer token en cookie HttpOnly (más seguro que localStorage)
+    res.cookie('access_token', tokenData.accessToken, {
+      httpOnly: true, // No accesible desde JavaScript
+      secure: process.env.NODE_ENV === 'production', // Solo HTTPS en producción
+      sameSite: 'strict', // Protección CSRF
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
+    });
+
+    return {
+      userId: tokenData.userId,
+      success: true,
+    };
+  }
+
+  @ApiOperation({ summary: 'Logout user by clearing access token cookie' })
+  @ApiResponse({
+    status: 200,
+    description: 'User logged out successfully',
+  })
+  @SkipThrottle()
+  @Post('logout')
+  logout(@Res({ passthrough: true }) res: Response): { success: boolean } {
+    // Limpiar la cookie de acceso
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    });
+
+    return { success: true };
   }
 }

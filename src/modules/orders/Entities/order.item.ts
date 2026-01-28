@@ -9,9 +9,9 @@ import {
   CreateDateColumn,
   Index,
 } from 'typeorm';
-import { OrderDetail } from './orderDetails.entity';
-import { Product } from 'src/modules/products/Entities/products.entity';
-import { ProductVariant } from 'src/modules/products/Entities/products_variant.entity';
+import { OrderDetail } from './order.details.entity';
+import { Product } from '../../products/entities/products.entity';
+import { ProductVariant } from '../../products/entities/products_variant.entity';
 
 @Index(['order_detail_id'])
 @Index(['product_id'])

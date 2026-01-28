@@ -1,11 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Review } from './entities/review.entity';
-import { Product } from '../products/Entities/products.entity';
+import { Product } from '../products/entities/products.entity';
 import { DataSource, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Users } from '../users/Entities/users.entity';
+import { Users } from '../users/entities/users.entity';
 import {
-  PaginatedReviewsDto,
   PaginatedReviewsAdminDto,
   ReviewFiltersDto,
   ReviewResponsePublic,

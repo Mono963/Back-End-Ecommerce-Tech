@@ -10,9 +10,9 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In, LessThan, QueryRunner, EntityManager } from 'typeorm';
 import { Cart } from './entities/cart.entity';
-import { Users } from '../users/Entities/users.entity';
-import { Product } from '../products/Entities/products.entity';
-import { ProductVariant } from '../products/Entities/products_variant.entity';
+import { Users } from '../users/entities/users.entity';
+import { Product } from '../products/entities/products.entity';
+import { ProductVariant } from '../products/entities/products_variant.entity';
 import { CartItem } from './entities/cart.item.entity';
 import { AddToCartDTO, UpdateCartItemDTO } from './dto/create-cart.dto';
 import { ProductsService } from '../products/products.service';
@@ -374,10 +374,25 @@ export class CartService {
     const cart = await this.getOrCreateCart(userId);
     const issues: IStockValidationIssue[] = [];
 
+    if (cart.items.length === 0) {
+      return { valid: true, issues: [] };
+    }
+
+    // 1. Extraer todos los IDs de productos
+    const productIds = cart.items.map((item) => item.product.id);
+
+    // 2. Cargar TODOS los productos en UNA query (evita N+1)
+    const products = await this.productRepository.find({
+      where: { id: In(productIds) },
+      relations: ['variants'],
+    });
+
+    // 3. Crear mapa para acceso O(1)
+    const productMap = new Map(products.map((p) => [p.id, p]));
+
+    // 4. Procesar en memoria (sin queries adicionales)
     for (const item of cart.items) {
-      const currentProduct = await this.productRepository.findOne({
-        where: { id: item.product.id },
-      });
+      const currentProduct = productMap.get(item.product.id);
 
       if (!currentProduct?.isActive) {
         issues.push({
@@ -391,8 +406,14 @@ export class CartService {
         continue;
       }
 
+      // Calcular stock disponible del producto y sus variantes
       const variantIds = item.variants?.map((v) => v.id) || [];
-      const availableStock = await this.productsService.getAvailableStock(item.product.id, variantIds);
+      let availableStock = currentProduct.baseStock;
+
+      if (variantIds.length > 0 && currentProduct.variants) {
+        const matchingVariants = currentProduct.variants.filter((v) => variantIds.includes(v.id));
+        availableStock = matchingVariants.reduce((sum, v) => sum + v.stock, 0);
+      }
 
       if (availableStock < item.quantity) {
         issues.push({

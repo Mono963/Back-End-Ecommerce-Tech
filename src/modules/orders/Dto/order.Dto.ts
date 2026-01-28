@@ -14,7 +14,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { OrderStatus } from '../Entities/order.entity';
+import { OrderStatus } from '../entities/order.entity';
 import { UserAddress } from 'src/modules/users/interface/IUserResponseDto';
 
 export class ProductSnapshotDto {

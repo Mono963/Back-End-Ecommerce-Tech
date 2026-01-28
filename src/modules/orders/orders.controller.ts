@@ -18,7 +18,7 @@ import { AuthGuard } from '../../guards/auth.guards';
 import { RoleGuard } from '../../guards/auth.guards.role';
 import { Roles, UserRole } from '../../decorator/role.decorator';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
-import { OrderStatus } from './Entities/order.entity';
+import { OrderStatus } from './entities/order.entity';
 import {
   OrderFiltersDto,
   OrderStatsDto,

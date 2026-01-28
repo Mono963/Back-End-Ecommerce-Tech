@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { GoogleUser, IUserAuthResponse } from '../interface/IAuth.interface';
-import { Users } from 'src/modules/users/Entities/users.entity';
+import { Users } from '../../users/entities/users.entity';
 
 export class AuthValidations {
   private static readonly BCRYPT_ROUNDS = 12;

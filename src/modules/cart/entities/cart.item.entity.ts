@@ -10,8 +10,8 @@ import {
   CreateDateColumn,
 } from 'typeorm';
 import { Cart } from './cart.entity';
-import { Product } from 'src/modules/products/Entities/products.entity';
-import { ProductVariant } from 'src/modules/products/Entities/products_variant.entity';
+import { Product } from '../../products/entities/products.entity';
+import { ProductVariant } from '../../products/entities/products_variant.entity';
 
 @Index(['cart_id', 'product_id'])
 @Index(['cart_id'])

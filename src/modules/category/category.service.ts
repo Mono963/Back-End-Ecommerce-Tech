@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -49,8 +49,7 @@ export class CategoriesService {
       .leftJoinAndSelect('category.products', 'products')
       .leftJoinAndSelect('products.category', 'productCategory')
       .leftJoinAndSelect('products.variants', 'variants')
-      .leftJoinAndSelect('products.reviews', 'reviews')
-      .leftJoinAndSelect('reviews.user', 'reviewUser');
+      .leftJoinAndSelect('products.reviews', 'reviews');
 
     // Filtro por nombre de categoría
     if (category) {
@@ -98,7 +97,7 @@ export class CategoriesService {
   async getByIdCategory(id: string): Promise<Category> {
     const exist = await this.categoryRepo.findOne({ where: { id }, relations: ['products', 'products.variants'] });
     if (!exist) {
-      throw new Error('La categoria no existe');
+      throw new NotFoundException(`Categoría con ID ${id} no encontrada`);
     }
     return exist;
   }

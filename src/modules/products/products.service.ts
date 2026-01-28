@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, DataSource, ILike } from 'typeorm';
-import { Product } from './Entities/products.entity';
-import { ProductVariant } from './Entities/products_variant.entity';
+import { Product } from './entities/products.entity';
+import { ProductVariant } from './entities/products_variant.entity';
 import { CategoriesService } from '../category/category.service';
 import { ProductsSearchQueryDto } from './Dto/PaginationQueryDto';
 import { paginate } from 'src/common/pagination/paginate';
@@ -18,7 +18,7 @@ import {
   HybridSearchResponse,
   HybridSearchStreamPayload,
 } from './interface/products.interface';
-import { Observable } from 'rxjs';
+import { EMPTY, Observable } from 'rxjs';
 
 @Injectable()
 export class ProductsService {
@@ -40,11 +40,11 @@ export class ProductsService {
   ) {}
 
   async getProducts(searchQuery: ProductsSearchQueryDto): Promise<IPaginatedResultProducts<ResponseProductDto>> {
-    const { name, price, minPrice, maxPrice, brand, categoryId, color, featured, ...pagination } = searchQuery;
+    const { name, basePrice, minPrice, maxPrice, brand, categoryId, color, featured, ...pagination } = searchQuery;
 
     const hasFilters: boolean = Boolean(
       name ||
-        price ||
+        basePrice ||
         minPrice !== undefined ||
         maxPrice !== undefined ||
         brand ||
@@ -111,14 +111,14 @@ export class ProductsService {
       queryBuilder.andWhere('product.basePrice >= :minPriceRange', { minPriceRange: Number(minPrice) });
     } else if (maxPrice !== undefined) {
       queryBuilder.andWhere('product.basePrice <= :maxPriceRange', { maxPriceRange: Number(maxPrice) });
-    } else if (price) {
+    } else if (basePrice) {
       queryBuilder.andWhere(
         '(product.basePrice BETWEEN :minPrice AND :maxPrice OR ' +
           'EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = product.id AND ' +
           '(product.basePrice + pv.priceModifier) BETWEEN :minPrice AND :maxPrice))',
         {
-          minPrice: price * 0.9,
-          maxPrice: price * 1.1,
+          minPrice: basePrice * 0.9,
+          maxPrice: basePrice * 1.1,
         },
       );
     }
@@ -474,9 +474,11 @@ export class ProductsService {
         variantMap.set(variant.type, new Set());
       }
 
-      const namesForType = variantMap.get(variant.type)!;
-      if (namesForType.has(variant.name)) {
+      const namesForType = variantMap.get(variant.type);
+      if (namesForType?.has(variant.name)) {
         throw new BadRequestException(`Variante duplicada: tipo '${variant.type}' con nombre '${variant.name}'`);
+      } else {
+        variantMap.set(variant.type, variantMap.get(variant.type)?.add(variant.name) || new Set([variant.name]));
       }
 
       namesForType.add(variant.name);
@@ -682,7 +684,7 @@ export class ProductsService {
       id: p.id,
       name: p.name,
       brand: p.brand,
-      price: Number(p.basePrice),
+      basePrice: Number(p.basePrice),
       image: p.imgUrls?.[0] || null,
       category: p.category?.categoryName || null,
     }));
@@ -712,7 +714,10 @@ export class ProductsService {
    * Búsqueda híbrida: local + AI
    */
   async hybridSearch(query: string, useAi: boolean = false, limit: number = 8): Promise<HybridSearchResponse> {
-    if (!query?.trim()) return { results: [], source: 'local' };
+    // 🔒 Anti-spam REAL
+    if (!query || query.trim().length < 2) {
+      return { results: [], source: 'local' };
+    }
 
     const localResults = await this.autocomplete(query, limit);
 
@@ -727,7 +732,7 @@ export class ProductsService {
         id: p.id,
         name: p.name,
         brand: p.brand,
-        price: Number(p.basePrice),
+        basePrice: Number(p.basePrice),
         image: p.imgUrls?.[0] || null,
         category: p.category_name || null,
       }));
@@ -746,6 +751,9 @@ export class ProductsService {
   }
 
   hybridSearchStream(query: string): Observable<{ data: HybridSearchStreamPayload }> {
+    if (!query || query.trim().length < 2) {
+      return EMPTY;
+    }
     return new Observable<{ data: HybridSearchStreamPayload }>((subscriber) => {
       // 🔹 BÚSQUEDA LOCAL (rápida)
       this.autocomplete(query, 8)
@@ -769,7 +777,7 @@ export class ProductsService {
             id: p.id,
             name: p.name,
             brand: p.brand,
-            price: Number(p.basePrice),
+            basePrice: Number(p.basePrice),
             image: p.imgUrls?.[0] || null,
             category: p.category_name || null,
           }));
@@ -778,6 +786,7 @@ export class ProductsService {
             data: {
               source: 'ai',
               results: aiResults,
+              message: aiResponse.message,
             },
           });
 

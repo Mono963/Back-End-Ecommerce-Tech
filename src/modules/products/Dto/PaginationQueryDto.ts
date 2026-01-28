@@ -1,36 +1,7 @@
-import { IsInt, IsNumber, IsOptional, IsPositive, IsString, IsBoolean, Length, Max, Min } from 'class-validator';
+import { IsNumber, IsOptional, IsString, IsBoolean, Length, Min } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-
-export class PaginationQueryDto {
-  @ApiProperty({
-    example: 10,
-    required: false,
-    description: 'Cantidad de items por página',
-    minimum: 1,
-    maximum: 100,
-    default: 10,
-  })
-  @IsOptional()
-  @IsPositive()
-  @IsInt()
-  @Type(() => Number)
-  @Max(100)
-  limit: number = 10;
-
-  @ApiProperty({
-    example: 1,
-    required: false,
-    description: 'Número de página a obtener',
-    minimum: 1,
-    default: 1,
-  })
-  @IsOptional()
-  @IsPositive()
-  @IsInt()
-  @Type(() => Number)
-  page: number = 1;
-}
+import { PaginationQueryDto } from '../../../common/dto';
 
 export class ProductsSearchQueryDto extends PaginationQueryDto {
   @ApiProperty({
@@ -55,7 +26,7 @@ export class ProductsSearchQueryDto extends PaginationQueryDto {
   @IsNumber()
   @Type(() => Number)
   @Min(0.01)
-  price?: number;
+  basePrice?: number;
 
   @ApiProperty({
     example: 100,

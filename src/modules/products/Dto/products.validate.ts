@@ -1,5 +1,5 @@
-import { Product } from '../Entities/products.entity';
-import { ProductVariant } from '../Entities/products_variant.entity';
+import { Product } from '../entities/products.entity';
+import { ProductVariant } from '../entities/products_variant.entity';
 import { ResponseProductDto, ResponseVariantDto } from './products.Dto';
 
 export function mapVariantToDto(variant: ProductVariant): ResponseVariantDto {

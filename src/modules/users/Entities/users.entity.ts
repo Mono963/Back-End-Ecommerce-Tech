@@ -1,5 +1,5 @@
 import { Cart } from 'src/modules/cart/entities/cart.entity';
-import { Order } from 'src/modules/orders/Entities/order.entity';
+import { Order } from '../../orders/entities/order.entity';
 import { Role } from 'src/modules/roles/entities/role.entity';
 import {
   Column,

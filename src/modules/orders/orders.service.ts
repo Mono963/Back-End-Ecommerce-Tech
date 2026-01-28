@@ -9,12 +9,11 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, QueryRunner } from 'typeorm'; // Corregido: Se eliminaron Between y FindManyOptions
-import { Order, OrderStatus } from './Entities/order.entity';
-import { OrderDetail } from './Entities/orderDetails.entity';
-import { OrderItem } from './Entities/order.item';
-import { Product } from '../products/Entities/products.entity';
-import { ProductVariant } from '../products/Entities/products_variant.entity';
-import { Users } from '../users/Entities/users.entity';
+import { Order, OrderStatus } from './entities/order.entity';
+import { OrderDetail } from './entities/order.details.entity';
+import { Product } from '../products/entities/products.entity';
+import { ProductVariant } from '../products/entities/products_variant.entity';
+import { Users } from '../users/entities/users.entity';
 import { Cart } from '../cart/entities/cart.entity';
 import { CartItem } from '../cart/entities/cart.item.entity';
 import { ProductsService } from '../products/products.service';
@@ -22,6 +21,7 @@ import { OrderFiltersDto, ResponseOrderDto } from './Dto/order.Dto';
 import { IShippingAddressInternal } from './interfaces/orders.interface';
 import { CartService } from '../cart/cart.service';
 import { UserAddress } from '../users/interface/IUserResponseDto';
+import { OrderItem } from './entities/order.item';
 
 @Injectable()
 export class OrdersService {

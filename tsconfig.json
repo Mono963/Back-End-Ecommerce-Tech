@@ -3,13 +3,9 @@
     // Configuración de módulos
     "module": "commonjs",
     "moduleResolution": "node",
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
-
-    // Configuración de salida
-    "target": "ES2022", // Más estable que ES2023
+    "target": "ES2022",
     "lib": ["ES2022"],
+
     "outDir": "./dist",
     "rootDir": "./src",
     "sourceMap": true,
@@ -24,7 +20,7 @@
     // Configuración de paths
     "baseUrl": "./",
     "paths": {
-      "src/*": ["src/*"],
+      "../*": ["src/*"],
       "@/*": ["src/*"], // Alias adicional más común
       "@modules/*": ["src/modules/*"],
       "@common/*": ["src/common/*"],
@@ -35,25 +31,13 @@
     "incremental": true,
     "tsBuildInfoFile": "./dist/.tsbuildinfo", // Mejor ubicación
     "skipLibCheck": true,
-    "skipDefaultLibCheck": true,
 
-    // Configuración strict (recomendada)
-    "strict": false, // Gradualmente cambiar a true
-    "strictNullChecks": true,
-    "strictBindCallApply": false,
-    "strictFunctionTypes": false,
-    "strictPropertyInitialization": false,
-    "noImplicitAny": false,
-    "noImplicitThis": true,
+    "strict": false,
+    "noImplicitAny": true,
     "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": false,
-
-    // Configuración adicional
     "forceConsistentCasingInFileNames": true,
-    "noEmitOnError": true,
-    "preserveConstEnums": true,
-    "newLine": "lf"
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "test", "**/*spec.ts", "**/*test.ts", "**/*.e2e-spec.ts"]

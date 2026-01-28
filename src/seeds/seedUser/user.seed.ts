@@ -1,6 +1,6 @@
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { Users } from 'src/modules/users/Entities/users.entity';
+import { Users } from '../../modules/users/entities/users.entity';
 import { Role } from 'src/modules/roles/entities/role.entity';
 import { Logger } from '@nestjs/common';
 

@@ -2,6 +2,7 @@ import eslint from '@eslint/js';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+import path from 'path';
 
 export default tseslint.config(
   {
@@ -27,12 +28,13 @@ export default tseslint.config(
         ...globals.node,
         ...globals.jest,
       },
-      sourceType: 'module',
+      sourceType: 'script',
       parserOptions: {
-        projectService: true,
+        project: ['./tsconfig.json'],
         tsconfigRootDir: import.meta.dirname,
       },
     },
+
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-floating-promises': 'error',
@@ -104,12 +106,23 @@ export default tseslint.config(
   },
 
   {
-    files: ['src/migrations/**/*', 'src/config/database/**/*', 'src/**/*.entity.ts'],
+    files: ['src/**/*.entity.ts'],
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       'class-methods-use-this': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
+
+      // 🔒 No permitir alias en entidades
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: ['@/*'],
+        },
+      ],
+
+      // 🧹 Forzar imports relativos
+      'import/no-unresolved': 'off',
     },
   },
 

@@ -3,9 +3,10 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 
-import { Users } from '../users/Entities/users.entity';
-import { AuthResponse, GoogleUser } from './interface/IAuth.interface';
+import { Users } from '../users/entities/users.entity';
+import { AuthCodeData, AuthResponse, GoogleUser } from './interface/IAuth.interface';
 import { CreateUserDto } from '../users/Dtos/CreateUserDto';
 import { ResponseUserDto } from '../users/interface/IUserResponseDto';
 import { AuthValidations } from './validate/auth.validate';
@@ -14,6 +15,9 @@ import { Role } from '../roles/entities/role.entity';
 @Injectable()
 export class AuthsService {
   private readonly logger = new Logger(AuthsService.name);
+
+  // Almacén temporal de códigos de autorización (en producción considerar Redis)
+  private authCodes = new Map<string, AuthCodeData>();
 
   constructor(
     @InjectRepository(Users)
@@ -188,5 +192,58 @@ export class AuthsService {
     if (!googleUser?.email) {
       throw new BadRequestException('Email required for authentication with Google');
     }
+  }
+
+  /**
+   * Genera un código de autorización temporal para el flujo OAuth seguro.
+   * El código expira en 30 segundos y solo puede usarse una vez.
+   */
+  generateAuthCode(userId: string, accessToken: string): string {
+    const code = randomUUID();
+    const expiresAt = Date.now() + 30000; // 30 segundos
+
+    this.authCodes.set(code, {
+      token: accessToken,
+      userId,
+      expiresAt,
+    });
+
+    // Limpiar código expirado automáticamente
+    setTimeout(() => {
+      this.authCodes.delete(code);
+    }, 30000);
+
+    this.logger.log(`Código de autorización generado para usuario: ${userId}`);
+
+    return code;
+  }
+
+  /**
+   * Intercambia un código de autorización por el token de acceso.
+   * El código solo puede usarse una vez y debe estar dentro del tiempo de expiración.
+   */
+  exchangeAuthCode(code: string): { accessToken: string; userId: string } {
+    const data = this.authCodes.get(code);
+
+    if (!data) {
+      this.logger.warn(`Intento de intercambio con código inválido: ${code}`);
+      throw new UnauthorizedException('Código de autorización inválido');
+    }
+
+    if (Date.now() > data.expiresAt) {
+      this.authCodes.delete(code);
+      this.logger.warn(`Intento de intercambio con código expirado: ${code}`);
+      throw new UnauthorizedException('Código de autorización expirado');
+    }
+
+    // Eliminar código después de usarlo (un solo uso)
+    this.authCodes.delete(code);
+
+    this.logger.log(`Código intercambiado exitosamente para usuario: ${data.userId}`);
+
+    return {
+      accessToken: data.token,
+      userId: data.userId,
+    };
   }
 }

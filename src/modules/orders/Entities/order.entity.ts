@@ -9,8 +9,9 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
-import { OrderDetail } from './orderDetails.entity';
-import { Users } from 'src/modules/users/Entities/users.entity';
+
+import { Users } from '../../users/entities/users.entity';
+import { OrderDetail } from './order.details.entity';
 
 export enum OrderStatus {
   PENDING = 'pending',
