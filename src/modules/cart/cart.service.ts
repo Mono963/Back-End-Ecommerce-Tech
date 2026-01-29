@@ -26,7 +26,7 @@ import {
   IVariantValidationResult,
 } from './interfaces/interface.cart';
 import { IShippingAddressDto } from '../orders/interfaces/orders.interface';
-import { ResponseOrderDto } from '../orders/Dto/order.Dto';
+import { ResponseOrderDto } from '../orders/dto/order.Dto';
 import { ICategory } from '../category/interface/category.interface';
 
 @Injectable()

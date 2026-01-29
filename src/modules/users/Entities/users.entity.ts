@@ -16,6 +16,7 @@ import {
 } from 'typeorm';
 import { UserAddress } from '../interface/IUserResponseDto';
 import { Review } from 'src/modules/review/entities/review.entity';
+import { Payment } from '../../payments/entities/payment.entity';
 
 @Entity({
   name: 'users',
@@ -60,6 +61,9 @@ export class Users {
 
   @OneToMany(() => Order, (order) => order.user)
   orders: Order[];
+
+  @OneToMany(() => Payment, (payment) => payment.user)
+  payment: Payment;
 
   @OneToOne(() => Cart, (cart) => cart.user)
   cart: Cart;

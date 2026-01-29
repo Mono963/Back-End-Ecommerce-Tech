@@ -25,7 +25,7 @@ import {
   PaginatedOrdersDto,
   ResponseOrderDto,
   UpdateOrderStatusDto,
-} from './Dto/order.Dto';
+} from './dto/order.Dto';
 import { AuthenticatedRequest } from '../users/interface/IUserResponseDto';
 
 @ApiTags('Orders')

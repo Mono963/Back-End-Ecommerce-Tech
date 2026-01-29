@@ -16,7 +16,11 @@
       "Bash(npx eslint src/modules/products/products.service.ts --format json)",
       "Bash(npm audit:*)",
       "Bash(npm outdated:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(git -C \"/c/Users/Lucio/Desktop/Back-end-ecommerce\" log --oneline --all -- src/modules/payments/listener/payment.listener.ts src/modules/payments/mercadopago.service.ts src/modules/payments/webhooks-router.service.ts)",
+      "Bash(git -C \"/c/Users/Lucio/Desktop/Back-end-ecommerce\" show b8973f4:src/modules/payments/webhooks-router.service.ts)",
+      "Bash(git -C \"/c/Users/Lucio/Desktop/Back-end-ecommerce\" show b8973f4:src/modules/payments/mercadopago.service.ts)",
+      "Bash(git -C \"/c/Users/Lucio/Desktop/Back-end-ecommerce\" show b8973f4:src/modules/payments/listener/payment.listener.ts)"
     ],
     "deny": [],
     "ask": []

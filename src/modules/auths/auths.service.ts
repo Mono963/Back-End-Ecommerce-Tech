@@ -7,7 +7,7 @@ import { randomUUID } from 'crypto';
 
 import { Users } from '../users/entities/users.entity';
 import { AuthCodeData, AuthResponse, GoogleUser } from './interface/IAuth.interface';
-import { CreateUserDto } from '../users/Dtos/CreateUserDto';
+import { CreateUserDto } from '../users/dtos/CreateUserDto';
 import { ResponseUserDto } from '../users/interface/IUserResponseDto';
 import { AuthValidations } from './validate/auth.validate';
 import { Role } from '../roles/entities/role.entity';

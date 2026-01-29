@@ -19,7 +19,7 @@ import { AuthenticatedRequest } from '../users/interface/IUserResponseDto';
 import { AddToCartDTO, UpdateCartItemDTO } from './dto/create-cart.dto';
 import { ICartResponseDTO, IResponseCartSummaryDTO, IStockValidationResult } from './interfaces/interface.cart';
 import { IShippingAddressDto } from '../orders/interfaces/orders.interface';
-import { ResponseOrderDto } from '../orders/Dto/order.Dto';
+import { ResponseOrderDto } from '../orders/dto/order.Dto';
 import { SelectAddressDto } from './dto/select-address.dto';
 import { RoleGuard } from 'src/guards/auth.guards.role';
 import { Roles, UserRole } from 'src/decorator/role.decorator';

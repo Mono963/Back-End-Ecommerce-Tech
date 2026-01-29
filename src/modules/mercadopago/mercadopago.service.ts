@@ -3,24 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
-import { Users } from '../users/Entyties/users.entity';
-import {
-  CreatePreferenceDto,
-  PaymentStatusDto,
-  PreferenceResponseDto,
-} from './dto/create-payment.dto';
-import {
-  isMercadoPagoError,
-  MercadoPagoPaymentInfo,
-  WebhookNotificationDto,
-} from './interface/patment.interface';
-
-export interface CreatePreferenceOptions {
-  userId: string;
-  dto: CreatePreferenceDto;
-  paymentType: 'donation' | 'cart';
-  cartId?: string;
-}
+import { Users } from '../users/entities/users.entity';
+import { CreatePreferenceDto, PaymentStatusDto, PreferenceResponseDto } from '../payments/dto/create-payment.dto';
+import { IMercadoPagoPaymentInfo, IWebhookNotificationInterface } from '../payments/interface/patment.interface';
+import { isMercadoPagoError } from '../payments/validate/payment.validate';
 
 @Injectable()
 export class MercadoPagoService {
@@ -46,35 +32,7 @@ export class MercadoPagoService {
     this.payment = new Payment(this.client);
   }
 
-  async createPreference(
-    userId: string,
-    dto: CreatePreferenceDto,
-  ): Promise<PreferenceResponseDto> {
-    return this.createPreferenceWithType({
-      userId,
-      dto,
-      paymentType: 'donation',
-    });
-  }
-
-  async createCartPreference(
-    userId: string,
-    cartId: string,
-    dto: CreatePreferenceDto,
-  ): Promise<PreferenceResponseDto> {
-    return this.createPreferenceWithType({
-      userId,
-      dto,
-      paymentType: 'cart',
-      cartId,
-    });
-  }
-
-  private async createPreferenceWithType(
-    options: CreatePreferenceOptions,
-  ): Promise<PreferenceResponseDto> {
-    const { userId, dto, paymentType, cartId } = options;
-
+  async createPreference(userId: string, orderId: string, dto: CreatePreferenceDto): Promise<PreferenceResponseDto> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       this.logger.warn(`User with ID ${userId} not found`);
@@ -85,25 +43,18 @@ export class MercadoPagoService {
     let itemTitle: string;
     let itemDescription: string;
 
-    if (paymentType === 'donation') {
-      externalReference = `donation-${userId}`;
-      itemTitle = 'Donacion a ROOTS';
-      itemDescription = dto.message || 'Voluntary donation';
-    } else if (paymentType === 'cart') {
-      if (!cartId) {
-        throw new BadRequestException('Cart ID is required for cart payments');
-      }
-      externalReference = `cart-${cartId}`;
-      itemTitle = 'Compra en ROOTS';
-      itemDescription = dto.message || 'Purchase from cart';
+    if (!orderId) {
+      throw new BadRequestException('Cart ID is required for cart payments');
     } else {
-      throw new BadRequestException('Invalid payment type');
+      externalReference = `order-${orderId}`;
+      itemTitle = 'Compra en WAT';
+      itemDescription = dto.message || 'Purchase from cart';
     }
 
     const preferenceData = {
       items: [
         {
-          id: `${paymentType}-${paymentType === 'donation' ? userId : cartId}`,
+          id: `${orderId}`,
           title: itemTitle,
           description: itemDescription,
           quantity: 1,
@@ -115,9 +66,9 @@ export class MercadoPagoService {
         email: 'test_user_461283922@testuser.com',
       },
       back_urls: {
-        success: `${this.configService.get<string>('FRONTEND_MP_URL')}/${paymentType === 'donation' ? 'donaciones' : 'orders'}/success`,
-        failure: `${this.configService.get<string>('FRONTEND_MP_URL')}/${paymentType === 'donation' ? 'donaciones' : 'orders'}/failure`,
-        pending: `${this.configService.get<string>('FRONTEND_MP_URL')}/${paymentType === 'donation' ? 'donaciones' : 'orders'}/pending`,
+        success: `${this.configService.get<string>('FRONTEND_MP_URL')}/orders/success`,
+        failure: `${this.configService.get<string>('FRONTEND_MP_URL')}/orders/failure`,
+        pending: `${this.configService.get<string>('FRONTEND_MP_URL')}/orders/pending`,
       },
       auto_return: 'approved',
       notification_url: `${this.configService.get<string>('BACKEND_MP_URL')}/payments/webhook`,
@@ -127,34 +78,28 @@ export class MercadoPagoService {
     try {
       const response = await this.preference.create({ body: preferenceData });
       this.logger.log(
-        `Payment preference created: ${response.id} for ${paymentType} - user: ${userId}${cartId ? `, cart: ${cartId}` : ''}`,
+        `Payment preference created: ${response.id} for ${orderId} - user: ${userId} Con la orden ${orderId ? `, OrderId: ${orderId}` : ''}`,
       );
       return {
-        preferenceId: response.id!,
-        initPoint: response.init_point!,
-        sandboxInitPoint: response.sandbox_init_point!,
+        preferenceId: response.id,
+        initPoint: response.init_point,
+        sandboxInitPoint: response.sandbox_init_point,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(
-        `Error creating ${paymentType} preference for user ${userId}: ${message}`,
-      );
-      throw new BadRequestException(
-        `Failed to create ${paymentType} preference`,
-      );
+      this.logger.error(`Error creating ${orderId} preference for user ${userId}: ${message}`);
+      throw new BadRequestException(`Failed to create ${orderId} preference`);
     }
   }
 
-  async processWebhook(
-    notification: unknown,
-  ): Promise<MercadoPagoPaymentInfo | null> {
+  async processWebhook(notification: unknown): Promise<IMercadoPagoPaymentInfo | null> {
     try {
       if (!notification || typeof notification !== 'object') {
         this.logger.warn('Invalid webhook notification format received');
         return null;
       }
 
-      const notif = notification as WebhookNotificationDto;
+      const notif = notification as IWebhookNotificationInterface;
       if (!notif.type || !notif.data?.id) {
         this.logger.warn('Webhook notification missing required fields');
         return null;
@@ -162,15 +107,9 @@ export class MercadoPagoService {
 
       if (notif.type === 'payment') {
         const paymentId = notif.data.id;
-        if (
-          paymentId === '123456' ||
-          paymentId === 'test' ||
-          paymentId.length < 8
-        ) {
-          this.logger.log(
-            `Test webhook detected with ID: ${paymentId} - Simulating approved payment`,
-          );
-          const mockPaymentInfo: MercadoPagoPaymentInfo = {
+        if (paymentId === '123456' || paymentId === 'test' || paymentId.length < 8) {
+          this.logger.log(`Test webhook detected with ID: ${paymentId} - Simulating approved payment`);
+          const mockPaymentInfo: IMercadoPagoPaymentInfo = {
             id: parseInt(paymentId) || 123456,
             status: 'approved',
             status_detail: 'accredited',
@@ -187,16 +126,10 @@ export class MercadoPagoService {
 
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        const paymentInfo = await this.getPaymentInfoWithRetry(
-          paymentId,
-          6,
-          3000,
-        );
+        const paymentInfo = await this.getPaymentInfoWithRetry(paymentId, 6, 3000);
 
         if (!paymentInfo) {
-          this.logger.warn(
-            `Payment info for ID ${paymentId} could not be retrieved after retries.`,
-          );
+          this.logger.warn(`Payment info for ID ${paymentId} could not be retrieved after retries.`);
           return null;
         }
 
@@ -210,10 +143,7 @@ export class MercadoPagoService {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(
-        `Error processing webhook: ${message}`,
-        error instanceof Error ? error.stack : undefined,
-      );
+      this.logger.error(`Error processing webhook: ${message}`, error instanceof Error ? error.stack : undefined);
       return null;
     }
   }
@@ -236,15 +166,12 @@ export class MercadoPagoService {
     }
   }
 
-  private async getPaymentInfo(
-    paymentId: string,
-  ): Promise<MercadoPagoPaymentInfo> {
+  private async getPaymentInfo(paymentId: string): Promise<IMercadoPagoPaymentInfo> {
     try {
       const paymentResponse = await this.payment.get({ id: paymentId });
-      return paymentResponse as MercadoPagoPaymentInfo;
+      return paymentResponse as IMercadoPagoPaymentInfo;
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : JSON.stringify(error);
+      const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
       if (isMercadoPagoError(error)) {
         const responseData = error.response?.data as { message?: string };
         if (responseData?.message === 'payment not found') {
@@ -252,9 +179,7 @@ export class MercadoPagoService {
         }
       }
       this.logger.error(`Error fetching payment info: ${errorMessage}`);
-      throw new BadRequestException(
-        `Failed to fetch payment information: ${errorMessage}`,
-      );
+      throw new BadRequestException(`Failed to fetch payment information: ${errorMessage}`);
     }
   }
 
@@ -262,27 +187,22 @@ export class MercadoPagoService {
     paymentId: string,
     maxRetries = 3,
     delayMs = 2000,
-  ): Promise<MercadoPagoPaymentInfo | null> {
+  ): Promise<IMercadoPagoPaymentInfo | null> {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         return await this.getPaymentInfo(paymentId);
       } catch (error) {
         const isPaymentNotFound =
-          error instanceof BadRequestException &&
-          error.message.includes('Failed to fetch payment information');
+          error instanceof BadRequestException && error.message.includes('Failed to fetch payment information');
 
         if (isPaymentNotFound && attempt < maxRetries) {
-          this.logger.warn(
-            `Payment info not found on attempt ${attempt}/${maxRetries}, retrying...`,
-          );
+          this.logger.warn(`Payment info not found on attempt ${attempt}/${maxRetries}, retrying...`);
           await new Promise((r) => setTimeout(r, delayMs));
           continue;
         }
 
         if (isPaymentNotFound) {
-          this.logger.warn(
-            `Payment info not available after ${maxRetries} retries.`,
-          );
+          this.logger.warn(`Payment info not available after ${maxRetries} retries.`);
           return null;
         }
 

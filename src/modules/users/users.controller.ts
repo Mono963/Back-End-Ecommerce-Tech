@@ -19,8 +19,8 @@ import { UsersService } from './users.service';
 import { AuthGuard } from 'src/guards/auth.guards';
 import { RoleGuard } from 'src/guards/auth.guards.role';
 import { Roles, UserRole } from 'src/decorator/role.decorator';
-import { PaginatedUsersDto } from './Dtos/paginated-users.dto';
-import { UserSearchQueryDto } from './Dtos/PaginationQueryDto';
+import { PaginatedUsersDto } from './dtos/paginated-users.dto';
+import { UserSearchQueryDto } from './dtos/PaginationQueryDto';
 import {
   AuthenticatedRequest,
   IUserResponseDto,
@@ -28,12 +28,12 @@ import {
   ResponseUserWithAdminDto,
   UserAddress,
 } from './interface/IUserResponseDto';
-import { UpdatePasswordDto } from './Dtos/UpdatePasswordDto';
-import { UpdateRoleDto } from './Dtos/UpdateRoleDto';
-import { UpdateUserDbDto } from './Dtos/CreateUserDto';
-import { ForgotPasswordDto } from './Dtos/forgot-password.dto';
-import { ResetPasswordDto } from './Dtos/reset-password.dto';
-import { CreateAddressDto, UpdateAddressDto } from './Dtos/address.dto';
+import { UpdatePasswordDto } from './dtos/UpdatePasswordDto';
+import { UpdateRoleDto } from './dtos/UpdateRoleDto';
+import { UpdateUserDbDto } from './dtos/CreateUserDto';
+import { ForgotPasswordDto } from './dtos/forgot-password.dto';
+import { ResetPasswordDto } from './dtos/reset-password.dto';
+import { CreateAddressDto, UpdateAddressDto } from './dtos/address.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()

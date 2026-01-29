@@ -12,6 +12,7 @@ import {
 
 import { Users } from '../../users/entities/users.entity';
 import { OrderDetail } from './order.details.entity';
+import { Payment } from '../../payments/entities/payment.entity';
 
 export enum OrderStatus {
   PENDING = 'pending',
@@ -55,6 +56,9 @@ export class Order {
   })
   @JoinColumn()
   orderDetail: OrderDetail;
+
+  @OneToOne(() => Payment, (payment) => payment.order)
+  payment: Payment;
 
   @ManyToOne(() => Users, (user) => user.orders)
   @JoinColumn({ name: 'user_id' })

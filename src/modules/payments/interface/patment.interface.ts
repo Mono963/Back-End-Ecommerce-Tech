@@ -1,10 +1,4 @@
-import {
-  CreatePreferenceDto,
-  PaymentStatusDto,
-  PreferenceResponseDto,
-} from '../dto/create-payment.dto';
-
-export interface MercadoPagoPaymentInfo {
+export interface IMercadoPagoPaymentInfo {
   id: number | string;
   status: string;
   status_detail: string;
@@ -16,7 +10,7 @@ export interface MercadoPagoPaymentInfo {
   external_reference: string;
 }
 
-export interface WebhookNotificationDto {
+export interface IWebhookNotificationInterface {
   id: number;
   live_mode: boolean;
   type: string;
@@ -31,19 +25,22 @@ export interface WebhookNotificationDto {
   };
 }
 
-export interface PaymentCompletedEvent {
-  paymentId: string;
-  userId: string;
-  amount: number;
-  currency: string;
+export interface IPaymentCompleted {
+  id: string;
+  payment_id: string;
+  user_id: string;
+  order_id: string;
   status: string;
-  statusDetail: string;
-  paymentTypeId: string;
-  paymentMethodId: string;
-  dateApproved: string;
+  status_detail: string;
+  amount: number;
+  currency_id: string;
+  payment_type_id: string;
+  payment_method_id: string;
+  date_approved: Date;
+  createdAt: Date;
 }
 
-export interface MercadoPagoError extends Error {
+export interface IMercadoPagoError extends Error {
   message: string;
   response?: {
     data: unknown;
@@ -52,26 +49,33 @@ export interface MercadoPagoError extends Error {
   status?: number;
 }
 
-export function isMercadoPagoError(error: unknown): error is MercadoPagoError {
-  return error instanceof Error && ('response' in error || 'status' in error);
+export enum PaymentStatus {
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  AUTHORIZED = 'authorized',
+  IN_PROCESS = 'in_process',
+  IN_MEDIATION = 'in_mediation',
+  REJECTED = 'rejected',
+  CANCELLED = 'cancelled',
+  REFUNDED = 'refunded',
+  CHARGED_BACK = 'charged_back',
 }
 
-export interface IPaymentService {
-  createPreference(
-    userId: string,
-    dto: CreatePreferenceDto,
-  ): Promise<PreferenceResponseDto>;
-  getPaymentStatus(paymentId: string): Promise<PaymentStatusDto>;
-  handleWebhook(notification: WebhookNotificationDto): Promise<void>;
-}
+export enum PaymentStatusDetail {
+  ACCREDITED = 'accredited',
 
-export function isWebhookNotification(
-  obj: unknown,
-): obj is WebhookNotificationDto {
-  if (typeof obj !== 'object' || obj === null) return false;
-  const o = obj as Record<string, unknown>;
+  PENDING_CONTINGENCY = 'pending_contingency',
+  PENDING_REVIEW_MANUAL = 'pending_review_manual',
+  PENDING_WAITING_PAYMENT = 'pending_waiting_payment',
+  PENDING_WAITING_TRANSFER = 'pending_waiting_transfer',
 
-  return (
-    typeof o.type === 'string' && typeof o.data === 'object' && o.data !== null
-  );
+  CC_REJECTED_CALL_FOR_AUTHORIZE = 'cc_rejected_call_for_authorize',
+  CC_REJECTED_CARD_DISABLED = 'cc_rejected_card_disabled',
+  CC_REJECTED_INSUFFICIENT_AMOUNT = 'cc_rejected_insufficient_amount',
+  CC_REJECTED_MAX_ATTEMPTS = 'cc_rejected_max_attempts',
+  CC_REJECTED_OTHER_REASON = 'cc_rejected_other_reason',
+
+  REJECTED_BY_REGULATIONS = 'rejected_by_regulations',
+  REJECTED_HIGH_RISK = 'rejected_high_risk',
+  REJECTED_BY_BANK = 'rejected_by_bank',
 }

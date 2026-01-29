@@ -8,7 +8,7 @@ import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { AuthsService } from './auths.service';
 import { AuthExceptionFilter } from './validate/auth.filter';
 import { AuthResponse, GoogleUser } from './interface/IAuth.interface';
-import { CreateUserDto, LoginUserDto } from '../users/Dtos/CreateUserDto';
+import { CreateUserDto, LoginUserDto } from '../users/dtos/CreateUserDto';
 import { ResponseUserDto } from '../users/interface/IUserResponseDto';
 
 interface AuthenticatedRequest extends Request {

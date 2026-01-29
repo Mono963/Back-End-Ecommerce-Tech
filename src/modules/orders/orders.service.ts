@@ -17,7 +17,7 @@ import { Users } from '../users/entities/users.entity';
 import { Cart } from '../cart/entities/cart.entity';
 import { CartItem } from '../cart/entities/cart.item.entity';
 import { ProductsService } from '../products/products.service';
-import { OrderFiltersDto, ResponseOrderDto } from './Dto/order.Dto';
+import { OrderFiltersDto, ResponseOrderDto } from './dto/order.Dto';
 import { IShippingAddressInternal } from './interfaces/orders.interface';
 import { CartService } from '../cart/cart.service';
 import { UserAddress } from '../users/interface/IUserResponseDto';
