@@ -35,17 +35,17 @@ export class ReviewController {
 
   @Post()
   @ApiOperation({
-    summary: 'Crear una nueva reseña',
-    description: 'Permite a un cliente crear una reseña para un producto',
+    summary: 'Create a new review',
+    description: 'Allows a customer to create a review for a product',
   })
   @ApiResponse({
     status: 201,
-    description: 'Reseña creada exitosamente',
+    description: 'Review successfully created',
     type: Object,
   })
   @ApiResponse({
     status: 400,
-    description: 'Ya existe una reseña para este producto del usuario',
+    description: 'A review for this product already exists for this user',
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.CLIENT)
@@ -55,47 +55,47 @@ export class ReviewController {
 
   @Get()
   @ApiOperation({
-    summary: 'Obtener todas las reseñas con paginación y filtros (Admin)',
+    summary: 'Get all reviews with pagination and filters (Admin)',
     description:
-      'Retorna todas las reseñas CON isVisible, metadata de paginación, filtros por rating, productId y nombre de usuario (Solo Admin)',
+      'Returns all reviews INCLUDING isVisible, pagination metadata, and filters by rating, productId, and username (Admin only)',
   })
   @ApiQuery({
     name: 'page',
     required: false,
     type: 'number',
-    description: 'Página',
+    description: 'Page number',
     example: 1,
   })
   @ApiQuery({
     name: 'limit',
     required: false,
     type: 'number',
-    description: 'Límite por página',
+    description: 'Items per page',
     example: 10,
   })
   @ApiQuery({
     name: 'rating',
     required: false,
     enum: Rating,
-    description: 'Filtrar por calificación',
+    description: 'Filter by rating',
     example: 5,
   })
   @ApiQuery({
     name: 'productId',
     required: false,
     type: 'string',
-    description: 'Filtrar por ID de producto',
+    description: 'Filter by product ID',
   })
   @ApiQuery({
     name: 'userName',
     required: false,
     type: 'string',
-    description: 'Buscar por nombre de usuario',
+    description: 'Search by username',
     example: 'Juan',
   })
   @ApiResponse({
     status: 200,
-    description: 'Lista paginada de reseñas con metadata (incluye isVisible)',
+    description: 'Paginated list of reviews with metadata (includes isVisible)',
     type: PaginatedReviewsAdminDto,
   })
   @HttpCode(HttpStatus.OK)
@@ -107,12 +107,12 @@ export class ReviewController {
 
   @Get(':id')
   @ApiOperation({
-    summary: 'Obtener una reseña por ID',
-    description: 'Retorna una reseña específica (sin isVisible)',
+    summary: 'Get a review by ID',
+    description: 'Returns a specific review (without isVisible)',
   })
   @ApiResponse({
     status: 200,
-    description: 'Reseña encontrada',
+    description: 'Review found',
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.CLIENT)
@@ -122,12 +122,12 @@ export class ReviewController {
 
   @Get('product/:productId/public')
   @ApiOperation({
-    summary: 'Obtener reseñas públicas de un producto',
-    description: 'Retorna todas las reseñas visibles de un producto (Sin autenticación, sin isVisible)',
+    summary: 'Get public reviews for a product',
+    description: 'Returns all visible reviews for a product (No authentication, without isVisible)',
   })
   @ApiResponse({
     status: 200,
-    description: 'Reseñas del producto obtenidas',
+    description: 'Product reviews retrieved',
     type: [Object],
   })
   async getProductReviewsPublic(@Param('productId') productId: string): Promise<ReviewResponsePublic[]> {
@@ -136,12 +136,12 @@ export class ReviewController {
 
   @Get('can-review/:productId')
   @ApiOperation({
-    summary: 'Verificar si el usuario puede dejar una reseña',
-    description: 'Verifica si el usuario ya dejó una reseña para este producto',
+    summary: 'Check if the user can leave a review',
+    description: 'Checks whether the user has already submitted a review for this product',
   })
   @ApiResponse({
     status: 200,
-    description: 'Estado de verificación',
+    description: 'Verification status',
     schema: {
       type: 'object',
       properties: {
@@ -161,12 +161,12 @@ export class ReviewController {
 
   @Get('product/:productId')
   @ApiOperation({
-    summary: 'Obtener todas las reseñas de un producto (Admin)',
-    description: 'Retorna todas las reseñas de un producto CON isVisible (Solo Admin)',
+    summary: 'Get all reviews for a product (Admin)',
+    description: 'Returns all reviews for a product INCLUDING isVisible (Admin only)',
   })
   @ApiResponse({
     status: 200,
-    description: 'Reseñas del producto (incluye isVisible)',
+    description: 'Product reviews retrieved (includes isVisible)',
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
@@ -176,12 +176,12 @@ export class ReviewController {
 
   @Patch(':id/visibility')
   @ApiOperation({
-    summary: 'Cambiar visibilidad de una reseña (Admin)',
-    description: 'Alterna la visibilidad de una reseña (visible/oculta)',
+    summary: 'Change review visibility (Admin)',
+    description: 'Toggles a review visibility (visible / hidden)',
   })
   @ApiResponse({
     status: 200,
-    description: 'Visibilidad actualizada',
+    description: 'Visibility successfully updated',
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
@@ -191,12 +191,12 @@ export class ReviewController {
 
   @Delete(':id')
   @ApiOperation({
-    summary: 'Eliminar una reseña',
-    description: 'Un cliente solo puede eliminar sus propias reseñas',
+    summary: 'Delete a review',
+    description: 'A customer can only delete their own reviews',
   })
   @ApiResponse({
     status: 200,
-    description: 'Reseña eliminada',
+    description: 'Review successfully deleted',
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.CLIENT)

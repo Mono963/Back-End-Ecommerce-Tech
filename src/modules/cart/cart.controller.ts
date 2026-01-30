@@ -32,7 +32,7 @@ import { Roles, UserRole } from 'src/decorator/role.decorator';
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 
-  @Get('id')
+  @Get('my-cart')
   @ApiOperation({
     summary: "Get the authenticated user's shopping cart with all details",
   })

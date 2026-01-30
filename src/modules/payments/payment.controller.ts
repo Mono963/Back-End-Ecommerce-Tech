@@ -1,8 +1,22 @@
-import { Controller, Post, Body, Param, ParseUUIDPipe, Get, Logger, UseGuards, HttpCode } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Param,
+  ParseUUIDPipe,
+  Get,
+  Logger,
+  UseGuards,
+  HttpCode,
+  Req,
+  Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   CreatePreferenceDto,
   IPaymentCompletedDto,
+  MyPaymentResponseDto,
+  PaymentResponseDto,
   PaymentStatusDto,
   PreferenceResponseDto,
   WebhookNotificationDto,
@@ -12,24 +26,20 @@ import { AuthGuard } from 'src/guards/auth.guards';
 import { Roles, UserRole } from 'src/decorator/role.decorator';
 import { RoleGuard } from '../../guards/auth.guards.role';
 import { PaymentsService } from './payment.service';
-import { IWebhookNotificationInterface } from './interface/patment.interface';
+import { IWebhookNotificationInterface } from './interface/payment.interface';
 import { isWebhookNotification } from './validate/payment.validate';
+import { AuthenticatedRequest } from '../users/interface/IUserResponseDto';
 
-@ApiTags('Order-payments')
-@Controller('order-payments')
+@ApiTags('Payments')
+@Controller('payments')
 export class PaymentsController {
   private readonly logger = new Logger(PaymentsController.name);
 
   constructor(private readonly PaymentsService: PaymentsService) {}
 
-  @Post('create-preference/:userId')
+  @Post('create-preference')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create payment preference for cart purchase' })
-  @ApiParam({
-    name: 'userId',
-    type: String,
-    description: 'ID of the user making the purchase',
-  })
+  @ApiOperation({ summary: 'Create payment preference' })
   @ApiBody({ type: CreatePreferenceDto })
   @ApiResponse({
     status: 201,
@@ -42,15 +52,15 @@ export class PaymentsController {
   })
   @UseGuards(AuthGuard)
   async createPreference(
-    @Param('userId', ParseUUIDPipe) userId: string,
+    @Req() req: AuthenticatedRequest,
     @Body() createPreferenceDto: CreatePreferenceDto,
   ): Promise<PreferenceResponseDto> {
-    return await this.PaymentsService.createPreferencePayment(userId, createPreferenceDto);
+    return await this.PaymentsService.createPreferencePayment(req.user.sub, createPreferenceDto);
   }
 
   @Get()
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Todos los' })
+  @ApiOperation({ summary: 'Get All payments' })
   @ApiResponse({
     status: 200,
     description: 'Payment status retrieved successfully',
@@ -72,7 +82,27 @@ export class PaymentsController {
     status: 200,
     description: 'Webhook processed successfully',
   })
-  async handleWebhook(@Body() notification: IWebhookNotificationInterface): Promise<{ status: string }> {
+  async handleWebhook(
+    @Body() body: Record<string, unknown>,
+    @Query('data.id') queryDataId?: string,
+    @Query('type') queryType?: string,
+    @Query('id') queryId?: string,
+  ): Promise<{ status: string }> {
+    // MercadoPago puede enviar datos en body o en query params
+    // El ID puede venir en diferentes lugares según el tipo de notificación
+    const bodyData = body?.data as { id?: string } | undefined;
+    const resourceId = bodyData?.id || (body?.id as string) || queryDataId || queryId || '';
+
+    // Construir notificación unificada
+    const notification: IWebhookNotificationInterface = {
+      type: (body?.type as string) || queryType || '',
+      data: {
+        id: resourceId,
+      },
+    };
+
+    this.logger.log(`Webhook received - type: ${notification.type}, data.id: ${notification.data?.id}`);
+
     if (!isWebhookNotification(notification)) {
       this.logger.warn('Invalid webhook notification structure received');
       return { status: 'invalid_structure' };
@@ -86,6 +116,19 @@ export class PaymentsController {
       this.logger.error(`Webhook processing error: ${message}`);
       return { status: 'error' };
     }
+  }
+
+  @Get('my-payments')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all payments for the authenticated user' })
+  @ApiResponse({
+    status: 200,
+    description: 'User payments retrieved successfully',
+    type: [PaymentResponseDto],
+  })
+  @UseGuards(AuthGuard)
+  async getMyPayments(@Req() req: AuthenticatedRequest): Promise<MyPaymentResponseDto[]> {
+    return await this.PaymentsService.getPaymentsByUserId(req.user.sub);
   }
 
   @Get('status/:paymentId')
@@ -118,27 +161,11 @@ export class PaymentsController {
   @ApiResponse({
     status: 200,
     description: 'Payment information retrieved successfully',
+    type: PaymentResponseDto,
   })
   @UseGuards(AuthGuard, RoleGuard)
-  @Roles(UserRole.CLIENT)
-  async getPaymentByCartId(@Param('cartId', ParseUUIDPipe) cartId: string): Promise<any> {
-    await this.PaymentsService.getPaymentByOrderId(cartId);
-  }
-
-  @Get('user/:userId/payments')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get all payments for a user' })
-  @ApiParam({
-    name: 'userId',
-    type: String,
-    description: 'User ID',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'User payments retrieved successfully',
-  })
-  @UseGuards(AuthGuard)
-  async getUserPayments(@Param('userId', ParseUUIDPipe) userId: string): Promise<any[]> {
-    await this.PaymentsService.getPaymentsByUserId(userId);
+  @Roles(UserRole.ADMIN)
+  async getPaymentByOrderId(@Param('orderId', ParseUUIDPipe) orderId: string): Promise<PaymentResponseDto | null> {
+    return await this.PaymentsService.getPaymentByOrderId(orderId);
   }
 }

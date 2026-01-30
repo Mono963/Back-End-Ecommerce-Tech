@@ -38,76 +38,76 @@ export class ProductsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Obtener productos paginados con filtros para catálogo',
-    description: 'Retorna una lista paginada de productos activos con múltiples filtros combinables para el catálogo',
+    summary: 'Get paginated products with catalog filters',
+    description: 'Returns a paginated list of active products with multiple combinable filters for the catalog',
   })
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Número de página' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1, description: 'Page number' })
   @ApiQuery({
     name: 'limit',
     required: false,
     type: Number,
     example: 10,
-    description: 'Productos por página (max 100)',
+    description: 'Products per page (max 100)',
   })
   @ApiQuery({
     name: 'name',
     required: false,
     type: String,
-    description: 'Buscar por nombre de producto (parcial, case-insensitive)',
+    description: 'Search by product name (partial, case-insensitive)',
     example: 'Laptop',
   })
   @ApiQuery({
     name: 'brand',
     required: false,
     type: String,
-    description: 'Filtrar por marca (parcial, case-insensitive)',
+    description: 'Filter by brand (partial, case-insensitive)',
     example: 'Dell',
   })
   @ApiQuery({
     name: 'categoryId',
     required: false,
     type: String,
-    description: 'Filtrar por ID de categoría (UUID)',
+    description: 'Filter by category ID (UUID)',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @ApiQuery({
     name: 'color',
     required: false,
     type: String,
-    description: 'Filtrar por color de variante (parcial, case-insensitive)',
-    example: 'Negro',
+    description: 'Filter by variant color (partial, case-insensitive)',
+    example: 'Black',
   })
   @ApiQuery({
     name: 'minPrice',
     required: false,
     type: Number,
-    description: 'Precio mínimo del producto',
+    description: 'Minimum product price',
     example: 100,
   })
   @ApiQuery({
     name: 'maxPrice',
     required: false,
     type: Number,
-    description: 'Precio máximo del producto',
+    description: 'Maximum product price',
     example: 2000,
   })
   @ApiQuery({
     name: 'price',
     required: false,
     type: Number,
-    description: 'Buscar productos en rango de precio (±10%) - Usar minPrice/maxPrice para rangos exactos',
+    description: 'Search products in price range (±10%) - Use minPrice/maxPrice for exact ranges',
     example: 1000,
   })
   @ApiQuery({
     name: 'featured',
     required: false,
     type: Boolean,
-    description: 'Filtrar solo productos destacados',
+    description: 'Filter featured products only',
     example: true,
   })
   @ApiResponse({
     status: 200,
-    description: 'Productos obtenidos exitosamente',
+    description: 'Products retrieved successfully',
     type: PaginatedProductsDto,
   })
   async getProducts(@Query() searchQuery: ProductsSearchQueryDto): Promise<PaginatedProductsDto> {
@@ -117,19 +117,19 @@ export class ProductsController {
 
   @Get('featured')
   @ApiOperation({
-    summary: 'Obtener productos destacados',
-    description: 'Retorna una lista de productos marcados como destacados',
+    summary: 'Get featured products',
+    description: 'Returns a list of products marked as featured',
   })
   @ApiQuery({
     name: 'limit',
     required: false,
     type: Number,
-    description: 'Cantidad máxima de productos a retornar',
+    description: 'Maximum number of products to return',
     example: 10,
   })
   @ApiResponse({
     status: 200,
-    description: 'Productos destacados obtenidos',
+    description: 'Featured products retrieved',
     type: [ResponseProductDto],
   })
   async getFeaturedProducts(
@@ -140,18 +140,18 @@ export class ProductsController {
 
   @Get('brand/:brand')
   @ApiOperation({
-    summary: 'Obtener productos por marca',
-    description: 'Retorna todos los productos de una marca específica',
+    summary: 'Get products by brand',
+    description: 'Returns all products from a specific brand',
   })
   @ApiParam({
     name: 'brand',
     type: 'string',
-    description: 'Nombre de la marca',
+    description: 'Brand name',
     example: 'Dell',
   })
   @ApiResponse({
     status: 200,
-    description: 'Productos de la marca obtenidos',
+    description: 'Brand products retrieved',
     type: [ResponseProductDto],
   })
   async getProductsByBrand(@Param('brand') brand: string): Promise<ResponseProductDto[]> {
@@ -160,23 +160,23 @@ export class ProductsController {
 
   @Get('category/:categoryId')
   @ApiOperation({
-    summary: 'Obtener productos por categoría',
-    description: 'Retorna todos los productos activos de una categoría específica',
+    summary: 'Get products by category',
+    description: 'Returns all active products from a specific category',
   })
   @ApiParam({
     name: 'categoryId',
     type: 'string',
-    description: 'ID de la categoría',
+    description: 'Category ID',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @ApiResponse({
     status: 200,
-    description: 'Productos de la categoría obtenidos',
+    description: 'Category products retrieved',
     type: [ResponseProductDto],
   })
   @ApiResponse({
     status: 404,
-    description: 'Categoría no encontrada',
+    description: 'Category not found',
   })
   async getProductsByCategory(@Param('categoryId', ParseUUIDPipe) categoryId: string): Promise<ResponseProductDto[]> {
     return await this.productsService.getProductsByCategory(categoryId);
@@ -185,39 +185,39 @@ export class ProductsController {
   @SkipThrottle()
   @Get('search')
   @ApiOperation({
-    summary: 'Búsqueda híbrida de productos',
-    description: 'Búsqueda instantánea desde 1 letra. Con ai=true también incluye resultados de IA.',
+    summary: 'Hybrid product search',
+    description: 'Instant search from 1 character. With ai=true also includes AI results.',
   })
   @ApiQuery({
     name: 'q',
     required: true,
     type: String,
-    description: 'Texto de búsqueda (mínimo 1 carácter)',
+    description: 'Search text (minimum 1 character)',
     example: 'laptop',
   })
   @ApiQuery({
     name: 'ai',
     required: false,
     type: Boolean,
-    description: 'Incluir resultados de búsqueda con IA (default: false)',
+    description: 'Include AI search results (default: false)',
     example: false,
   })
   @ApiQuery({
     name: 'limit',
     required: false,
     type: Number,
-    description: 'Cantidad de resultados (default: 8)',
+    description: 'Number of results (default: 8)',
     example: 8,
   })
   @ApiResponse({
     status: 200,
-    description: 'Resultados de búsqueda',
+    description: 'Search results',
     schema: {
       type: 'object',
       properties: {
         results: {
           type: 'array',
-          description: 'Resultados instantáneos locales',
+          description: 'Instant local results',
           items: {
             type: 'object',
             properties: {
@@ -232,7 +232,7 @@ export class ProductsController {
         },
         aiResults: {
           type: 'array',
-          description: 'Resultados de IA (solo si ai=true)',
+          description: 'AI results (only if ai=true)',
           nullable: true,
         },
         aiMessage: { type: 'string', nullable: true },
@@ -258,30 +258,30 @@ export class ProductsController {
 
   @Get(':id/related')
   @ApiOperation({
-    summary: 'Obtener productos relacionados',
-    description: 'Retorna productos relacionados basados en categoría y marca',
+    summary: 'Get related products',
+    description: 'Returns related products based on category and brand',
   })
   @ApiParam({
     name: 'id',
     type: 'string',
-    description: 'ID del producto',
+    description: 'Product ID',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @ApiQuery({
     name: 'limit',
     required: false,
     type: Number,
-    description: 'Cantidad de productos relacionados',
+    description: 'Number of related products',
     example: 6,
   })
   @ApiResponse({
     status: 200,
-    description: 'Productos relacionados obtenidos',
+    description: 'Related products retrieved',
     type: [ResponseProductDto],
   })
   @ApiResponse({
     status: 404,
-    description: 'Producto no encontrado',
+    description: 'Product not found',
   })
   async getRelatedProducts(
     @Param('id', ParseUUIDPipe) productId: string,
@@ -292,23 +292,23 @@ export class ProductsController {
 
   @Get(':id')
   @ApiOperation({
-    summary: 'Obtener producto por ID (Público)',
-    description: 'Retorna un producto específico con todas sus variantes - No requiere autenticación',
+    summary: 'Get product by ID (Public)',
+    description: 'Returns a specific product with all its variants - No authentication required',
   })
   @ApiParam({
     name: 'id',
     type: 'string',
-    description: 'ID del producto',
+    description: 'Product ID',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @ApiResponse({
     status: 200,
-    description: 'Producto encontrado',
+    description: 'Product found',
     type: ResponseProductDto,
   })
   @ApiResponse({
     status: 404,
-    description: 'Producto no encontrado',
+    description: 'Product not found',
   })
   async getProductById(@Param('id', ParseUUIDPipe) id: string): Promise<ResponseProductDto> {
     return await this.productsService.getProductById(id);
@@ -317,22 +317,22 @@ export class ProductsController {
   @Post()
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Crear nuevo producto',
-    description: 'Crea un nuevo producto con variantes opcionales (Solo Admin)',
+    summary: 'Create new product',
+    description: 'Creates a new product with optional variants (Admin only)',
   })
   @ApiBody({ type: CreateProductDto })
   @ApiResponse({
     status: 201,
-    description: 'Producto creado exitosamente',
+    description: 'Product created successfully',
     type: ResponseProductDto,
   })
   @ApiResponse({
     status: 400,
-    description: 'Datos inválidos o producto duplicado',
+    description: 'Invalid data or duplicate product',
   })
   @ApiResponse({
     status: 404,
-    description: 'Categoría no encontrada',
+    description: 'Category not found',
   })
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(AuthGuard, RoleGuard)
@@ -351,23 +351,23 @@ export class ProductsController {
   @Put(':id')
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Actualizar producto',
-    description: 'Actualiza un producto existente (Solo Admin)',
+    summary: 'Update product',
+    description: 'Updates an existing product (Admin only)',
   })
   @ApiParam({
     name: 'id',
     type: 'string',
-    description: 'ID del producto',
+    description: 'Product ID',
   })
   @ApiBody({ type: UpdateProductDto })
   @ApiResponse({
     status: 200,
-    description: 'Producto actualizado exitosamente',
+    description: 'Product updated successfully',
     type: ResponseProductDto,
   })
   @ApiResponse({
     status: 404,
-    description: 'Producto no encontrado',
+    description: 'Product not found',
   })
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard, RoleGuard)
@@ -389,21 +389,21 @@ export class ProductsController {
   @Delete(':id')
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Desactivar producto',
-    description: 'Marca un producto como inactivo (soft delete) - Solo Admin',
+    summary: 'Deactivate product',
+    description: 'Marks a product as inactive (soft delete) - Admin only',
   })
   @ApiParam({
     name: 'id',
     type: 'string',
-    description: 'ID del producto',
+    description: 'Product ID',
   })
   @ApiResponse({
     status: 200,
-    description: 'Producto desactivado exitosamente',
+    description: 'Product deactivated successfully',
   })
   @ApiResponse({
     status: 404,
-    description: 'Producto no encontrado',
+    description: 'Product not found',
   })
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard, RoleGuard)
@@ -415,27 +415,27 @@ export class ProductsController {
   @Post(':id/variants')
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Agregar variante a producto',
-    description: 'Agrega una nueva variante a un producto existente (Solo Admin)',
+    summary: 'Add variant to product',
+    description: 'Adds a new variant to an existing product (Admin only)',
   })
   @ApiParam({
     name: 'id',
     type: 'string',
-    description: 'ID del producto',
+    description: 'Product ID',
   })
   @ApiBody({ type: CreateVariantDto })
   @ApiResponse({
     status: 201,
-    description: 'Variante agregada exitosamente',
+    description: 'Variant added successfully',
     type: ProductVariant,
   })
   @ApiResponse({
     status: 404,
-    description: 'Producto no encontrado',
+    description: 'Product not found',
   })
   @ApiResponse({
     status: 400,
-    description: 'Variante duplicada',
+    description: 'Duplicate variant',
   })
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(AuthGuard, RoleGuard)
@@ -457,26 +457,26 @@ export class ProductsController {
   @Put('variants/:variantId')
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Actualizar variante de producto',
-    description: 'Actualiza una variante existente (Solo Admin)',
+    summary: 'Update product variant',
+    description: 'Updates an existing variant (Admin only)',
   })
   @ApiParam({
     name: 'variantId',
     type: 'string',
-    description: 'ID de la variante',
+    description: 'Variant ID',
   })
   @ApiBody({
     type: CreateVariantDto,
-    description: 'Datos parciales de la variante a actualizar',
+    description: 'Partial variant data to update',
   })
   @ApiResponse({
     status: 200,
-    description: 'Variante actualizada exitosamente',
+    description: 'Variant updated successfully',
     type: ProductVariant,
   })
   @ApiResponse({
     status: 404,
-    description: 'Variante no encontrada',
+    description: 'Variant not found',
   })
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard, RoleGuard)
@@ -499,21 +499,21 @@ export class ProductsController {
   @Delete('variants/:variantId')
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Eliminar variante de producto',
-    description: 'Elimina una variante existente (Solo Admin)',
+    summary: 'Delete product variant',
+    description: 'Deletes an existing variant (Admin only)',
   })
   @ApiParam({
     name: 'variantId',
     type: 'string',
-    description: 'ID de la variante',
+    description: 'Variant ID',
   })
   @ApiResponse({
     status: 200,
-    description: 'Variante eliminada exitosamente',
+    description: 'Variant deleted successfully',
   })
   @ApiResponse({
     status: 404,
-    description: 'Variante no encontrada',
+    description: 'Variant not found',
   })
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard, RoleGuard)
@@ -524,24 +524,24 @@ export class ProductsController {
 
   @Get(':id/price')
   @ApiOperation({
-    summary: 'Calcular precio de producto con variantes (Público)',
-    description: 'Calcula el precio final del producto con las variantes seleccionadas - No requiere autenticación',
+    summary: 'Calculate product price with variants (Public)',
+    description: 'Calculates the final product price with selected variants - No authentication required',
   })
   @ApiParam({
     name: 'id',
     type: 'string',
-    description: 'ID del producto',
+    description: 'Product ID',
   })
   @ApiQuery({
     name: 'variants',
     required: false,
     type: 'string',
-    description: 'IDs de variantes separados por comas',
+    description: 'Variant IDs separated by commas',
     example: 'uuid1,uuid2,uuid3',
   })
   @ApiResponse({
     status: 200,
-    description: 'Precio calculado exitosamente',
+    description: 'Price calculated successfully',
     schema: {
       type: 'object',
       properties: {
@@ -562,24 +562,24 @@ export class ProductsController {
 
   @Get(':id/stock')
   @ApiOperation({
-    summary: 'Obtener stock disponible (Público)',
-    description: 'Obtiene el stock disponible para un producto con variantes específicas - No requiere autenticación',
+    summary: 'Get available stock (Public)',
+    description: 'Gets the available stock for a product with specific variants - No authentication required',
   })
   @ApiParam({
     name: 'id',
     type: 'string',
-    description: 'ID del producto',
+    description: 'Product ID',
   })
   @ApiQuery({
     name: 'variants',
     required: false,
     type: 'string',
-    description: 'IDs de variantes separados por comas',
+    description: 'Variant IDs separated by commas',
     example: 'uuid1,uuid2,uuid3',
   })
   @ApiResponse({
     status: 200,
-    description: 'Stock obtenido exitosamente',
+    description: 'Stock retrieved successfully',
     schema: {
       type: 'object',
       properties: {
@@ -601,12 +601,12 @@ export class ProductsController {
   @Post('seeder')
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Cargar productos iniciales',
-    description: 'Carga productos de prueba en la base de datos (Solo Admin)',
+    summary: 'Load initial products',
+    description: 'Loads test products into the database (Admin only)',
   })
   @ApiResponse({
     status: 201,
-    description: 'Productos cargados exitosamente',
+    description: 'Products loaded successfully',
     schema: {
       type: 'object',
       properties: {
@@ -617,7 +617,7 @@ export class ProductsController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Ya existen productos o faltan categorías',
+    description: 'Products already exist or categories are missing',
   })
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(AuthGuard, RoleGuard)

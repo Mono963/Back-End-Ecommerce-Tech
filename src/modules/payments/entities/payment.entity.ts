@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, OneToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, OneToOne, JoinColumn } from 'typeorm';
 import { Users } from '../../users/entities/users.entity';
 import { Order } from '../../orders/entities/order.entity';
 
@@ -28,13 +28,14 @@ export class Payment {
   @Column()
   paymentMethodId: string;
 
-  @Column({ type: 'timestamp' })
-  dateApproved: Date;
+  @Column({ type: 'timestamp', nullable: true })
+  dateApproved: Date | null;
 
-  @ManyToOne(() => Users, (user) => user.payment)
+  @ManyToOne(() => Users, (user) => user.payments)
   user: Users;
 
   @OneToOne(() => Order, (order) => order.payment)
+  @JoinColumn({ name: 'order_id' })
   order: Order;
 
   @CreateDateColumn()

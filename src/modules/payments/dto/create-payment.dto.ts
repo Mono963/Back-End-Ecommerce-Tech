@@ -1,6 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, OmitType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 export class CreatePreferenceDto {
   @ApiProperty({
@@ -10,16 +10,6 @@ export class CreatePreferenceDto {
   @IsNotEmpty()
   @IsString()
   orderId: string;
-
-  @ApiProperty({
-    description: 'Donation amount',
-    example: 1000,
-    minimum: 1,
-  })
-  @IsNotEmpty()
-  @IsNumber()
-  @Min(1)
-  amount: number;
 
   @ApiProperty({
     description: 'Optional message from the donor',
@@ -164,3 +154,43 @@ export class IPaymentCompletedDto {
   })
   createdAt: Date;
 }
+
+export class PaymentResponseDto {
+  @ApiProperty({ description: 'Payment UUID', example: 'b7e7db43-e1a0-493a-bbc3-ba8b6da08ec6' })
+  id: string;
+
+  @ApiProperty({ description: 'MercadoPago Payment ID', example: '1234567890' })
+  paymentId: string;
+
+  @ApiProperty({ description: 'Payment status', example: 'approved' })
+  status: string;
+
+  @ApiProperty({ description: 'Payment status detail', example: 'accredited' })
+  statusDetail: string;
+
+  @ApiProperty({ description: 'Amount paid', example: 1500.0 })
+  amount: number;
+
+  @ApiProperty({ description: 'Currency', example: 'ARS' })
+  currencyId: string;
+
+  @ApiProperty({ description: 'Payment type (credit_card, debit_card, etc)', example: 'credit_card' })
+  paymentTypeId: string;
+
+  @ApiProperty({ description: 'Payment method (visa, mastercard, etc)', example: 'visa' })
+  paymentMethodId: string;
+
+  @ApiProperty({ description: 'Date when payment was approved', example: '2024-01-15T10:30:00Z', nullable: true })
+  dateApproved: Date | null;
+
+  @ApiProperty({ description: 'Order ID', example: 'b7e7db43-e1a0-493a-bbc3-ba8b6da08ec6' })
+  orderId: string;
+
+  @ApiProperty({ description: 'User ID', example: 'b7e7db43-e1a0-493a-bbc3-ba8b6da08ec6' })
+  userId: string;
+
+  @ApiProperty({ description: 'Created timestamp', example: '2024-01-15T10:30:00Z' })
+  createdAt: Date;
+}
+
+export class MyPaymentResponseDto extends OmitType(PaymentResponseDto, ['userId', 'orderId'] as const) {}

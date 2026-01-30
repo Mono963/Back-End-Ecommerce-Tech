@@ -33,12 +33,18 @@ export class CategoriesController {
   @ApiBearerAuth()
   @Post()
   @UseGuards(AuthGuard, RoleGuard)
+  @ApiOperation({
+    summary: 'Create category',
+  })
   @Roles(UserRole.ADMIN)
   create(@Body() dto: CreateCategoryDto): Promise<Category> {
     return this.categoriesService.createCategory(dto);
   }
 
   @Get(':id')
+  @ApiOperation({
+    summary: 'search category by its ID',
+  })
   getById(@Param('id') id: string): Promise<Category> {
     const category = this.categoriesService.getByIdCategory(id);
     return category;
@@ -46,6 +52,9 @@ export class CategoriesController {
 
   @ApiBearerAuth()
   @Post('seeder')
+  @ApiOperation({
+    summary: 'Load the seeds to the database',
+  })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
   async seedCategories(): Promise<{ message: string; data?: Category[] }> {

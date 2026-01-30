@@ -6,15 +6,17 @@ import { CreatePreferenceDto, PaymentStatusDto, PreferenceResponseDto } from '..
 
 import { MailService } from '../mail/mail.service';
 import { Payment } from './entities/payment.entity';
-import { Order } from '../orders/entities/order.entity';
+import { Order, OrderStatus } from '../orders/entities/order.entity';
+import { OrderDetail } from '../orders/entities/order.details.entity';
 import { Users } from '../users/entities/users.entity';
 import { MercadoPagoService } from '../mercadopago/mercadopago.service';
 import { IPaymentService } from './validate/payment.validate';
 import {
   IMercadoPagoPaymentInfo,
   IPaymentCompleted,
+  IPaymentResponse,
   IWebhookNotificationInterface,
-} from './interface/patment.interface';
+} from './interface/payment.interface';
 
 @Injectable()
 export class PaymentsService implements IPaymentService {
@@ -26,10 +28,29 @@ export class PaymentsService implements IPaymentService {
     private readonly PaymentsRepository: Repository<Payment>,
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
+    @InjectRepository(OrderDetail)
+    private readonly orderDetailRepository: Repository<OrderDetail>,
     private readonly mailService: MailService,
     @InjectRepository(Users)
-    private readonly userRespository: Repository<Users>,
+    private readonly userRepository: Repository<Users>,
   ) {}
+
+  private mapPaymentToResponse(payment: Payment): IPaymentResponse {
+    return {
+      id: payment.id,
+      paymentId: payment.paymentId,
+      status: payment.status,
+      statusDetail: payment.statusDetail,
+      amount: payment.amount,
+      currencyId: payment.currencyId,
+      paymentTypeId: payment.paymentTypeId,
+      paymentMethodId: payment.paymentMethodId,
+      dateApproved: payment.dateApproved,
+      orderId: payment.order?.id,
+      userId: payment.user?.id,
+      createdAt: payment.createdAt,
+    };
+  }
 
   async createPreferencePayment(
     userId: string,
@@ -37,14 +58,14 @@ export class PaymentsService implements IPaymentService {
   ): Promise<PreferenceResponseDto> {
     const order = await this.orderRepository.findOne({
       where: { id: dto.orderId, user: { id: userId } },
-      relations: ['user'],
+      relations: ['user', 'orderDetail'],
     });
 
     if (!order) {
-      throw new BadRequestException(`Cart with ID ${dto.orderId} not found or doesn't belong to user ${userId}`);
+      throw new BadRequestException(`Order with ID ${dto.orderId} not found or doesn't belong to user ${userId}`);
     }
     const cartTotal = Number(order.orderDetail.total);
-    const dtoAmount = Number(dto.amount);
+    const dtoAmount = Number(order);
 
     if (cartTotal !== dtoAmount) {
       throw new BadRequestException(`Amount mismatch: Cart total is ${cartTotal}, but received amount is ${dtoAmount}`);
@@ -67,60 +88,78 @@ export class PaymentsService implements IPaymentService {
 
   async processPaymentInfo(paymentInfo: IMercadoPagoPaymentInfo): Promise<void> {
     try {
+      if (!paymentInfo.external_reference) {
+        this.logger.error('Payment received but no external_reference found');
+        return;
+      }
+
+      if (!paymentInfo.external_reference.startsWith('order-')) {
+        this.logger.error(`Invalid external_reference format for order payment: ${paymentInfo.external_reference}`);
+        return;
+      }
+
+      const orderId = paymentInfo.external_reference.replace('order-', '');
+
+      const order = await this.orderRepository.findOne({
+        where: { id: orderId },
+        relations: ['user', 'orderDetail'],
+      });
+
+      if (!order) {
+        this.logger.error(`Order with ID ${orderId} not found`);
+        return;
+      }
+
+      // Crear registro de Payment para todos los estados
+      const orderPayment = this.PaymentsRepository.create({
+        paymentId: paymentInfo.id.toString(),
+        status: paymentInfo.status,
+        statusDetail: paymentInfo.status_detail,
+        amount: paymentInfo.transaction_amount,
+        currencyId: paymentInfo.currency_id,
+        paymentTypeId: paymentInfo.payment_type_id,
+        paymentMethodId: paymentInfo.payment_method_id,
+        dateApproved: paymentInfo.date_approved ? new Date(paymentInfo.date_approved) : null,
+        user: order.user,
+        order,
+      });
+
+      await this.PaymentsRepository.save(orderPayment);
+
+      // Solo actualizar Order.status a PAID cuando el pago está aprobado
       if (paymentInfo.status === 'approved') {
-        if (!paymentInfo.external_reference) {
-          this.logger.error('Payment approved but no external_reference found');
-          return;
+        order.status = OrderStatus.PAID;
+        await this.orderRepository.save(order);
+
+        // Sincronizar método de pago en OrderDetail
+        if (order.orderDetail) {
+          order.orderDetail.paymentMethod = paymentInfo.payment_method_id;
+          await this.orderDetailRepository.save(order.orderDetail);
         }
 
-        if (!paymentInfo.external_reference.startsWith('order-')) {
-          this.logger.error(`Invalid external_reference format for order payment: ${paymentInfo.external_reference}`);
-          return;
-        }
-
-        const orderId = paymentInfo.external_reference.replace('order-', '');
-
-        const order = await this.orderRepository.findOne({
-          where: { id: orderId },
-          relations: ['user'],
-        });
-
-        if (!order) {
-          this.logger.error(`Cart with ID ${orderId} not found`);
-          return;
-        }
-
-        const orderPayment = this.PaymentsRepository.create({
-          paymentId: paymentInfo.id.toString(),
-          status: paymentInfo.status,
-          statusDetail: paymentInfo.status_detail,
-          amount: paymentInfo.transaction_amount,
-          currencyId: paymentInfo.currency_id,
-          paymentTypeId: paymentInfo.payment_type_id,
-          paymentMethodId: paymentInfo.payment_method_id,
-          dateApproved: new Date(paymentInfo.date_approved),
-          user: order.user,
-          order,
-        });
-
-        await this.PaymentsRepository.save(orderPayment);
-
-        if (orderPayment.status === 'approved') {
-          await this.sendOrderPaymentNotificationAsync(order.user.id);
-          await this.sendOrderPaymentNotificationAsyncToAdmin(order.user.id, order);
-        }
-        if (orderPayment.status === 'pending' || orderPayment.status === 'in_process') {
-          await this.sendOrderPaymentPendingNotificationAsync(order.user.id);
-        }
-        if (orderPayment.status === 'rejected') {
-          await this.sendOrderPaymentFailureNotificationAsync(order.user.id);
-        }
+        // Notificaciones de pago aprobado
+        await this.sendOrderPaymentNotificationAsync(order.user.id);
+        await this.sendOrderPaymentNotificationAsyncToAdmin(order.user.id, order);
 
         this.logger.log(
-          `Order payment completed and saved for cart: ${orderId}, payment: ${paymentInfo.id}, user: ${order.user.id}`,
+          `Order payment approved and saved for order: ${orderId}, payment: ${paymentInfo.id}, user: ${order.user.id}`,
+        );
+      } else if (paymentInfo.status === 'pending' || paymentInfo.status === 'in_process') {
+        // Notificación de pago pendiente (Order.status sigue en PENDING)
+        await this.sendOrderPaymentPendingNotificationAsync(order.user.id);
+
+        this.logger.log(
+          `Order payment pending for order: ${orderId}, payment: ${paymentInfo.id}, status: ${paymentInfo.status}`,
+        );
+      } else if (paymentInfo.status === 'rejected' || paymentInfo.status === 'cancelled') {
+        // Notificación de pago rechazado (Order.status sigue en PENDING)
+        await this.sendOrderPaymentFailureNotificationAsync(order.user.id);
+
+        this.logger.log(
+          `Order payment rejected for order: ${orderId}, payment: ${paymentInfo.id}, status: ${paymentInfo.status}`,
         );
       } else {
-        this.logger.log(`Order payment not approved - Status: ${paymentInfo.status}, Payment: ${paymentInfo.id}`);
+        this.logger.log(`Order payment received with status: ${paymentInfo.status}, payment: ${paymentInfo.id}`);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -129,19 +168,21 @@ export class PaymentsService implements IPaymentService {
     }
   }
 
-  async getPaymentByOrderId(orderId: string): Promise<Payment | null> {
-    return await this.PaymentsRepository.findOne({
+  async getPaymentByOrderId(orderId: string): Promise<IPaymentResponse | null> {
+    const payment = await this.PaymentsRepository.findOne({
       where: { order: { id: orderId } },
       relations: ['user', 'order'],
     });
+    return payment ? this.mapPaymentToResponse(payment) : null;
   }
 
-  async getPaymentsByUserId(userId: string): Promise<Payment[]> {
-    return await this.PaymentsRepository.find({
+  async getPaymentsByUserId(userId: string): Promise<IPaymentResponse[]> {
+    const payments = await this.PaymentsRepository.find({
       where: { user: { id: userId } },
-      relations: ['user', 'order', 'order.cart'],
+      relations: ['user', 'order'],
       order: { createdAt: 'DESC' },
     });
+    return payments.map((p) => this.mapPaymentToResponse(p));
   }
 
   async getAllOrdersPayment(): Promise<IPaymentCompleted[]> {
@@ -163,7 +204,7 @@ export class PaymentsService implements IPaymentService {
   }
 
   private async sendOrderPaymentNotificationAsync(id: string): Promise<void> {
-    const user = await this.userRespository.findOne({ where: { id } });
+    const user = await this.userRepository.findOne({ where: { id } });
 
     if (!user) {
       this.logger.warn(`Usuario con ID ${id} no encontrado para notificación de orden`);
@@ -184,7 +225,7 @@ export class PaymentsService implements IPaymentService {
   }
 
   private async sendOrderPaymentPendingNotificationAsync(id: string): Promise<void> {
-    const user = await this.userRespository.findOne({ where: { id } });
+    const user = await this.userRepository.findOne({ where: { id } });
 
     if (!user) {
       this.logger.warn(`Usuario con ID ${id} no encontrado para notificación de pago pendiente`);
@@ -205,7 +246,7 @@ export class PaymentsService implements IPaymentService {
   }
 
   private async sendOrderPaymentFailureNotificationAsync(id: string): Promise<void> {
-    const user = await this.userRespository.findOne({ where: { id } });
+    const user = await this.userRepository.findOne({ where: { id } });
 
     if (!user) {
       this.logger.warn(`Usuario con ID ${id} no encontrado para notificación de pago rechazado`);
@@ -226,7 +267,7 @@ export class PaymentsService implements IPaymentService {
   }
 
   private async sendOrderPaymentNotificationAsyncToAdmin(id: string, order: Order): Promise<void> {
-    const user = await this.userRespository.findOne({ where: { id } });
+    const user = await this.userRepository.findOne({ where: { id } });
 
     if (!user) {
       this.logger.warn(`Usuario con ID ${id} no encontrado para notificación de orden`);

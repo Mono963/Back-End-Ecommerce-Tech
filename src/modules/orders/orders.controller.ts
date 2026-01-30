@@ -36,59 +36,59 @@ export class OrdersController {
   @Get()
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Obtener todas las órdenes con paginación y filtros',
+    summary: 'Get all orders with pagination and filters',
     description:
-      'Retorna todas las órdenes con metadata de paginación, filtros por estado, fecha, número de orden y email del usuario (Solo Admin)',
+      'Returns all orders with pagination metadata, filters by status, date, order number and user email (Admin only)',
   })
   @ApiQuery({
     name: 'status',
     required: false,
     enum: OrderStatus,
-    description: 'Filtrar por estado',
+    description: 'Filter by status',
   })
   @ApiQuery({
     name: 'startDate',
     required: false,
     type: 'string',
-    description: 'Fecha de inicio (YYYY-MM-DD)',
+    description: 'Start date (YYYY-MM-DD)',
   })
   @ApiQuery({
     name: 'endDate',
     required: false,
     type: 'string',
-    description: 'Fecha de fin (YYYY-MM-DD)',
+    description: 'End date (YYYY-MM-DD)',
   })
   @ApiQuery({
     name: 'orderNumber',
     required: false,
     type: 'string',
-    description: 'Buscar por número de orden',
+    description: 'Search by order number',
     example: 'ORD-2024-01-0001',
   })
   @ApiQuery({
     name: 'userEmail',
     required: false,
     type: 'string',
-    description: 'Buscar por email del usuario',
-    example: 'juan@example.com',
+    description: 'Search by user email',
+    example: 'john@example.com',
   })
   @ApiQuery({
     name: 'page',
     required: false,
     type: 'number',
-    description: 'Página',
+    description: 'Page',
     example: 1,
   })
   @ApiQuery({
     name: 'limit',
     required: false,
     type: 'number',
-    description: 'Límite por página',
+    description: 'Limit per page',
     example: 10,
   })
   @ApiResponse({
     status: 200,
-    description: 'Lista paginada de órdenes con metadata',
+    description: 'Paginated list of orders with metadata',
     type: PaginatedOrdersDto,
   })
   @UseGuards(AuthGuard, RoleGuard)
@@ -100,12 +100,12 @@ export class OrdersController {
   @Get('my-orders')
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Obtener todas las órdenes del usuario autenticado',
-    description: 'Retorna un listado de órdenes del usuario ordenadas por fecha',
+    summary: 'Get all orders for authenticated user',
+    description: 'Returns a list of user orders sorted by date',
   })
   @ApiResponse({
     status: 200,
-    description: 'Lista de órdenes obtenida',
+    description: 'Orders list retrieved',
     type: [ResponseOrderDto],
   })
   @UseGuards(AuthGuard)
@@ -117,12 +117,12 @@ export class OrdersController {
   @Get('stats')
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Obtener estadísticas de órdenes',
-    description: 'Retorna estadísticas generales de las órdenes (Solo Admin)',
+    summary: 'Get order statistics',
+    description: 'Returns general order statistics (Admin only)',
   })
   @ApiResponse({
     status: 200,
-    description: 'Estadísticas obtenidas',
+    description: 'Statistics retrieved',
     type: OrderStatsDto,
   })
   @UseGuards(AuthGuard, RoleGuard)
@@ -134,23 +134,23 @@ export class OrdersController {
   @Get(':id')
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Obtener una orden por ID',
-    description: 'Retorna los detalles completos de una orden específica',
+    summary: 'Get order by ID',
+    description: 'Returns complete details of a specific order',
   })
   @ApiParam({
     name: 'id',
     type: 'string',
-    description: 'ID de la orden',
+    description: 'Order ID',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @ApiResponse({
     status: 200,
-    description: 'Orden encontrada',
+    description: 'Order found',
     type: ResponseOrderDto,
   })
   @ApiResponse({
     status: 404,
-    description: 'Orden no encontrada',
+    description: 'Order not found',
   })
   @UseGuards(AuthGuard)
   async getOrderById(
@@ -164,27 +164,27 @@ export class OrdersController {
   @Put(':id/status')
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Actualizar el estado de una orden',
-    description: 'Permite cambiar el estado de una orden (Solo Admin)',
+    summary: 'Update order status',
+    description: 'Allows changing the status of an order (Admin only)',
   })
   @ApiParam({
     name: 'id',
     type: 'string',
-    description: 'ID de la orden',
+    description: 'Order ID',
   })
   @ApiBody({ type: UpdateOrderStatusDto })
   @ApiResponse({
     status: 200,
-    description: 'Estado actualizado exitosamente',
+    description: 'Status updated successfully',
     type: ResponseOrderDto,
   })
   @ApiResponse({
     status: 400,
-    description: 'Transición de estado inválida',
+    description: 'Invalid status transition',
   })
   @ApiResponse({
     status: 404,
-    description: 'Orden no encontrada',
+    description: 'Order not found',
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
@@ -198,27 +198,27 @@ export class OrdersController {
   @Post(':OrderId/:UserId/cancel')
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Cancelar una orden',
-    description: 'Permite cancelar una orden pendiente o pagada',
+    summary: 'Cancel an order',
+    description: 'Allows canceling a pending or paid order',
   })
   @ApiParam({
     name: 'OrderId',
     type: 'string',
-    description: 'ID de la orden',
+    description: 'Order ID',
   })
   @ApiParam({
     name: 'UserId',
     type: 'string',
-    description: 'ID de Usuario',
+    description: 'User ID',
   })
   @ApiResponse({
     status: 200,
-    description: 'Orden cancelada exitosamente',
+    description: 'Order cancelled successfully',
     type: ResponseOrderDto,
   })
   @ApiResponse({
     status: 400,
-    description: 'No se puede cancelar la orden en su estado actual',
+    description: 'Cannot cancel order in its current status',
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.SUPER_ADMIN)

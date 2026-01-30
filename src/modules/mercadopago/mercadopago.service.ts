@@ -2,10 +2,11 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
+import { MercadoPagoConfig, Preference, Payment, MerchantOrder } from 'mercadopago';
 import { Users } from '../users/entities/users.entity';
+import { Order } from '../orders/entities/order.entity';
 import { CreatePreferenceDto, PaymentStatusDto, PreferenceResponseDto } from '../payments/dto/create-payment.dto';
-import { IMercadoPagoPaymentInfo, IWebhookNotificationInterface } from '../payments/interface/patment.interface';
+import { IMercadoPagoPaymentInfo, IWebhookNotificationInterface } from '../payments/interface/payment.interface';
 import { isMercadoPagoError } from '../payments/validate/payment.validate';
 
 @Injectable()
@@ -14,11 +15,14 @@ export class MercadoPagoService {
   private readonly client: MercadoPagoConfig;
   private readonly preference: Preference;
   private readonly payment: Payment;
+  private readonly merchantOrder: MerchantOrder;
 
   constructor(
     private readonly configService: ConfigService,
     @InjectRepository(Users)
     private readonly userRepository: Repository<Users>,
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
   ) {
     const accessToken = this.configService.get<string>('MP_ACCESS_TOKEN');
     if (!accessToken) {
@@ -30,6 +34,7 @@ export class MercadoPagoService {
     });
     this.preference = new Preference(this.client);
     this.payment = new Payment(this.client);
+    this.merchantOrder = new MerchantOrder(this.client);
   }
 
   async createPreference(userId: string, orderId: string, dto: CreatePreferenceDto): Promise<PreferenceResponseDto> {
@@ -39,17 +44,45 @@ export class MercadoPagoService {
       throw new BadRequestException(`User with ID ${userId} not found`);
     }
 
-    let externalReference: string;
-    let itemTitle: string;
-    let itemDescription: string;
-
     if (!orderId) {
-      throw new BadRequestException('Cart ID is required for cart payments');
-    } else {
-      externalReference = `order-${orderId}`;
-      itemTitle = 'Compra en WAT';
-      itemDescription = dto.message || 'Purchase from cart';
+      throw new BadRequestException('Order ID is required for payments');
     }
+
+    // Buscar la orden con su detalle para obtener el total
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId, user: { id: userId } },
+      relations: ['orderDetail'],
+    });
+
+    if (!order) {
+      this.logger.warn(`Order ${orderId} not found for user ${userId}`);
+      throw new BadRequestException(`Order ${orderId} not found`);
+    }
+
+    if (!order.orderDetail?.total || order.orderDetail.total <= 0) {
+      throw new BadRequestException('Order total must be greater than 0');
+    }
+
+    const externalReference = `order-${orderId}`;
+    const itemTitle = 'Compra en WAT';
+    const itemDescription = dto.message || 'Purchase from cart';
+
+    // Obtener URLs y remover trailing slash si existe
+    const frontendUrl = (this.configService.get<string>('FRONTEND_MP_URL') || '').replace(/\/$/, '');
+    const backendUrl = (this.configService.get<string>('BACKEND_MP_URL') || '').replace(/\/$/, '');
+
+    if (!frontendUrl) {
+      this.logger.error('FRONTEND_MP_URL is not configured');
+      throw new BadRequestException('Payment service is not properly configured');
+    }
+
+    if (!backendUrl) {
+      this.logger.error('BACKEND_MP_URL is not configured');
+      throw new BadRequestException('Payment service is not properly configured');
+    }
+
+    // Determinar si estamos en localhost (desarrollo)
+    const isLocalhost = frontendUrl.includes('localhost') || frontendUrl.includes('127.0.0.1');
 
     const preferenceData = {
       items: [
@@ -59,20 +92,21 @@ export class MercadoPagoService {
           description: itemDescription,
           quantity: 1,
           currency_id: dto.currency || 'ARS',
-          unit_price: dto.amount,
+          unit_price: Number(order.orderDetail.total),
         },
       ],
       payer: {
-        email: 'test_user_461283922@testuser.com',
+        email: user.email,
       },
       back_urls: {
-        success: `${this.configService.get<string>('FRONTEND_MP_URL')}/orders/success`,
-        failure: `${this.configService.get<string>('FRONTEND_MP_URL')}/orders/failure`,
-        pending: `${this.configService.get<string>('FRONTEND_MP_URL')}/orders/pending`,
+        success: `${frontendUrl}/orders/success`,
+        failure: `${frontendUrl}/orders/failure`,
+        pending: `${frontendUrl}/orders/pending`,
       },
-      auto_return: 'approved',
-      notification_url: `${this.configService.get<string>('BACKEND_MP_URL')}/payments/webhook`,
+      notification_url: `${backendUrl}/payments/webhook`,
       external_reference: externalReference,
+      // Solo agregar auto_return si NO es localhost (MercadoPago lo rechaza con localhost)
+      ...(isLocalhost ? {} : { auto_return: 'approved' as const }),
     };
 
     try {
@@ -86,7 +120,7 @@ export class MercadoPagoService {
         sandboxInitPoint: response.sandbox_init_point,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = error instanceof Error ? error.message : JSON.stringify(error);
       this.logger.error(`Error creating ${orderId} preference for user ${userId}: ${message}`);
       throw new BadRequestException(`Failed to create ${orderId} preference`);
     }
@@ -105,47 +139,97 @@ export class MercadoPagoService {
         return null;
       }
 
-      if (notif.type === 'payment') {
-        const paymentId = notif.data.id;
-        if (paymentId === '123456' || paymentId === 'test' || paymentId.length < 8) {
-          this.logger.log(`Test webhook detected with ID: ${paymentId} - Simulating approved payment`);
-          const mockPaymentInfo: IMercadoPagoPaymentInfo = {
-            id: parseInt(paymentId) || 123456,
-            status: 'approved',
-            status_detail: 'accredited',
-            transaction_amount: 100,
-            currency_id: 'ARS',
-            external_reference: 'donation-b7e7db43-e1a0-493a-bbc3-ba8b6da08ec6',
-            payment_type_id: 'credit_card',
-            payment_method_id: 'visa',
-            date_approved: new Date().toISOString(),
-          };
-          this.logger.log(`Mock payment processed successfully`);
-          return mockPaymentInfo;
-        }
+      const resourceId = notif.data.id;
+      this.logger.log(`Processing ${notif.type} notification with ID: ${resourceId}`);
 
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        const paymentInfo = await this.getPaymentInfoWithRetry(paymentId, 6, 3000);
-
-        if (!paymentInfo) {
-          this.logger.warn(`Payment info for ID ${paymentId} could not be retrieved after retries.`);
-          return null;
-        }
-
-        this.logger.log(
-          `Payment webhook processed successfully - Status: ${paymentInfo.status}, Type: ${this.getPaymentTypeFromReference(paymentInfo.external_reference)}`,
-        );
-        return paymentInfo;
-      } else {
-        this.logger.log(`Received unhandled webhook type: ${notif.type}`);
-        return null;
+      // Manejar merchant_order - necesitamos obtener el payment_id de la orden
+      if (notif.type === 'topic_merchant_order_wh' || notif.type === 'merchant_order') {
+        return await this.processMerchantOrderWebhook(resourceId);
       }
+
+      // Manejar payment directamente
+      if (notif.type === 'payment') {
+        return await this.processPaymentWebhook(resourceId);
+      }
+
+      this.logger.log(`Received unhandled webhook type: ${notif.type}`);
+      return null;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Error processing webhook: ${message}`, error instanceof Error ? error.stack : undefined);
       return null;
     }
+  }
+
+  /**
+   * Procesa webhook de merchant_order - obtiene los payments asociados
+   */
+  private async processMerchantOrderWebhook(merchantOrderId: string): Promise<IMercadoPagoPaymentInfo | null> {
+    try {
+      this.logger.log(`Fetching merchant order: ${merchantOrderId}`);
+      const merchantOrderResponse = await this.merchantOrder.get({ merchantOrderId });
+
+      if (!merchantOrderResponse) {
+        this.logger.warn(`Merchant order ${merchantOrderId} not found`);
+        return null;
+      }
+
+      this.logger.log(`Merchant order ${merchantOrderId} status: ${merchantOrderResponse.status}`);
+
+      // Obtener el primer payment aprobado o el más reciente
+      const payments = merchantOrderResponse.payments || [];
+      const approvedPayment = payments.find((p: { status?: string }) => p.status === 'approved');
+      const paymentToProcess = approvedPayment || payments[0];
+
+      if (!paymentToProcess?.id) {
+        this.logger.warn(`No payments found in merchant order ${merchantOrderId}`);
+        return null;
+      }
+
+      this.logger.log(`Processing payment ${paymentToProcess.id} from merchant order`);
+      return await this.processPaymentWebhook(String(paymentToProcess.id));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : JSON.stringify(error);
+      this.logger.error(`Error processing merchant order ${merchantOrderId}: ${message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Procesa webhook de payment directamente
+   */
+  private async processPaymentWebhook(paymentId: string): Promise<IMercadoPagoPaymentInfo | null> {
+    const isDevelopment = this.configService.get<string>('NODE_ENV') !== 'production';
+
+    if (isDevelopment && (paymentId === '123456' || paymentId === 'test' || paymentId.length < 8)) {
+      this.logger.log(`Test webhook detected with ID: ${paymentId} - Simulating approved payment`);
+      const mockPaymentInfo: IMercadoPagoPaymentInfo = {
+        id: parseInt(paymentId) || 123456,
+        status: 'approved',
+        status_detail: 'accredited',
+        transaction_amount: 100,
+        currency_id: 'ARS',
+        external_reference: 'order-test-uuid',
+        payment_type_id: 'credit_card',
+        payment_method_id: 'visa',
+        date_approved: new Date().toISOString(),
+      };
+      return mockPaymentInfo;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    const paymentInfo = await this.getPaymentInfoWithRetry(paymentId, 6, 3000);
+
+    if (!paymentInfo) {
+      this.logger.warn(`Payment info for ID ${paymentId} could not be retrieved after retries.`);
+      return null;
+    }
+
+    this.logger.log(
+      `Payment webhook processed successfully - Status: ${paymentInfo.status}, External Ref: ${paymentInfo.external_reference}`,
+    );
+    return paymentInfo;
   }
 
   async getPaymentStatus(paymentId: string): Promise<PaymentStatusDto> {

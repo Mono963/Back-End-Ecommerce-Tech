@@ -318,12 +318,13 @@ export class UsersController {
 
   @Get('stats/me')
   @ApiOperation({
-    summary: 'Obtener estadísticas personales del usuario',
-    description: 'Retorna estadísticas del usuario autenticado: total de órdenes, total gastado, productos en wishlist',
+    summary: 'Get personal user statistics',
+    description:
+      'Returns statistics of the authenticated user: total orders, total spent, products on wishlist and reviews',
   })
   @ApiResponse({
     status: 200,
-    description: 'Estadísticas obtenidas exitosamente',
+    description: 'Successfully Obtained Statistics',
     schema: {
       type: 'object',
       properties: {

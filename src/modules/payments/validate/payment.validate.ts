@@ -1,5 +1,5 @@
 import { CreatePreferenceDto, PaymentStatusDto, PreferenceResponseDto } from '../dto/create-payment.dto';
-import { IMercadoPagoError, IWebhookNotificationInterface } from '../interface/patment.interface';
+import { IMercadoPagoError, IWebhookNotificationInterface } from '../interface/payment.interface';
 
 export function isMercadoPagoError(error: unknown): error is IMercadoPagoError {
   return error instanceof Error && ('response' in error || 'status' in error);

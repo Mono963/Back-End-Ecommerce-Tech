@@ -6,16 +6,18 @@ import { PaymentsService } from './payment.service';
 import { AuthsModule } from '../auths/auths.module';
 import { MailModule } from '../mail/mail.module';
 import { Users } from '../users/entities/users.entity';
-import { MercadoPagoService } from '../mercadopago/mercadopago.service';
+import { MercadoPagoModule } from '../mercadopago/mercadopago.module';
 import { Payment } from './entities/payment.entity';
+import { Order } from '../orders/entities/order.entity';
+import { OrderDetail } from '../orders/entities/order.details.entity';
 
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([Payment, Users]),
+    TypeOrmModule.forFeature([Payment, Users, Order, OrderDetail]),
     forwardRef(() => AuthsModule),
     MailModule,
-    forwardRef(() => MercadoPagoService),
+    forwardRef(() => MercadoPagoModule),
   ],
   controllers: [PaymentsController],
   providers: [PaymentsService],

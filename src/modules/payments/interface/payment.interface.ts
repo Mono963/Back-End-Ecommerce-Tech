@@ -6,20 +6,20 @@ export interface IMercadoPagoPaymentInfo {
   currency_id: string;
   payment_type_id: string;
   payment_method_id: string;
-  date_approved: string;
+  date_approved: string | null;
   external_reference: string;
 }
 
 export interface IWebhookNotificationInterface {
-  id: number;
-  live_mode: boolean;
+  id?: number;
+  live_mode?: boolean;
   type: string;
-  date_created: string;
-  application_id: number;
-  user_id: string;
-  version: number;
-  api_version: string;
-  action: string;
+  date_created?: string;
+  application_id?: number;
+  user_id?: string;
+  version?: number;
+  api_version?: string;
+  action?: string;
   data: {
     id: string;
   };
@@ -36,7 +36,7 @@ export interface IPaymentCompleted {
   currency_id: string;
   payment_type_id: string;
   payment_method_id: string;
-  date_approved: Date;
+  date_approved: Date | null;
   createdAt: Date;
 }
 
@@ -78,4 +78,32 @@ export enum PaymentStatusDetail {
   REJECTED_BY_REGULATIONS = 'rejected_by_regulations',
   REJECTED_HIGH_RISK = 'rejected_high_risk',
   REJECTED_BY_BANK = 'rejected_by_bank',
+}
+
+export interface IPaymentResponse {
+  id: string;
+  paymentId: string;
+  status: string;
+  statusDetail: string;
+  amount: number;
+  currencyId: string;
+  paymentTypeId: string;
+  paymentMethodId: string;
+  dateApproved: Date | null;
+  orderId: string;
+  userId: string;
+  createdAt: Date;
+}
+
+export interface IMyPaymentResponse {
+  id: string;
+  paymentId: string;
+  status: string;
+  statusDetail: string;
+  amount: number;
+  currencyId: string;
+  paymentTypeId: string;
+  paymentMethodId: string;
+  dateApproved: Date | null;
+  createdAt: Date;
 }

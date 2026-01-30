@@ -8,7 +8,7 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, QueryRunner } from 'typeorm'; // Corregido: Se eliminaron Between y FindManyOptions
+import { Repository, DataSource, QueryRunner } from 'typeorm';
 import { Order, OrderStatus } from './entities/order.entity';
 import { OrderDetail } from './entities/order.details.entity';
 import { Product } from '../products/entities/products.entity';
@@ -308,9 +308,9 @@ export class OrdersService {
     quantity: number,
   ): Promise<void> {
     // 🔒 Pessimistic write lock para evitar race conditions en stock
+    // NOTA: No usar relations con lock porque PostgreSQL no permite FOR UPDATE con LEFT JOIN
     const product = await queryRunner.manager.findOne(Product, {
       where: { id: productId },
-      relations: ['variants'],
       lock: { mode: 'pessimistic_write' },
     });
 
@@ -361,7 +361,13 @@ export class OrdersService {
   async getUserOrders(userId: string): Promise<ResponseOrderDto[]> {
     const orders = await this.orderRepo.find({
       where: { user: { id: userId } },
-      relations: ['orderDetail', 'orderDetail.items', 'orderDetail.items.product', 'orderDetail.items.variants'],
+      relations: [
+        'user',
+        'orderDetail',
+        'orderDetail.items',
+        'orderDetail.items.product',
+        'orderDetail.items.variants',
+      ],
       order: { createdAt: 'DESC' },
     });
 
@@ -535,6 +541,7 @@ export class OrdersService {
 
       for (const item of order.orderDetail.items) {
         // 🔒 Lock para evitar race conditions al restaurar stock
+        // NOTA: No usar relations con lock porque PostgreSQL no permite FOR UPDATE con LEFT JOIN
         const product = await queryRunner.manager.findOne(Product, {
           where: { id: item.product_id },
           lock: { mode: 'pessimistic_write' },

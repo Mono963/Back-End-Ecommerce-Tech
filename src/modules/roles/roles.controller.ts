@@ -8,16 +8,16 @@ export class RolesController {
 
   @Post('seed_roles')
   @ApiOperation({
-    summary: 'Ejecutar seeds de roles',
-    description: 'Crea los 5 roles del sistema si no existen',
+    summary: 'Run role seeds',
+    description: 'Create the 5 system roles if they do not exist',
   })
   @ApiResponse({
     status: 201,
-    description: 'Seeds ejecutados exitosamente',
+    description: 'Seeds executed successfully',
     schema: {
       example: {
-        message: 'Seeds ejecutados exitosamente',
-        roles: ['SUPER_ADMIN', 'ADMIN', 'CLIENT', 'CLEANER', 'KEY_KEEPER'],
+        message: 'Seeds executed successfully',
+        roles: ['SUPER_ADMIN', 'ADMIN', 'CLIENT'],
       },
     },
   })

@@ -24,12 +24,15 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { BullModule } from '@nestjs/bull';
 import { cacheConfig } from './config/cache.config';
 import { bullConfig } from './config/bull.config';
+import { PaymentsModule } from './modules/payments/payment.module';
+import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       load: [typeOrmConfig],
+      envFilePath: ['.env', '.env.development', '.env.local'],
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
@@ -56,6 +59,8 @@ import { bullConfig } from './config/bull.config';
     ReviewModule,
     WishlistModule,
     N8nModule,
+    PaymentsModule,
+    MercadoPagoModule,
   ],
   controllers: [AppController],
   providers: [

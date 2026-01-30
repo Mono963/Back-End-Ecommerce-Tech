@@ -28,7 +28,6 @@ export class RolesService {
     try {
       await seedRoles(this.dataSource);
 
-      // Obtener todos los roles creados
       const roles = await this.roleRepository.find({
         select: ['name', 'description'],
       });

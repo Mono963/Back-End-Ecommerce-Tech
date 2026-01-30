@@ -9,7 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { FileService } from './file.service';
 import { FileValidationPipe } from '../../common/pipes/file-validation.pipe';
@@ -26,12 +26,13 @@ export class FileController {
 
   @ApiBearerAuth()
   @Post('uploadImage/:id')
+  @ApiOperation({ summary: 'Upload image for a product' })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB máximo
+        fileSize: 5 * 1024 * 1024,
       },
       fileFilter: (req, file, callback) => {
         const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
