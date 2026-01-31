@@ -5,7 +5,7 @@ import { AddToWishlistDto, WishlistResponseDto, WishlistSummaryDto, WishlistItem
 import { AuthGuard } from 'src/guards/auth.guards';
 import { RoleGuard } from 'src/guards/auth.guards.role';
 import { Roles, UserRole } from 'src/decorator/role.decorator';
-import { AuthenticatedRequest } from '../users/interface/IUserResponseDto';
+import { AuthRequest } from 'src/common/auths/auth-request.interface';
 
 @ApiTags('Wishlist')
 @ApiBearerAuth()
@@ -22,7 +22,7 @@ export class WishlistController {
     description: 'Wishlist retrieved successfully',
     type: WishlistResponseDto,
   })
-  async getMyWishlist(@Req() req: AuthenticatedRequest): Promise<WishlistResponseDto> {
+  async getMyWishlist(@Req() req: AuthRequest): Promise<WishlistResponseDto> {
     return await this.wishlistService.getWishlist(req.user.sub);
   }
 
@@ -33,7 +33,7 @@ export class WishlistController {
     description: 'Summary retrieved successfully',
     type: WishlistSummaryDto,
   })
-  async getWishlistSummary(@Req() req: AuthenticatedRequest): Promise<WishlistSummaryDto> {
+  async getWishlistSummary(@Req() req: AuthRequest): Promise<WishlistSummaryDto> {
     return await this.wishlistService.getWishlistSummary(req.user.sub);
   }
 
@@ -53,7 +53,7 @@ export class WishlistController {
     description: 'Product is already in the wishlist',
   })
   async addToWishlist(
-    @Req() req: AuthenticatedRequest,
+    @Req() req: AuthRequest,
     @Body() dto: AddToWishlistDto,
   ): Promise<WishlistItemResponseDto> {
     return await this.wishlistService.addToWishlist(req.user.sub, dto.productId);
@@ -75,7 +75,7 @@ export class WishlistController {
     status: 404,
     description: 'Wishlist or product not found',
   })
-  async removeFromWishlist(@Req() req: AuthenticatedRequest, @Param('productId') productId: string): Promise<void> {
+  async removeFromWishlist(@Req() req: AuthRequest, @Param('productId') productId: string): Promise<void> {
     return await this.wishlistService.removeFromWishlist(req.user.sub, productId);
   }
 
@@ -90,7 +90,7 @@ export class WishlistController {
     status: 404,
     description: 'Wishlist not found',
   })
-  async clearWishlist(@Req() req: AuthenticatedRequest): Promise<void> {
+  async clearWishlist(@Req() req: AuthRequest): Promise<void> {
     return await this.wishlistService.clearWishlist(req.user.sub);
   }
 
@@ -115,7 +115,7 @@ export class WishlistController {
     },
   })
   async checkInWishlist(
-    @Req() req: AuthenticatedRequest,
+    @Req() req: AuthRequest,
     @Param('productId') productId: string,
   ): Promise<{ isInWishlist: boolean }> {
     const isInWishlist = await this.wishlistService.isInWishlist(req.user.sub, productId);

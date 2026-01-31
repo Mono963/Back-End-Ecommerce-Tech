@@ -14,8 +14,8 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { OrderStatus } from '../entities/order.entity';
-import { UserAddress } from 'src/modules/users/interface/IUserResponseDto';
+import { IUserAddress } from '../../users/interfaces/user.interface';
+import { OrderStatus } from '../interfaces/orders.interface';
 
 export class ProductSnapshotDto {
   @ApiProperty({ example: 'Dell Inspiron 15' })
@@ -196,7 +196,7 @@ export class OrderDetailResponseDto {
       isDefault: true,
     },
   })
-  shippingAddress?: UserAddress | null;
+  shippingAddress?: IUserAddress | null;
 
   @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440000' })
   shippingAddressId?: string | null;

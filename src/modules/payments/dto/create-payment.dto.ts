@@ -4,7 +4,7 @@ import { IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from 'clas
 
 export class CreatePreferenceDto {
   @ApiProperty({
-    description: 'Order ID to process payment for',
+    description: 'Order ID to process the payment for',
     example: 'b7e7db43-e1a0-493a-bbc3-ba8b6da08ec6',
   })
   @IsNotEmpty()
@@ -12,7 +12,7 @@ export class CreatePreferenceDto {
   orderId: string;
 
   @ApiProperty({
-    description: 'Optional message from the donor',
+    description: 'Optional message provided by the user',
     example: 'Keep up the great work!',
     required: false,
   })
@@ -21,7 +21,7 @@ export class CreatePreferenceDto {
   message: string;
 
   @ApiProperty({
-    description: 'Currency code',
+    description: 'Currency code used for the payment',
     example: 'ARS',
     default: 'ARS',
     required: false,
@@ -32,124 +32,178 @@ export class CreatePreferenceDto {
 }
 
 export class PaymentStatusDto {
-  @ApiProperty({ description: 'Payment ID' })
+  @ApiProperty({ description: 'MercadoPago payment ID', example: 123456789 })
   id: string | number;
 
-  @ApiProperty({ description: 'Payment status', example: 'approved' })
+  @ApiProperty({ description: 'Current payment status', example: 'approved' })
   status: string;
 
   @ApiProperty({
-    description: 'Payment status detail',
+    description: 'Detailed payment status information',
     example: 'accredited',
   })
   status_detail: string;
 
-  @ApiProperty({ description: 'Transaction amount', example: 100.0 })
+  @ApiProperty({ description: 'Transaction amount paid', example: 100.0 })
   transaction_amount: number;
 
-  @ApiProperty({ description: 'Currency ID', example: 'ARS' })
+  @ApiProperty({ description: 'Currency identifier', example: 'ARS' })
   currency_id: string;
 
   @ApiProperty({
-    description: 'Date approved',
+    description: 'Date when the payment was approved',
     example: '2023-01-01T00:00:00Z',
   })
   date_approved: string;
 }
 
 export class PreferenceResponseDto {
-  @ApiProperty({ description: 'Preference ID' })
+  @ApiProperty({ description: 'Generated MercadoPago preference ID' })
   preferenceId: string;
 
-  @ApiProperty({ description: 'Init point URL' })
+  @ApiProperty({ description: 'Checkout init point URL' })
   initPoint: string;
 
-  @ApiProperty({ description: 'Sandbox init point URL' })
+  @ApiProperty({ description: 'Sandbox checkout init point URL' })
   sandboxInitPoint: string;
 }
 
 class WebhookDataDto {
+  @ApiProperty({
+    description: 'Resource ID related to the webhook event (usually payment ID)',
+    example: '1234567890',
+  })
   @IsString()
   @IsNotEmpty()
   id: string;
 }
 
 export class WebhookNotificationDto {
+  @ApiProperty({
+    description: 'Webhook notification ID',
+    example: 987654321,
+  })
   @IsNumber()
   id: number;
 
+  @ApiProperty({
+    description: 'Type of webhook event',
+    example: 'payment',
+  })
   @IsString()
   @IsNotEmpty()
   type: string;
 
+  @ApiProperty({
+    description: 'Payload data sent by MercadoPago',
+    type: WebhookDataDto,
+  })
   @ValidateNested()
   @Type(() => WebhookDataDto)
   data: WebhookDataDto;
 
+  @ApiProperty({
+    description: 'Indicates whether the event was triggered in live mode',
+    example: true,
+    required: false,
+  })
   @IsOptional()
   live_mode?: boolean;
 
+  @ApiProperty({
+    description: 'Date when the webhook event was created',
+    example: '2023-01-01T00:00:00Z',
+    required: false,
+  })
   @IsOptional()
   date_created?: string;
 
+  @ApiProperty({
+    description: 'MercadoPago application ID',
+    example: 123456,
+    required: false,
+  })
   @IsOptional()
   application_id?: number;
 
+  @ApiProperty({
+    description: 'MercadoPago user ID',
+    example: '123456789',
+    required: false,
+  })
   @IsOptional()
   user_id?: string;
 
+  @ApiProperty({
+    description: 'Webhook version number',
+    example: 1,
+    required: false,
+  })
   @IsOptional()
   version?: number;
 
+  @ApiProperty({
+    description: 'API version used by MercadoPago',
+    example: 'v1',
+    required: false,
+  })
   @IsOptional()
   api_version?: string;
 
+  @ApiProperty({
+    description: 'Action performed that triggered the webhook',
+    example: 'payment.updated',
+    required: false,
+  })
   @IsOptional()
   action?: string;
 }
 
-export class IPaymentCompletedDto {
-  @ApiProperty({ description: 'Payment ID' })
+export class PaymentCompletedDto {
+  @ApiProperty({ description: 'Internal payment UUID' })
   id: string;
 
-  @ApiProperty({ description: 'Id del pago de mercadopago' })
+  @ApiProperty({
+    description: 'MercadoPago payment ID',
+    example: '1234567890',
+  })
   payment_id: string;
 
-  @ApiProperty({ description: 'User ID' })
+  @ApiProperty({ description: 'User ID associated with the payment' })
   user_id: string;
 
-  @ApiProperty({ description: 'Order ID' })
+  @ApiProperty({ description: 'Order ID associated with the payment' })
   order_id: string;
 
   @ApiProperty({ description: 'Payment status', example: 'approved' })
   status: string;
 
   @ApiProperty({
-    description: 'Payment status detail',
+    description: 'Detailed payment status',
     example: 'accredited',
   })
   status_detail: string;
 
-  @ApiProperty({ description: 'Transaction amount', example: 100.0 })
+  @ApiProperty({ description: 'Total amount paid', example: 100.0 })
   amount: number;
 
-  @ApiProperty({ description: 'Currency ID', example: 'ARS' })
+  @ApiProperty({ description: 'Currency identifier', example: 'ARS' })
   currency_id: string;
 
-  @ApiProperty({ description: 'Payment type ID', example: 'credit_card' })
+  @ApiProperty({ description: 'Payment type', example: 'credit_card' })
   payment_type_id: string;
 
-  @ApiProperty({ description: 'Payment method ID', example: 'visa' })
+  @ApiProperty({ description: 'Payment method used', example: 'visa' })
   payment_method_id: string;
 
   @ApiProperty({
-    description: 'Date approved',
+    description: 'Date when the payment was approved',
     example: '2023-01-01T00:00:00Z',
   })
   date_approved: Date;
 
   @ApiProperty({
-    description: 'Created at timestamp',
+    description: 'Payment creation timestamp',
     example: '2023-01-01T00:00:00Z',
   })
   createdAt: Date;
@@ -159,37 +213,41 @@ export class PaymentResponseDto {
   @ApiProperty({ description: 'Payment UUID', example: 'b7e7db43-e1a0-493a-bbc3-ba8b6da08ec6' })
   id: string;
 
-  @ApiProperty({ description: 'MercadoPago Payment ID', example: '1234567890' })
+  @ApiProperty({ description: 'MercadoPago payment ID', example: '1234567890' })
   paymentId: string;
 
   @ApiProperty({ description: 'Payment status', example: 'approved' })
   status: string;
 
-  @ApiProperty({ description: 'Payment status detail', example: 'accredited' })
+  @ApiProperty({ description: 'Detailed payment status', example: 'accredited' })
   statusDetail: string;
 
-  @ApiProperty({ description: 'Amount paid', example: 1500.0 })
+  @ApiProperty({ description: 'Total amount paid', example: 1500.0 })
   amount: number;
 
-  @ApiProperty({ description: 'Currency', example: 'ARS' })
+  @ApiProperty({ description: 'Currency identifier', example: 'ARS' })
   currencyId: string;
 
-  @ApiProperty({ description: 'Payment type (credit_card, debit_card, etc)', example: 'credit_card' })
+  @ApiProperty({ description: 'Payment type', example: 'credit_card' })
   paymentTypeId: string;
 
-  @ApiProperty({ description: 'Payment method (visa, mastercard, etc)', example: 'visa' })
+  @ApiProperty({ description: 'Payment method', example: 'visa' })
   paymentMethodId: string;
 
-  @ApiProperty({ description: 'Date when payment was approved', example: '2024-01-15T10:30:00Z', nullable: true })
+  @ApiProperty({
+    description: 'Date when the payment was approved',
+    example: '2024-01-15T10:30:00Z',
+    nullable: true,
+  })
   dateApproved: Date | null;
 
-  @ApiProperty({ description: 'Order ID', example: 'b7e7db43-e1a0-493a-bbc3-ba8b6da08ec6' })
+  @ApiProperty({ description: 'Associated order ID' })
   orderId: string;
 
-  @ApiProperty({ description: 'User ID', example: 'b7e7db43-e1a0-493a-bbc3-ba8b6da08ec6' })
+  @ApiProperty({ description: 'Associated user ID' })
   userId: string;
 
-  @ApiProperty({ description: 'Created timestamp', example: '2024-01-15T10:30:00Z' })
+  @ApiProperty({ description: 'Payment creation timestamp' })
   createdAt: Date;
 }
 

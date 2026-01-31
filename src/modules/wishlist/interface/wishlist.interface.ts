@@ -1,5 +1,5 @@
 import { IProducts } from 'src/modules/products/interface/products.interface';
-import { IUserResponseDto } from 'src/modules/users/interface/IUserResponseDto';
+import { IUserResponse } from '../../users/interfaces/user.interface';
 
 // IWishlistItem representa la estructura de un ítem individual en la lista
 export interface IWishlistItem {
@@ -21,6 +21,6 @@ export interface IWishlist {
   updatedAt: Date;
 
   // Relaciones
-  user?: IUserResponseDto; // Aquí deberías usar la interfaz de User
+  user?: IUserResponse;
   items: IWishlistItem[];
 }

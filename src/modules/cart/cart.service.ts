@@ -18,14 +18,14 @@ import { AddToCartDTO, UpdateCartItemDTO } from './dto/create-cart.dto';
 import { ProductsService } from '../products/products.service';
 import { OrdersService } from '../orders/orders.service';
 import {
-  ICartItemResponseDTO,
-  ICartResponseDTO,
-  IResponseCartSummaryDTO,
+  ICartItemResponse,
+  ICartResponse,
+  IResponseCartSummary,
   IStockValidationIssue,
   IStockValidationResult,
   IVariantValidationResult,
 } from './interfaces/interface.cart';
-import { IShippingAddressDto } from '../orders/interfaces/orders.interface';
+import { IShippingAddress } from '../orders/interfaces/orders.interface';
 import { ResponseOrderDto } from '../orders/dto/order.Dto';
 import { ICategory } from '../category/interface/category.interface';
 
@@ -57,12 +57,12 @@ export class CartService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async getCartById(userId: string): Promise<ICartResponseDTO> {
+  async getCartById(userId: string): Promise<ICartResponse> {
     const cart = await this.getOrCreateCart(userId);
     return this.mapCartToResponse(cart);
   }
 
-  async getCartSummary(userId: string): Promise<IResponseCartSummaryDTO> {
+  async getCartSummary(userId: string): Promise<IResponseCartSummary> {
     const cart = await this.cartRepository.findOne({
       where: { user: { id: userId } },
       relations: ['items'],
@@ -81,7 +81,7 @@ export class CartService {
     };
   }
 
-  async addProductToCart(userId: string, dto: AddToCartDTO): Promise<ICartResponseDTO> {
+  async addProductToCart(userId: string, dto: AddToCartDTO): Promise<ICartResponse> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -167,7 +167,7 @@ export class CartService {
     }
   }
 
-  async updateCartItemQuantity(userId: string, cartItemId: string, dto: UpdateCartItemDTO): Promise<ICartResponseDTO> {
+  async updateCartItemQuantity(userId: string, cartItemId: string, dto: UpdateCartItemDTO): Promise<ICartResponse> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -227,7 +227,7 @@ export class CartService {
     }
   }
 
-  async removeCartItem(userId: string, cartItemId: string): Promise<{ message: string; cart: ICartResponseDTO }> {
+  async removeCartItem(userId: string, cartItemId: string): Promise<{ message: string; cart: ICartResponse }> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -433,7 +433,7 @@ export class CartService {
     };
   }
 
-  async createOrderFromCartCheckout(userId: string, shippingAddress: IShippingAddressDto): Promise<ResponseOrderDto> {
+  async createOrderFromCartCheckout(userId: string, shippingAddress: IShippingAddress): Promise<ResponseOrderDto> {
     const stockValidation = await this.validateCartStock(userId);
 
     if (!stockValidation.valid) {
@@ -632,8 +632,8 @@ export class CartService {
   /**
    * Mapea el carrito a DTO de respuesta
    */
-  private mapCartToResponse(cart: Cart): ICartResponseDTO {
-    const items: ICartItemResponseDTO[] =
+  private mapCartToResponse(cart: Cart): ICartResponse {
+    const items: ICartItemResponse[] =
       cart.items?.map((item) => ({
         id: item.id,
         quantity: item.quantity,

@@ -14,7 +14,7 @@ import {
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   CreatePreferenceDto,
-  IPaymentCompletedDto,
+  PaymentCompletedDto,
   MyPaymentResponseDto,
   PaymentResponseDto,
   PaymentStatusDto,
@@ -28,7 +28,7 @@ import { RoleGuard } from '../../guards/auth.guards.role';
 import { PaymentsService } from './payment.service';
 import { IWebhookNotificationInterface } from './interface/payment.interface';
 import { isWebhookNotification } from './validate/payment.validate';
-import { AuthenticatedRequest } from '../users/interface/IUserResponseDto';
+import { AuthRequest } from 'src/common/auths/auth-request.interface';
 
 @ApiTags('Payments')
 @Controller('payments')
@@ -52,7 +52,7 @@ export class PaymentsController {
   })
   @UseGuards(AuthGuard)
   async createPreference(
-    @Req() req: AuthenticatedRequest,
+    @Req() req: AuthRequest,
     @Body() createPreferenceDto: CreatePreferenceDto,
   ): Promise<PreferenceResponseDto> {
     return await this.PaymentsService.createPreferencePayment(req.user.sub, createPreferenceDto);
@@ -64,11 +64,11 @@ export class PaymentsController {
   @ApiResponse({
     status: 200,
     description: 'Payment status retrieved successfully',
-    type: IPaymentCompletedDto,
+    type: PaymentCompletedDto,
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
-  async getAllPaymentStatus(): Promise<IPaymentCompletedDto[]> {
+  async getAllPaymentStatus(): Promise<PaymentCompletedDto[]> {
     return await this.PaymentsService.getAllOrdersPayment();
   }
 
@@ -127,7 +127,7 @@ export class PaymentsController {
     type: [PaymentResponseDto],
   })
   @UseGuards(AuthGuard)
-  async getMyPayments(@Req() req: AuthenticatedRequest): Promise<MyPaymentResponseDto[]> {
+  async getMyPayments(@Req() req: AuthRequest): Promise<MyPaymentResponseDto[]> {
     return await this.PaymentsService.getPaymentsByUserId(req.user.sub);
   }
 

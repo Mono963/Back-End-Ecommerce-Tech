@@ -7,16 +7,15 @@ import { randomUUID } from 'crypto';
 
 import { Users } from '../users/entities/users.entity';
 import { AuthCodeData, AuthResponse, GoogleUser } from './interface/IAuth.interface';
-import { CreateUserDto } from '../users/dtos/CreateUserDto';
-import { ResponseUserDto } from '../users/interface/IUserResponseDto';
+import { UserMapper } from '../users/mappers/user.mapper';
 import { AuthValidations } from './validate/auth.validate';
 import { Role } from '../roles/entities/role.entity';
+import { ICreateUser, IUserResponse } from '../users/interfaces/user.interface';
 
 @Injectable()
 export class AuthsService {
   private readonly logger = new Logger(AuthsService.name);
 
-  // Almacén temporal de códigos de autorización (en producción considerar Redis)
   private authCodes = new Map<string, AuthCodeData>();
 
   constructor(
@@ -48,7 +47,7 @@ export class AuthsService {
     return this.generateAuthResponse(user);
   }
 
-  async signup(data: CreateUserDto): Promise<ResponseUserDto> {
+  async signup(data: ICreateUser): Promise<IUserResponse> {
     const { password, confirmPassword, ...userData } = data;
 
     AuthValidations.validatePasswordMatch(password, confirmPassword);
@@ -93,7 +92,7 @@ export class AuthsService {
 
       this.logger.log(`Usuario registrado exitosamente: ${savedUser.email}`);
 
-      return ResponseUserDto.toDTO(savedUser);
+      return UserMapper.toResponse(savedUser);
     } catch (error) {
       AuthValidations.handleSignupError(error);
     }

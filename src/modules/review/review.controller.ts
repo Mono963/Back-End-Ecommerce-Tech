@@ -17,15 +17,16 @@ import { Roles, UserRole } from 'src/decorator/role.decorator';
 import { AuthGuard } from 'src/guards/auth.guards';
 import { RoleGuard } from 'src/guards/auth.guards.role';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+
 import {
+  CreateReviewDto,
   PaginatedReviewsAdminDto,
-  Rating,
   ReviewFiltersDto,
-  ReviewResponsePublic,
-  ReviewResponseAdmin,
-} from './interface/IReview.interface';
-import { CreateReviewDto } from './dto/create-review.dto';
-import { AuthenticatedRequest } from '../users/interface/IUserResponseDto';
+  ReviewResponseAdminDto,
+  ReviewResponsePublicDto,
+} from './dto/create-review.dto';
+import { AuthRequest } from 'src/common/auths/auth-request.interface';
+import { Rating } from './interface/IReview.interface';
 
 @ApiBearerAuth()
 @ApiTags('Reviews')
@@ -49,7 +50,7 @@ export class ReviewController {
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.CLIENT)
-  async create(@Body() dto: CreateReviewDto, @Req() req: AuthenticatedRequest): Promise<ReviewResponsePublic> {
+  async create(@Body() dto: CreateReviewDto, @Req() req: AuthRequest): Promise<ReviewResponsePublicDto> {
     return await this.reviewService.create(dto, req.user.sub);
   }
 
@@ -116,7 +117,7 @@ export class ReviewController {
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.CLIENT)
-  async findOne(@Param('id') id: string): Promise<ReviewResponsePublic> {
+  async findOne(@Param('id') id: string): Promise<ReviewResponsePublicDto> {
     return await this.reviewService.findOne(id);
   }
 
@@ -130,7 +131,7 @@ export class ReviewController {
     description: 'Product reviews retrieved',
     type: [Object],
   })
-  async getProductReviewsPublic(@Param('productId') productId: string): Promise<ReviewResponsePublic[]> {
+  async getProductReviewsPublic(@Param('productId') productId: string): Promise<ReviewResponsePublicDto[]> {
     return await this.reviewService.findByProductPublic(productId);
   }
 
@@ -154,7 +155,7 @@ export class ReviewController {
   @UseGuards(AuthGuard)
   async canUserReview(
     @Param('productId') productId: string,
-    @Req() req: AuthenticatedRequest,
+    @Req() req: AuthRequest,
   ): Promise<{ canReview: boolean; hasReviewed: boolean; message: string }> {
     return await this.reviewService.canUserReview(productId, req.user.sub);
   }
@@ -170,7 +171,7 @@ export class ReviewController {
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
-  async getProductReviews(@Param('productId') productId: string): Promise<ReviewResponseAdmin[]> {
+  async getProductReviews(@Param('productId') productId: string): Promise<ReviewResponsePublicDto[]> {
     return await this.reviewService.findByProduct(productId);
   }
 
@@ -185,7 +186,7 @@ export class ReviewController {
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
-  async toggleVisibility(@Param('id') id: string): Promise<ReviewResponseAdmin> {
+  async toggleVisibility(@Param('id') id: string): Promise<ReviewResponseAdminDto> {
     return await this.reviewService.toggleVisibility(id);
   }
 
@@ -200,7 +201,7 @@ export class ReviewController {
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.CLIENT)
-  async remove(@Param('id') id: string, @Req() req: AuthenticatedRequest): Promise<void> {
+  async remove(@Param('id') id: string, @Req() req: AuthRequest): Promise<void> {
     return await this.reviewService.remove(id, req.user.sub);
   }
 }

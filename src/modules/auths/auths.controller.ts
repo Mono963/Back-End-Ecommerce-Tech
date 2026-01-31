@@ -7,12 +7,13 @@ import { SkipThrottle, Throttle } from '@nestjs/throttler';
 
 import { AuthsService } from './auths.service';
 import { AuthExceptionFilter } from './validate/auth.filter';
-import { AuthResponse, GoogleUser } from './interface/IAuth.interface';
+import { AuthResponse } from './interface/IAuth.interface';
 import { CreateUserDto, LoginUserDto } from '../users/dtos/CreateUserDto';
-import { ResponseUserDto } from '../users/interface/IUserResponseDto';
+import { UserResponseDto } from '../users/dtos/user-response.dto';
+import { GoogleUserDto } from './dtos/dto.auths';
 
 interface AuthenticatedRequest extends Request {
-  user: GoogleUser;
+  user: GoogleUserDto;
 }
 
 @ApiTags('Auth')
@@ -55,7 +56,7 @@ export class AuthsController {
     }),
   )
   @Post('signup')
-  async signup(@Body() newUser: CreateUserDto): Promise<ResponseUserDto> {
+  async signup(@Body() newUser: CreateUserDto): Promise<UserResponseDto> {
     if (!newUser || typeof newUser !== 'object') {
       throw new Error('Invalid user data format');
     }

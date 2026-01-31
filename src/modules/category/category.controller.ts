@@ -10,7 +10,7 @@ import { RoleGuard } from '../../guards/auth.guards.role';
 import { Roles, UserRole } from '../../decorator/role.decorator';
 import { PaginatedCategoryDto } from './dto/paginated-users.dto';
 import { CategorySearchQueryDto } from './dto/PaginationQueryDto';
-import { ResponseCategoryDto } from './interface/category.interface';
+import { ResponseCategoryDto } from './mappers/category.mapper';
 
 @ApiTags('Category')
 @Controller('categories')

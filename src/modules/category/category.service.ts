@@ -3,10 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Category } from './entities/category.entity';
-import { CreateCategoryDto } from './dto/create-category.dto';
 import { PRODUCTS_SEED } from 'src/seeds/products.data';
 import { CategorySearchQueryDto } from './dto/PaginationQueryDto';
 import { IPaginatedResult } from './interface/IPaginatedResult';
+import { ICreateCategory } from './interface/category.interface';
 
 @Injectable()
 export class CategoriesService {
@@ -82,7 +82,7 @@ export class CategoriesService {
     return await this.categoryRepo.findOneBy({ categoryName });
   }
 
-  async createCategory(dto: CreateCategoryDto): Promise<Category> {
+  async createCategory(dto: ICreateCategory): Promise<Category> {
     const exists = await this.findByName(dto.categoryName);
     if (exists) {
       throw new HttpException(`La categoría "${dto.categoryName}" ya existe`, HttpStatus.CONFLICT);

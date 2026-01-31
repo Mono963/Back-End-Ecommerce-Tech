@@ -6,7 +6,7 @@ import { v2 as CloudinaryType } from 'cloudinary';
 
 import { ProductsService } from '../products/products.service';
 import { File } from './entities/file.entity';
-import { CloudinaryUploadResult } from './interface/file.interface';
+import { ICloudinaryUploadResult } from './interface/file.interface';
 import { Product } from '../products/entities/products.entity';
 
 @Injectable()
@@ -70,7 +70,7 @@ export class FileService {
     return { id: image.id, url: image.url };
   }
 
-  private uploadToCloudinary(file: Express.Multer.File): Promise<CloudinaryUploadResult> {
+  private uploadToCloudinary(file: Express.Multer.File): Promise<ICloudinaryUploadResult> {
     return new Promise((resolve, reject) => {
       const stream = this.cloudinary.uploader.upload_stream(
         {
@@ -82,7 +82,7 @@ export class FileService {
             this.logger.error('Error al subir imagen a Cloudinary', error);
             return reject(new Error('Error al subir imagen a Cloudinary'));
           }
-          resolve(result as CloudinaryUploadResult);
+          resolve(result as ICloudinaryUploadResult);
         },
       );
 

@@ -26,8 +26,13 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiQuery, ApiResponse, ApiTags, A
 import { ProductsSearchQueryDto } from './dto/PaginationQueryDto';
 import { PaginatedProductsDto } from './dto/paginated-products.dto';
 import { ProductVariant } from './entities/products_variant.entity';
-import { CreateProductDto, CreateVariantDto, ResponseProductDto, UpdateProductDto } from './dto/products.Dto';
-import { HybridSearchResponse } from './interface/products.interface';
+import {
+  CreateProductDto,
+  CreateVariantDto,
+  HybridSearchResponseDto,
+  ResponseProductDto,
+  UpdateProductDto,
+} from './dto/products.Dto';
 import { Observable } from 'rxjs';
 import { SkipThrottle } from '@nestjs/throttler';
 
@@ -245,7 +250,7 @@ export class ProductsController {
     @Query('q') query: string,
     @Query('ai') ai?: string,
     @Query('limit', new DefaultValuePipe(8), ParseIntPipe) limit?: number,
-  ): Promise<HybridSearchResponse> {
+  ): Promise<HybridSearchResponseDto> {
     const useAi = ai === 'true';
     return await this.productsService.hybridSearch(query, useAi, limit);
   }

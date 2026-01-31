@@ -8,15 +8,15 @@ import { ProductsSearchQueryDto } from './dto/PaginationQueryDto';
 import { paginate } from 'src/common/pagination/paginate';
 import { IPaginatedResultProducts } from './interface/IPaginatedResult';
 import { CreateProductDto, CreateVariantDto, ResponseProductDto, UpdateProductDto } from './dto/products.Dto';
-import { mapToProductDto } from './dto/products.validate';
+import { mapToProductDto } from './validate/products.validate';
 import { PRODUCTS_SEED } from 'src/seeds/products.data';
 import { N8nService } from '../N8N/n8n.service';
 import { AiSearchResponse } from '../N8N/interface/n8n.interface';
 import {
-  AiProduct,
-  AutocompleteResult,
-  HybridSearchResponse,
-  HybridSearchStreamPayload,
+  IAiProduct,
+  IAutocompleteResult,
+  IHybridSearchResponse,
+  IHybridSearchStreamPayload,
 } from './interface/products.interface';
 import { EMPTY, Observable } from 'rxjs';
 
@@ -646,7 +646,7 @@ export class ProductsService {
   /**
    * Autocomplete optimizado: startsWith + contains en un solo query
    */
-  async autocomplete(query: string, limit: number = 8): Promise<AutocompleteResult[]> {
+  async autocomplete(query: string, limit: number = 8): Promise<IAutocompleteResult[]> {
     if (!query || query.trim().length < 1) return [];
 
     const likeTerm = `%${query.trim().toLowerCase()}%`;
@@ -713,7 +713,7 @@ export class ProductsService {
   /**
    * Búsqueda híbrida: local + AI
    */
-  async hybridSearch(query: string, useAi: boolean = false, limit: number = 8): Promise<HybridSearchResponse> {
+  async hybridSearch(query: string, useAi: boolean = false, limit: number = 8): Promise<IHybridSearchResponse> {
     // 🔒 Anti-spam REAL
     if (!query || query.trim().length < 2) {
       return { results: [], source: 'local' };
@@ -728,7 +728,7 @@ export class ProductsService {
     try {
       const aiResponse = await this.n8nService.productSearch(query.trim());
 
-      const aiResults: AutocompleteResult[] = (aiResponse.products as AiProduct[]).map((p) => ({
+      const aiResults: IAutocompleteResult[] = (aiResponse.products as IAiProduct[]).map((p) => ({
         id: p.id,
         name: p.name,
         brand: p.brand,
@@ -750,11 +750,11 @@ export class ProductsService {
     }
   }
 
-  hybridSearchStream(query: string): Observable<{ data: HybridSearchStreamPayload }> {
+  hybridSearchStream(query: string): Observable<{ data: IHybridSearchStreamPayload }> {
     if (!query || query.trim().length < 2) {
       return EMPTY;
     }
-    return new Observable<{ data: HybridSearchStreamPayload }>((subscriber) => {
+    return new Observable<{ data: IHybridSearchStreamPayload }>((subscriber) => {
       // 🔹 BÚSQUEDA LOCAL (rápida)
       this.autocomplete(query, 8)
         .then((localResults) => {
@@ -773,7 +773,7 @@ export class ProductsService {
       this.n8nService
         .productSearch(query)
         .then((aiResponse) => {
-          const aiResults: AutocompleteResult[] = (aiResponse.products as AiProduct[]).map((p) => ({
+          const aiResults: IAutocompleteResult[] = (aiResponse.products as IAiProduct[]).map((p) => ({
             id: p.id,
             name: p.name,
             brand: p.brand,

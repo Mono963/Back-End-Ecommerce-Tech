@@ -14,25 +14,22 @@ async function bootstrap(): Promise<void> {
 
   const logger = new Logger('Bootstrap');
 
-  // Helmet (tipado explícito)
   const helmetMiddleware = helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Para Swagger
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
         imgSrc: ["'self'", 'data:', 'https:'],
       },
     },
-    crossOriginEmbedderPolicy: false, // Para Swagger
+    crossOriginEmbedderPolicy: false,
   });
   app.use(helmetMiddleware);
 
-  // Compression (tipado explícito)
   const compressionMiddleware = compression();
   app.use(compressionMiddleware);
 
-  // Validation
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -41,17 +38,15 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  // CORS
   app.enableCors({
     origin: ['http://localhost:3001', 'http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5173'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
 
-  // Swagger
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('E-commerce API')
-    .setDescription('Complete API for e-commerce platform')
+    .setTitle('worldassemblytechnology API')
+    .setDescription('Complete API for worldassemblytechnology platform')
     .setVersion('1.0.0')
     .addBearerAuth()
     .build();

@@ -1,7 +1,7 @@
 import { IsNumber, IsOptional, IsString, IsBoolean, Length, Min } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-import { PaginationQueryDto } from '../../../common/dto';
+import { PaginationQueryDto } from '../../../common/pagination';
 
 export class ProductsSearchQueryDto extends PaginationQueryDto {
   @ApiProperty({

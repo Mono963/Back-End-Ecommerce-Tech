@@ -14,7 +14,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { UserAddress } from '../interface/IUserResponseDto';
+import { IUserAddress } from '../interfaces/user.interface';
 import { Review } from 'src/modules/review/entities/review.entity';
 import { Payment } from '../../payments/entities/payment.entity';
 
@@ -48,7 +48,7 @@ export class Users {
   phone: string;
 
   @Column({ type: 'jsonb', nullable: true, default: [] })
-  addresses: UserAddress[];
+  addresses: IUserAddress[];
 
   @CreateDateColumn()
   createdAt?: Date;

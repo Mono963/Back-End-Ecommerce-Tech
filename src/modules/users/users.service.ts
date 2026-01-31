@@ -8,20 +8,24 @@ import {
 import { Users } from './entities/users.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CreateUserDbDto, UpdateUserDbDto } from './dtos/CreateUserDto';
 import { UserSearchQueryDto } from './dtos/PaginationQueryDto';
 import { paginate } from 'src/common/pagination/paginate';
-import { UpdatePasswordDto } from './dtos/UpdatePasswordDto';
 import { AuthValidations } from '../auths/validate/auth.validate';
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
 import { MailService } from '../mail/mail.service';
-import { UpdateRoleDto } from './dtos/UpdateRoleDto';
-import { ResetPasswordDto } from './dtos/reset-password.dto';
-import { IPaginatedResult } from './interface/IPaginatedResult';
+import { IPaginatedResult } from '../../common/pagination/IPaginatedResult';
 import { RolesService } from '../roles/roles.service';
-import { CreateAddressDto, UpdateAddressDto } from './dtos/address.dto';
-import { UserAddress } from './interface/IUserResponseDto';
+import {
+  ICreateAddress,
+  ICreateUserDb,
+  IResetPassword,
+  IUpdateAddress,
+  IUpdatePassword,
+  IUpdateRole,
+  IUpdateUserDb,
+  IUserAddress,
+} from './interfaces/user.interface';
 import { v4 as uuidv4 } from 'uuid';
 import { Order } from '../orders/entities/order.entity';
 import { Wishlist } from '../wishlist/entities/wishlist.entity';
@@ -137,7 +141,7 @@ export class UsersService {
     return userWithWishlist;
   }
 
-  async createUserService(dto: CreateUserDbDto): Promise<Users> {
+  async createUserService(dto: ICreateUserDb): Promise<Users> {
     try {
       const user = this.usersRepository.create(dto);
       return await this.usersRepository.save(user);
@@ -150,7 +154,7 @@ export class UsersService {
     }
   }
 
-  async updateUserService(id: string, dto: UpdateUserDbDto): Promise<Users> {
+  async updateUserService(id: string, dto: IUpdateUserDb): Promise<Users> {
     const camposRestringidos = ['isAdmin', 'isSuperAdmin'];
 
     for (const campo of camposRestringidos) {
@@ -182,7 +186,7 @@ export class UsersService {
 
     const updatedUser = await this.usersRepository.findOne({
       where: { id },
-      relations: ['orders', 'cart'], // Actualizado según la entidad
+      relations: ['orders', 'cart'],
     });
 
     if (!updatedUser) {
@@ -200,7 +204,7 @@ export class UsersService {
     return updatedUser;
   }
 
-  async changePassword(userId: string, dto: UpdatePasswordDto): Promise<void> {
+  async changePassword(userId: string, dto: IUpdatePassword): Promise<void> {
     const user = await this.usersRepository.findOne({ where: { id: userId } });
 
     if (!user) {
@@ -229,7 +233,7 @@ export class UsersService {
     });
   }
 
-  async rollChange(userId: string, dto: UpdateRoleDto): Promise<void> {
+  async rollChange(userId: string, dto: IUpdateRole): Promise<void> {
     try {
       const user = await this.usersRepository.findOne({
         where: { id: userId },
@@ -327,7 +331,7 @@ export class UsersService {
     await this.mailService.sendPasswordResetEmail(user.email, user.name, resetUrl);
   }
 
-  async resetPassword(dto: ResetPasswordDto): Promise<void> {
+  async resetPassword(dto: IResetPassword): Promise<void> {
     const { token, newPassword, confirmPassword } = dto;
 
     if (newPassword !== confirmPassword) {
@@ -356,7 +360,7 @@ export class UsersService {
    * @param userId - ID del usuario
    * @returns Array de direcciones del usuario
    */
-  async getAddresses(userId: string): Promise<UserAddress[]> {
+  async getAddresses(userId: string): Promise<IUserAddress[]> {
     const user = await this.usersRepository.findOne({
       where: { id: userId },
       select: ['id', 'addresses'],
@@ -374,7 +378,7 @@ export class UsersService {
    * Genera un UUID único y actualiza el array JSONB
    * Si isDefault es true, desmarca todas las demás direcciones como no-default
    */
-  async addAddress(userId: string, dto: CreateAddressDto): Promise<UserAddress> {
+  async addAddress(userId: string, dto: ICreateAddress): Promise<IUserAddress> {
     const user = await this.usersRepository.findOne({
       where: { id: userId },
       select: ['id', 'addresses'],
@@ -385,7 +389,7 @@ export class UsersService {
     }
 
     // Generar UUID único para la nueva dirección
-    const newAddress: UserAddress = {
+    const newAddress: IUserAddress = {
       id: uuidv4(), // ← Genera UUID en Node.js
       label: dto.label,
       street: dto.street,
@@ -422,7 +426,7 @@ export class UsersService {
    * Actualiza una dirección existente
    * Busca por addressId en el array JSONB y actualiza los campos
    */
-  async updateAddress(userId: string, addressId: string, dto: UpdateAddressDto): Promise<UserAddress> {
+  async updateAddress(userId: string, addressId: string, dto: IUpdateAddress): Promise<IUserAddress> {
     const user = await this.usersRepository.findOne({
       where: { id: userId },
       select: ['id', 'addresses'],
@@ -462,10 +466,6 @@ export class UsersService {
     return addresses[addressIndex];
   }
 
-  /**
-   * Elimina una dirección del usuario
-   * Si la dirección eliminada era default, marca la primera como default
-   */
   async deleteAddress(userId: string, addressId: string): Promise<{ message: string }> {
     const user = await this.usersRepository.findOne({
       where: { id: userId },
@@ -503,7 +503,7 @@ export class UsersService {
    * Marca una dirección como predeterminada
    * Desmarca todas las demás direcciones
    */
-  async setDefaultAddress(userId: string, addressId: string): Promise<UserAddress> {
+  async setDefaultAddress(userId: string, addressId: string): Promise<IUserAddress> {
     const user = await this.usersRepository.findOne({
       where: { id: userId },
       select: ['id', 'addresses'],

@@ -1,4 +1,4 @@
-import { ReviewResponse } from 'src/modules/review/interface/IReview.interface';
+import { IReviewResponsePublic } from '../../review/interface/IReview.interface';
 
 export interface IProductVariant {
   id: string;
@@ -33,7 +33,7 @@ export interface IProducts {
     categoryName: string;
   } | null;
   variants: IProductVariant[];
-  reviews: ReviewResponse[];
+  reviews: IReviewResponsePublic[];
 }
 
 export interface IProductWhishlist {
@@ -51,7 +51,7 @@ export interface IProductWhishlist {
     id: string;
     name: string;
   } | null;
-  review: ReviewResponse[];
+  review: IReviewResponsePublic[];
 }
 
 export enum TechVariantType {
@@ -83,7 +83,7 @@ export type MouseSpecs = {
   wireless?: boolean;
 };
 
-export interface AutocompleteResult {
+export interface IAutocompleteResult {
   id: string;
   name: string;
   brand: string;
@@ -92,14 +92,14 @@ export interface AutocompleteResult {
   category: string | null;
 }
 
-export interface HybridSearchResponse {
-  results: AutocompleteResult[];
-  aiResults?: AutocompleteResult[];
+export interface IHybridSearchResponse {
+  results: IAutocompleteResult[];
+  aiResults?: IAutocompleteResult[];
   aiMessage?: string;
   source: 'local' | 'hybrid';
 }
 
-export interface AiProduct {
+export interface IAiProduct {
   id: string;
   name: string;
   brand: string;
@@ -108,7 +108,7 @@ export interface AiProduct {
   category_name?: string | null;
 }
 
-export interface AutocompleteResult {
+export interface IAutocompleteResult {
   id: string;
   name: string;
   brand: string;
@@ -117,8 +117,8 @@ export interface AutocompleteResult {
   category: string | null;
 }
 
-export interface HybridSearchStreamPayload {
+export interface IHybridSearchStreamPayload {
   source: 'local' | 'ai';
-  results: AutocompleteResult[];
+  results: IAutocompleteResult[];
   message?: string;
 }

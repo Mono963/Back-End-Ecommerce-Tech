@@ -154,3 +154,37 @@ export class UpdateAddressDto {
   @IsOptional()
   isDefault?: boolean;
 }
+
+export class UserAddressDto {
+  @ApiProperty({ example: 'uuid-address-123' })
+  @IsString()
+  id: string;
+
+  @ApiProperty({ example: 'Casa' })
+  @IsString()
+  label: string;
+
+  @ApiProperty({ example: 'Av. Corrientes 1234' })
+  @IsString()
+  street: string;
+
+  @ApiProperty({ example: 'Buenos Aires' })
+  @IsString()
+  city: string;
+
+  @ApiProperty({ example: 'CABA' })
+  @IsString()
+  province: string;
+
+  @ApiProperty({ example: 'C1043' })
+  @IsString()
+  postalCode: string;
+
+  @ApiProperty({ example: 'Argentina' })
+  @IsString()
+  country: string;
+
+  @ApiProperty({ example: true })
+  @IsBoolean()
+  isDefault: boolean;
+}

@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, QueryRunner } from 'typeorm';
-import { Order, OrderStatus } from './entities/order.entity';
+import { Order } from './entities/order.entity';
 import { OrderDetail } from './entities/order.details.entity';
 import { Product } from '../products/entities/products.entity';
 import { ProductVariant } from '../products/entities/products_variant.entity';
@@ -17,10 +17,9 @@ import { Users } from '../users/entities/users.entity';
 import { Cart } from '../cart/entities/cart.entity';
 import { CartItem } from '../cart/entities/cart.item.entity';
 import { ProductsService } from '../products/products.service';
-import { OrderFiltersDto, ResponseOrderDto } from './dto/order.Dto';
-import { IShippingAddressInternal } from './interfaces/orders.interface';
+import { IOrderFilters, IResponseOrder, IShippingAddressInternal, OrderStatus } from './interfaces/orders.interface';
 import { CartService } from '../cart/cart.service';
-import { UserAddress } from '../users/interface/IUserResponseDto';
+import { IUserAddress } from '../users/interfaces/user.interface';
 import { OrderItem } from './entities/order.item';
 
 @Injectable()
@@ -56,7 +55,7 @@ export class OrdersService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async getOrder(id: string, userId?: string): Promise<ResponseOrderDto> {
+  async getOrder(id: string, userId?: string): Promise<IResponseOrder> {
     const order = await this.orderRepo.findOne({
       where: { id },
       relations: [
@@ -79,7 +78,7 @@ export class OrdersService {
     return this.mapOrderToDto(order);
   }
 
-  async createOrderFromCart(userId: string, shippingAddress: IShippingAddressInternal): Promise<ResponseOrderDto> {
+  async createOrderFromCart(userId: string, shippingAddress: IShippingAddressInternal): Promise<IResponseOrder> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -95,7 +94,7 @@ export class OrdersService {
       }
 
       // Obtener la dirección seleccionada del usuario (si existe)
-      let shippingAddressSnapshot: UserAddress | null = null;
+      let shippingAddressSnapshot: IUserAddress | null = null;
       let shippingAddressId: string | null = null;
 
       if (cart.selectedAddressId) {
@@ -247,7 +246,7 @@ export class OrdersService {
       shipping: number;
       total: number;
       shippingAddressId?: string | null;
-      shippingAddressSnapshot?: UserAddress | null;
+      shippingAddressSnapshot?: IUserAddress | null;
       shippingAddress: IShippingAddressInternal | null;
       items: OrderItem[];
     },
@@ -358,7 +357,7 @@ export class OrdersService {
    * @param userId - ID del usuario
    * @returns Lista de órdenes del usuario
    */
-  async getUserOrders(userId: string): Promise<ResponseOrderDto[]> {
+  async getUserOrders(userId: string): Promise<IResponseOrder[]> {
     const orders = await this.orderRepo.find({
       where: { user: { id: userId } },
       relations: [
@@ -374,13 +373,8 @@ export class OrdersService {
     return orders.map((order) => this.mapOrderToDto(order));
   }
 
-  /**
-   * Obtiene todas las órdenes con filtros (Admin)
-   * @param filters - Filtros de búsqueda
-   * @returns Lista paginada de órdenes
-   */
-  async getAllOrders(filters: OrderFiltersDto): Promise<{
-    items: ResponseOrderDto[];
+  async getAllOrders(filters: IOrderFilters): Promise<{
+    items: IResponseOrder[];
     total: number;
     pages: number;
   }> {
@@ -466,7 +460,7 @@ export class OrdersService {
     };
   }
 
-  async updateOrderStatus(orderId: string, status: OrderStatus, paymentMethod?: string): Promise<ResponseOrderDto> {
+  async updateOrderStatus(orderId: string, status: OrderStatus, paymentMethod?: string): Promise<IResponseOrder> {
     const order = await this.orderRepo.findOne({
       where: { id: orderId },
       relations: ['orderDetail'],
@@ -617,7 +611,7 @@ export class OrdersService {
     return 20;
   }
 
-  private mapOrderToDto(order: Order): ResponseOrderDto {
+  private mapOrderToDto(order: Order): IResponseOrder {
     // Usar el snapshot de dirección si existe
     const shippingAddress = order.orderDetail.shippingAddressSnapshot
       ? {

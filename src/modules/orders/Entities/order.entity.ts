@@ -13,15 +13,7 @@ import {
 import { Users } from '../../users/entities/users.entity';
 import { OrderDetail } from './order.details.entity';
 import { Payment } from '../../payments/entities/payment.entity';
-
-export enum OrderStatus {
-  PENDING = 'pending',
-  PAID = 'paid',
-  PROCESSING = 'processing',
-  SHIPPED = 'shipped',
-  DELIVERED = 'delivered',
-  CANCELLED = 'cancelled',
-}
+import { OrderStatus } from '../interfaces/orders.interface';
 
 @Index(['status'])
 @Index(['createdAt'])

@@ -4,13 +4,8 @@ import { Product } from '../products/entities/products.entity';
 import { DataSource, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Users } from '../users/entities/users.entity';
-import {
-  PaginatedReviewsAdminDto,
-  ReviewFiltersDto,
-  ReviewResponsePublic,
-  ReviewResponseAdmin,
-} from './interface/IReview.interface';
-import { CreateReviewDto } from './dto/create-review.dto';
+import { CreateReviewDto, ReviewFiltersDto } from './dto/create-review.dto';
+import { IReviewResponseAdmin, IReviewResponsePublic } from './interface/IReview.interface';
 
 @Injectable()
 export class ReviewService {
@@ -27,7 +22,7 @@ export class ReviewService {
   // ============ FUNCIONES DE MAPEO (Punto 3) ============
 
   // Mapea una Review a respuesta PÚBLICA (sin isVisible)
-  private toPublicResponse(review: Review): ReviewResponsePublic {
+  private toPublicResponse(review: Review): IReviewResponsePublic {
     return {
       id: review.id,
       rating: review.rating,
@@ -49,7 +44,7 @@ export class ReviewService {
   }
 
   // Mapea una Review a respuesta ADMIN (con isVisible)
-  private toAdminResponse(review: Review): ReviewResponseAdmin {
+  private toAdminResponse(review: Review): IReviewResponseAdmin {
     return {
       id: review.id,
       rating: review.rating,
@@ -75,7 +70,7 @@ export class ReviewService {
 
   // ============ MÉTODOS DEL SERVICIO ============
 
-  async create(dto: CreateReviewDto, userId: string): Promise<ReviewResponsePublic> {
+  async create(dto: CreateReviewDto, userId: string): Promise<IReviewResponsePublic> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -123,7 +118,7 @@ export class ReviewService {
   }
 
   // GET /review - Solo ADMIN (devuelve isVisible)
-  async findAll(filters?: ReviewFiltersDto): Promise<PaginatedReviewsAdminDto> {
+  async findAll(filters?: ReviewFiltersDto): Promise<{ items: IReviewResponseAdmin[]; total: number; pages: number }> {
     const { rating, productId, userName, page = 1, limit = 10 } = filters || {};
 
     // Si no hay filtros, usar findAndCount directo
@@ -181,7 +176,7 @@ export class ReviewService {
     };
   }
 
-  async findOne(id: string): Promise<ReviewResponsePublic> {
+  async findOne(id: string): Promise<IReviewResponsePublic> {
     const review = await this.reviewRepo.findOne({
       where: { id },
       relations: ['user', 'product'],
@@ -193,7 +188,7 @@ export class ReviewService {
   }
 
   // GET /review/product/:productId - Solo ADMIN (devuelve isVisible)
-  async findByProduct(productId: string): Promise<ReviewResponseAdmin[]> {
+  async findByProduct(productId: string): Promise<IReviewResponseAdmin[]> {
     const reviews = await this.reviewRepo.find({
       where: { product: { id: productId } },
       relations: ['user', 'product'],
@@ -220,7 +215,7 @@ export class ReviewService {
   }
 
   // GET /review/product/:productId/public - PÚBLICO (sin isVisible, solo visibles)
-  async findByProductPublic(productId: string): Promise<ReviewResponsePublic[]> {
+  async findByProductPublic(productId: string): Promise<IReviewResponsePublic[]> {
     const reviews = await this.reviewRepo.find({
       where: {
         product: { id: productId },
@@ -260,7 +255,7 @@ export class ReviewService {
   }
 
   // Método para que el admin cambie la visibilidad
-  async toggleVisibility(id: string): Promise<ReviewResponseAdmin> {
+  async toggleVisibility(id: string): Promise<IReviewResponseAdmin> {
     const review = await this.reviewRepo.findOne({
       where: { id },
       relations: ['user', 'product'],

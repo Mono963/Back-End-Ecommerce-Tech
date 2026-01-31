@@ -107,7 +107,7 @@ export class WishlistService {
       relations: ['product', 'product.category'],
     });
 
-    return this.mapWishlistItemToDto(itemWithProduct!);
+    return this.mapWishlistItemToDto(itemWithProduct);
   }
 
   /**

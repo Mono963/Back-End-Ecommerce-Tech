@@ -18,7 +18,6 @@ import { AuthGuard } from '../../guards/auth.guards';
 import { RoleGuard } from '../../guards/auth.guards.role';
 import { Roles, UserRole } from '../../decorator/role.decorator';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
-import { OrderStatus } from './entities/order.entity';
 import {
   OrderFiltersDto,
   OrderStatsDto,
@@ -26,7 +25,8 @@ import {
   ResponseOrderDto,
   UpdateOrderStatusDto,
 } from './dto/order.Dto';
-import { AuthenticatedRequest } from '../users/interface/IUserResponseDto';
+import { AuthRequest } from 'src/common/auths/auth-request.interface';
+import { OrderStatus } from './interfaces/orders.interface';
 
 @ApiTags('Orders')
 @Controller('orders')
@@ -109,7 +109,7 @@ export class OrdersController {
     type: [ResponseOrderDto],
   })
   @UseGuards(AuthGuard)
-  async getMyOrders(@Req() req: AuthenticatedRequest): Promise<ResponseOrderDto[]> {
+  async getMyOrders(@Req() req: AuthRequest): Promise<ResponseOrderDto[]> {
     const userId = req.user.sub;
     return await this.ordersService.getUserOrders(userId);
   }
@@ -153,10 +153,7 @@ export class OrdersController {
     description: 'Order not found',
   })
   @UseGuards(AuthGuard)
-  async getOrderById(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Req() req: AuthenticatedRequest,
-  ): Promise<ResponseOrderDto> {
+  async getOrderById(@Param('id', ParseUUIDPipe) id: string, @Req() req: AuthRequest): Promise<ResponseOrderDto> {
     const userId = req.user.sub;
     return await this.ordersService.getOrder(id, userId);
   }
@@ -278,7 +275,7 @@ export class OrdersController {
   async confirmPayment(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { paymentMethod: string; transactionId?: string },
-    @Req() req: AuthenticatedRequest,
+    @Req() req: AuthRequest,
   ): Promise<ResponseOrderDto> {
     const isAdminUser = req.user && (req.user.role as UserRole) === UserRole.ADMIN;
     const userId = isAdminUser ? undefined : req.user.sub;

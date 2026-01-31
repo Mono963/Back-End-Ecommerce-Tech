@@ -15,11 +15,15 @@ import {
 import { CartService } from './cart.service';
 import { AuthGuard } from 'src/guards/auth.guards';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { AuthenticatedRequest } from '../users/interface/IUserResponseDto';
-import { AddToCartDTO, UpdateCartItemDTO } from './dto/create-cart.dto';
-import { ICartResponseDTO, IResponseCartSummaryDTO, IStockValidationResult } from './interfaces/interface.cart';
-import { IShippingAddressDto } from '../orders/interfaces/orders.interface';
-import { ResponseOrderDto } from '../orders/dto/order.Dto';
+import { AuthRequest } from 'src/common/auths/auth-request.interface';
+import {
+  AddToCartDTO,
+  CartResponseDto,
+  CartSummaryResponseDto,
+  StockValidationResultDto,
+  UpdateCartItemDTO,
+} from './dto/create-cart.dto';
+import { ResponseOrderDto, ShippingAddressDto } from '../orders/dto/order.Dto';
 import { SelectAddressDto } from './dto/select-address.dto';
 import { RoleGuard } from 'src/guards/auth.guards.role';
 import { Roles, UserRole } from 'src/decorator/role.decorator';
@@ -39,9 +43,9 @@ export class CartController {
   @ApiResponse({
     status: 200,
     description: 'User shopping cart retrieved successfully',
-    type: ICartResponseDTO,
+    type: CartResponseDto,
   })
-  async getMyCart(@Req() req: AuthenticatedRequest): Promise<ICartResponseDTO> {
+  async getMyCart(@Req() req: AuthRequest): Promise<CartResponseDto> {
     return await this.cartService.getCartById(req.user.sub);
   }
 
@@ -62,7 +66,7 @@ export class CartController {
       },
     },
   })
-  async getCartSummary(@Req() req: AuthenticatedRequest): Promise<IResponseCartSummaryDTO> {
+  async getCartSummary(@Req() req: AuthRequest): Promise<CartSummaryResponseDto> {
     return await this.cartService.getCartSummary(req.user.sub);
   }
 
@@ -74,7 +78,7 @@ export class CartController {
   @ApiResponse({
     status: 200,
     description: 'Product added to cart successfully',
-    type: ICartResponseDTO,
+    type: CartResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -85,9 +89,9 @@ export class CartController {
     description: 'Product not found',
   })
   async addProductToCart(
-    @Req() req: AuthenticatedRequest,
+    @Req() req: AuthRequest,
     @Body() addToCartDTO: AddToCartDTO,
-  ): Promise<ICartResponseDTO> {
+  ): Promise<CartResponseDto> {
     return await this.cartService.addProductToCart(req.user.sub, addToCartDTO);
   }
 
@@ -104,7 +108,7 @@ export class CartController {
   @ApiResponse({
     status: 200,
     description: 'Cart item quantity updated successfully',
-    type: ICartResponseDTO,
+    type: CartResponseDto,
   })
   @ApiResponse({
     status: 404,
@@ -115,10 +119,10 @@ export class CartController {
     description: 'Invalid quantity or insufficient stock',
   })
   async updateCartItemQuantity(
-    @Req() req: AuthenticatedRequest,
+    @Req() req: AuthRequest,
     @Param('cartItemId', ParseUUIDPipe) cartItemId: string,
     @Body() updateCartItemDTO: UpdateCartItemDTO,
-  ): Promise<ICartResponseDTO> {
+  ): Promise<CartResponseDto> {
     return await this.cartService.updateCartItemQuantity(req.user.sub, cartItemId, updateCartItemDTO);
   }
 
@@ -140,9 +144,9 @@ export class CartController {
     description: 'Cart item not found',
   })
   async removeCartItem(
-    @Req() req: AuthenticatedRequest,
+    @Req() req: AuthRequest,
     @Param('cartItemId', ParseUUIDPipe) cartItemId: string,
-  ): Promise<{ message: string; cart: ICartResponseDTO }> {
+  ): Promise<{ message: string; cart: CartResponseDto }> {
     return await this.cartService.removeCartItem(req.user.sub, cartItemId);
   }
 
@@ -154,7 +158,7 @@ export class CartController {
     status: 200,
     description: 'Cart cleared successfully',
   })
-  async clearCart(@Req() req: AuthenticatedRequest): Promise<{ message: string }> {
+  async clearCart(@Req() req: AuthRequest): Promise<{ message: string }> {
     return await this.cartService.clearCart(req.user.sub);
   }
 
@@ -186,7 +190,7 @@ export class CartController {
       },
     },
   })
-  async validateStock(@Req() req: AuthenticatedRequest): Promise<IStockValidationResult> {
+  async validateStock(@Req() req: AuthRequest): Promise<StockValidationResultDto> {
     return await this.cartService.validateCartStock(req.user.sub);
   }
 
@@ -214,7 +218,7 @@ export class CartController {
     status: 404,
     description: 'Cart not found',
   })
-  async selectAddress(@Req() req: AuthenticatedRequest, @Body() dto: SelectAddressDto): Promise<{ message: string }> {
+  async selectAddress(@Req() req: AuthRequest, @Body() dto: SelectAddressDto): Promise<{ message: string }> {
     return await this.cartService.selectAddressForCheckout(req.user.sub, dto.addressId);
   }
 
@@ -237,7 +241,7 @@ export class CartController {
     status: 404,
     description: 'Cart not found',
   })
-  async getSelectedAddress(@Req() req: AuthenticatedRequest): Promise<{ selectedAddressId: string | null }> {
+  async getSelectedAddress(@Req() req: AuthRequest): Promise<{ selectedAddressId: string | null }> {
     return await this.cartService.getSelectedAddress(req.user.sub);
   }
 
@@ -273,8 +277,8 @@ export class CartController {
     description: 'Bad request - empty cart or stock issues',
   })
   async createOrder(
-    @Req() req: AuthenticatedRequest,
-    @Body() body: { shippingAddress: IShippingAddressDto },
+    @Req() req: AuthRequest,
+    @Body() body: { shippingAddress: ShippingAddressDto },
   ): Promise<ResponseOrderDto> {
     return await this.cartService.createOrderFromCartCheckout(req.user.sub, body.shippingAddress);
   }
