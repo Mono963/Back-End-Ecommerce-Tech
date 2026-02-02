@@ -108,11 +108,11 @@ export class CartItemProductDto {
   @ApiProperty({
     description: 'Product category',
     nullable: true,
-    example: { id: 'uuid', name: 'Shoes' },
+    example: { id: 'uuid', category_name: 'Shoes' },
   })
   category: {
     id: string;
-    name: string;
+    category_name: string;
   } | null;
 }
 

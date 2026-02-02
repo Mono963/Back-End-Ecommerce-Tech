@@ -21,12 +21,13 @@ import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@ne
 import {
   CreateReviewDto,
   PaginatedReviewsAdminDto,
-  ReviewFiltersDto,
   ReviewResponseAdminDto,
   ReviewResponsePublicDto,
 } from './dto/create-review.dto';
 import { AuthRequest } from 'src/common/auths/auth-request.interface';
 import { Rating } from './interface/IReview.interface';
+import { ReviewMapper } from './mappers/review.mapper';
+import { ReviewSearchQueryDto } from './dto/PaginationQueryDto';
 
 @ApiBearerAuth()
 @ApiTags('Reviews')
@@ -56,54 +57,45 @@ export class ReviewController {
 
   @Get()
   @ApiOperation({
-    summary: 'Get all reviews with pagination and filters (Admin)',
+    summary: 'Retrieve all reviews (paginated) with optional filters (Admin)',
     description:
-      'Returns all reviews INCLUDING isVisible, pagination metadata, and filters by rating, productId, and username (Admin only)',
+      'Returns paginated reviews including isVisible. Allows filtering by rating, productId and username (Admin only)',
   })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    type: 'number',
-    description: 'Page number',
-    example: 1,
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    type: 'number',
-    description: 'Items per page',
-    example: 10,
-  })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({
     name: 'rating',
     required: false,
     enum: Rating,
     description: 'Filter by rating',
-    example: 5,
   })
   @ApiQuery({
     name: 'productId',
     required: false,
-    type: 'string',
+    type: String,
     description: 'Filter by product ID',
   })
   @ApiQuery({
     name: 'userName',
     required: false,
-    type: 'string',
+    type: String,
     description: 'Search by username',
-    example: 'Juan',
   })
   @ApiResponse({
     status: 200,
-    description: 'Paginated list of reviews with metadata (includes isVisible)',
+    description: 'OK',
     type: PaginatedReviewsAdminDto,
   })
-  @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
-  async getAll(@Query() filters: ReviewFiltersDto): Promise<PaginatedReviewsAdminDto> {
-    return await this.reviewService.findAll(filters);
+  @HttpCode(HttpStatus.OK)
+  async getAll(@Query() searchQuery: ReviewSearchQueryDto): Promise<PaginatedReviewsAdminDto> {
+    const { items, ...meta } = await this.reviewService.findAll(searchQuery);
+
+    return {
+      ...meta,
+      items: ReviewMapper.toAdminResponseList(items),
+    };
   }
 
   @Get(':id')

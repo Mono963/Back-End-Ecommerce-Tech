@@ -1,4 +1,4 @@
-import { IUserAddress } from '../../users/interfaces/user.interface';
+import { IAddress } from '../../users/interfaces/user.interface';
 
 export interface IProductSnapshot {
   name: string;
@@ -37,23 +37,6 @@ export interface IOrderItem {
   createdAt: Date;
 }
 
-export interface IShippingAddress {
-  street: string;
-  number: string;
-  city: string;
-  state: string;
-  zipCode: string;
-}
-
-export interface IShippingAddressInternal {
-  street: string;
-  number: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country?: string;
-}
-
 export interface IResponseOrder {
   id: string;
   orderNumber: string;
@@ -80,7 +63,7 @@ export interface IOrderDetailResponse {
   tax: number;
   shipping: number;
   total: number;
-  shippingAddress?: IUserAddress | null;
+  shippingAddress?: IAddress;
   shippingAddressId?: string | null;
   paymentMethod?: string | null;
   items: IOrderItemResponse[];

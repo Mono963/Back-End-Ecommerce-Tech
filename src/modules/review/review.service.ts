@@ -4,8 +4,10 @@ import { Product } from '../products/entities/products.entity';
 import { DataSource, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Users } from '../users/entities/users.entity';
-import { CreateReviewDto, ReviewFiltersDto } from './dto/create-review.dto';
+import { CreateReviewDto } from './dto/create-review.dto';
 import { IReviewResponseAdmin, IReviewResponsePublic } from './interface/IReview.interface';
+import { ReviewSearchQueryDto } from './dto/PaginationQueryDto';
+import { IPaginatedResult, paginate } from '../../common/pagination';
 
 @Injectable()
 export class ReviewService {
@@ -118,43 +120,30 @@ export class ReviewService {
   }
 
   // GET /review - Solo ADMIN (devuelve isVisible)
-  async findAll(filters?: ReviewFiltersDto): Promise<{ items: IReviewResponseAdmin[]; total: number; pages: number }> {
-    const { rating, productId, userName, page = 1, limit = 10 } = filters || {};
+  async findAll(searchQuery: ReviewSearchQueryDto): Promise<IPaginatedResult<Review>> {
+    const { rating, productId, userName, ...pagination } = searchQuery;
 
-    // Si no hay filtros, usar findAndCount directo
+    // 🟢 Sin filtros → paginate directo
     if (!rating && !productId && !userName) {
-      const [reviews, total] = await this.reviewRepo.findAndCount({
+      return await paginate(this.reviewRepo, pagination, {
         relations: ['user', 'product'],
         order: { createdAt: 'DESC' },
-        skip: (page - 1) * limit,
-        take: limit,
       });
-
-      const pages = Math.ceil(total / limit);
-
-      return {
-        items: reviews.map((r) => this.toAdminResponse(r)),
-        total,
-        pages,
-      };
     }
 
-    // Si hay filtros, usar QueryBuilder
+    // 🟡 Con filtros → QueryBuilder
     const queryBuilder = this.reviewRepo.createQueryBuilder('review');
-    queryBuilder.leftJoinAndSelect('review.user', 'user');
-    queryBuilder.leftJoinAndSelect('review.product', 'product');
 
-    // Filtrar por rating
+    queryBuilder.leftJoinAndSelect('review.user', 'user').leftJoinAndSelect('review.product', 'product').where('1 = 1');
+
     if (rating !== undefined) {
       queryBuilder.andWhere('review.rating = :rating', { rating });
     }
 
-    // Filtrar por productId
     if (productId) {
       queryBuilder.andWhere('product.id = :productId', { productId });
     }
 
-    // Filtrar por nombre de usuario
     if (userName) {
       queryBuilder.andWhere('LOWER(user.name) LIKE LOWER(:userName)', {
         userName: `%${userName}%`,
@@ -163,14 +152,14 @@ export class ReviewService {
 
     queryBuilder.orderBy('review.createdAt', 'DESC');
 
-    const skip = (page - 1) * limit;
-    queryBuilder.skip(skip).take(limit);
+    const skip = (pagination.page - 1) * pagination.limit;
+    queryBuilder.skip(skip).take(pagination.limit);
 
-    const [reviews, total] = await queryBuilder.getManyAndCount();
-    const pages = Math.ceil(total / limit);
+    const [items, total] = await queryBuilder.getManyAndCount();
+    const pages = Math.ceil(total / pagination.limit);
 
     return {
-      items: reviews.map((r) => this.toAdminResponse(r)),
+      items,
       total,
       pages,
     };

@@ -14,30 +14,31 @@ GET /products
 
 ### Paginación
 
-| Parámetro | Tipo | Requerido | Default | Min | Max | Descripción |
-|-----------|------|-----------|---------|-----|-----|-------------|
-| `page` | number | No | 1 | 1 | - | Número de página a obtener |
-| `limit` | number | No | 10 | 1 | 100 | Cantidad de productos por página |
+| Parámetro | Tipo   | Requerido | Default | Min | Max | Descripción                      |
+| --------- | ------ | --------- | ------- | --- | --- | -------------------------------- |
+| `page`    | number | No        | 1       | 1   | -   | Número de página a obtener       |
+| `limit`   | number | No        | 10      | 1   | 100 | Cantidad de productos por página |
 
 ### Filtros de Búsqueda
 
-| Parámetro | Tipo | Requerido | Min Length | Max Length | Descripción |
-|-----------|------|-----------|------------|------------|-------------|
-| `name` | string | No | 3 | 80 | Buscar por nombre del producto (parcial, case-insensitive) |
-| `brand` | string | No | 2 | 50 | Filtrar por marca del producto (parcial, case-insensitive) |
-| `categoryId` | string (UUID) | No | - | - | Filtrar por ID de categoría exacto |
-| `color` | string | No | 2 | 50 | Filtrar por color de variante (parcial, case-insensitive) |
-| `featured` | boolean | No | - | - | Filtrar solo productos destacados (`true`/`false`) |
+| Parámetro    | Tipo          | Requerido | Min Length | Max Length | Descripción                                                |
+| ------------ | ------------- | --------- | ---------- | ---------- | ---------------------------------------------------------- |
+| `name`       | string        | No        | 3          | 80         | Buscar por nombre del producto (parcial, case-insensitive) |
+| `brand`      | string        | No        | 2          | 50         | Filtrar por marca del producto (parcial, case-insensitive) |
+| `categoryId` | string (UUID) | No        | -          | -          | Filtrar por ID de categoría exacto                         |
+| `color`      | string        | No        | 2          | 50         | Filtrar por color de variante (parcial, case-insensitive)  |
+| `featured`   | boolean       | No        | -          | -          | Filtrar solo productos destacados (`true`/`false`)         |
 
 ### Filtros de Precio
 
-| Parámetro | Tipo | Requerido | Min Value | Descripción |
-|-----------|------|-----------|-----------|-------------|
-| `minPrice` | number | No | 0 | Precio mínimo del producto |
-| `maxPrice` | number | No | 0 | Precio máximo del producto |
-| `price` | number | No | 0.01 | Buscar productos en rango de precio (±10%) |
+| Parámetro  | Tipo   | Requerido | Min Value | Descripción                                |
+| ---------- | ------ | --------- | --------- | ------------------------------------------ |
+| `minPrice` | number | No        | 0         | Precio mínimo del producto                 |
+| `maxPrice` | number | No        | 0         | Precio máximo del producto                 |
+| `price`    | number | No        | 0.01      | Buscar productos en rango de precio (±10%) |
 
 > **Nota sobre filtros de precio:**
+>
 > - Usa `minPrice` y `maxPrice` para rangos exactos (ej: productos entre $100 y $500)
 > - Usa `price` para búsquedas aproximadas (ej: productos alrededor de $1000)
 > - Si usas `minPrice`/`maxPrice`, el parámetro `price` será ignorado
@@ -48,31 +49,31 @@ GET /products
 
 ```typescript
 interface PaginatedProductsResponse {
-  items: ProductDto[];    // Array de productos
-  total: number;          // Total de productos que coinciden con los filtros
-  pages: number;          // Total de páginas disponibles
+  items: ProductDto[]; // Array de productos
+  total: number; // Total de productos que coinciden con los filtros
+  pages: number; // Total de páginas disponibles
 }
 
 interface ProductDto {
-  id: string;                    // UUID del producto
-  name: string;                  // Nombre del producto
-  description: string;           // Descripción
-  brand: string;                 // Marca
-  model: string | null;          // Modelo (puede ser null)
-  basePrice: number;             // Precio base
-  baseStock: number;             // Stock base
-  isActive: boolean;             // Estado activo
-  hasVariants: boolean;          // Si tiene variantes
-  featured: boolean;             // Si es destacado
-  createdAt: string;             // Fecha de creación (ISO 8601)
-  updatedAt: string;             // Fecha de actualización (ISO 8601)
+  id: string; // UUID del producto
+  name: string; // Nombre del producto
+  description: string; // Descripción
+  brand: string; // Marca
+  model: string | null; // Modelo (puede ser null)
+  basePrice: number; // Precio base
+  baseStock: number; // Stock base
+  isActive: boolean; // Estado activo
+  hasVariants: boolean; // Si tiene variantes
+  featured: boolean; // Si es destacado
+  createdAt: string; // Fecha de creación (ISO 8601)
+  updatedAt: string; // Fecha de actualización (ISO 8601)
   category: {
     id: string;
-    categoryName: string;
+    category_name: string;
   } | null;
-  variants: VariantDto[];        // Array de variantes
-  files: FileDto[];              // Array de archivos/imágenes
-  reviews: ReviewDto[];          // Array de reseñas
+  variants: VariantDto[]; // Array de variantes
+  files: FileDto[]; // Array de archivos/imágenes
+  reviews: ReviewDto[]; // Array de reseñas
 }
 
 interface VariantDto {
@@ -80,7 +81,7 @@ interface VariantDto {
   type: 'ram' | 'storage' | 'color' | 'size' | 'material' | 'connectivity';
   name: string;
   description: string | null;
-  priceModifier: number;         // Modificador de precio (+/-)
+  priceModifier: number; // Modificador de precio (+/-)
   stock: number;
   isAvailable: boolean;
   sortOrder: number;
@@ -95,91 +96,91 @@ interface VariantDto {
 
 ```javascript
 // Primera página con 10 productos (valores por defecto)
-fetch('/products')
+fetch('/products');
 
 // Página 2 con 20 productos
-fetch('/products?page=2&limit=20')
+fetch('/products?page=2&limit=20');
 ```
 
 ### 2. Buscar por nombre
 
 ```javascript
 // Buscar productos que contengan "laptop" en el nombre
-fetch('/products?name=laptop')
+fetch('/products?name=laptop');
 
 // Buscar "Dell" con paginación
-fetch('/products?name=Dell&page=1&limit=15')
+fetch('/products?name=Dell&page=1&limit=15');
 ```
 
 ### 3. Filtrar por marca
 
 ```javascript
 // Todos los productos de marca "Apple"
-fetch('/products?brand=Apple')
+fetch('/products?brand=Apple');
 
 // Productos Logitech, página 1
-fetch('/products?brand=Logitech&limit=12')
+fetch('/products?brand=Logitech&limit=12');
 ```
 
 ### 4. Filtrar por categoría
 
 ```javascript
 // Productos de una categoría específica
-fetch('/products?categoryId=123e4567-e89b-12d3-a456-426614174000')
+fetch('/products?categoryId=123e4567-e89b-12d3-a456-426614174000');
 ```
 
 ### 5. Filtrar por color
 
 ```javascript
 // Productos con variante de color "Negro"
-fetch('/products?color=Negro')
+fetch('/products?color=Negro');
 
 // Productos color "Blanco" o "White"
-fetch('/products?color=blanco')
-fetch('/products?color=white')
+fetch('/products?color=blanco');
+fetch('/products?color=white');
 ```
 
 ### 6. Filtrar por rango de precios
 
 ```javascript
 // Productos entre $100 y $500
-fetch('/products?minPrice=100&maxPrice=500')
+fetch('/products?minPrice=100&maxPrice=500');
 
 // Productos de $1000 o más
-fetch('/products?minPrice=1000')
+fetch('/products?minPrice=1000');
 
 // Productos de hasta $200
-fetch('/products?maxPrice=200')
+fetch('/products?maxPrice=200');
 ```
 
 ### 7. Buscar por precio aproximado (±10%)
 
 ```javascript
 // Productos alrededor de $1000 (rango: $900 - $1100)
-fetch('/products?price=1000')
+fetch('/products?price=1000');
 ```
 
 ### 8. Filtrar productos destacados
 
 ```javascript
 // Solo productos destacados
-fetch('/products?featured=true')
+fetch('/products?featured=true');
 
 // Solo productos NO destacados
-fetch('/products?featured=false')
+fetch('/products?featured=false');
 ```
 
 ### 9. Combinación de múltiples filtros
 
 ```javascript
 // Laptops Dell entre $800 y $1500, destacados
-fetch('/products?name=laptop&brand=Dell&minPrice=800&maxPrice=1500&featured=true')
+fetch('/products?name=laptop&brand=Dell&minPrice=800&maxPrice=1500&featured=true');
 
 // Productos negros de Apple, página 2
-fetch('/products?brand=Apple&color=negro&page=2&limit=10')
+fetch('/products?brand=Apple&color=negro&page=2&limit=10');
 
 // Productos de categoría específica con color rojo, ordenados por defecto
-fetch('/products?categoryId=abc123&color=rojo&limit=20')
+fetch('/products?categoryId=abc123&color=rojo&limit=20');
 ```
 
 ---
@@ -231,27 +232,33 @@ export const useProductFilters = () => {
     return params.toString();
   }, []);
 
-  const fetchProducts = useCallback(async (newFilters?: Partial<ProductFilters>) => {
-    const updatedFilters = { ...filters, ...newFilters };
-    setFilters(updatedFilters);
-    setLoading(true);
+  const fetchProducts = useCallback(
+    async (newFilters?: Partial<ProductFilters>) => {
+      const updatedFilters = { ...filters, ...newFilters };
+      setFilters(updatedFilters);
+      setLoading(true);
 
-    try {
-      const queryString = buildQueryString(updatedFilters);
-      const response = await fetch(`/products?${queryString}`);
-      const result = await response.json();
-      setData(result);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, buildQueryString]);
+      try {
+        const queryString = buildQueryString(updatedFilters);
+        const response = await fetch(`/products?${queryString}`);
+        const result = await response.json();
+        setData(result);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [filters, buildQueryString],
+  );
 
-  const updateFilter = useCallback((key: keyof ProductFilters, value: any) => {
-    // Resetear a página 1 cuando cambian los filtros
-    fetchProducts({ [key]: value, page: 1 });
-  }, [fetchProducts]);
+  const updateFilter = useCallback(
+    (key: keyof ProductFilters, value: any) => {
+      // Resetear a página 1 cuando cambian los filtros
+      fetchProducts({ [key]: value, page: 1 });
+    },
+    [fetchProducts],
+  );
 
   const clearFilters = useCallback(() => {
     fetchProducts({
@@ -268,9 +275,12 @@ export const useProductFilters = () => {
     });
   }, [fetchProducts]);
 
-  const goToPage = useCallback((page: number) => {
-    fetchProducts({ page });
-  }, [fetchProducts]);
+  const goToPage = useCallback(
+    (page: number) => {
+      fetchProducts({ page });
+    },
+    [fetchProducts],
+  );
 
   return {
     filters,
@@ -338,7 +348,7 @@ export const CatalogFilters: React.FC<CatalogFiltersProps> = ({
           <option value="">Todas las categorías</option>
           {categories.map((cat) => (
             <option key={cat.id} value={cat.id}>
-              {cat.categoryName}
+              {cat.category_name}
             </option>
           ))}
         </select>
@@ -364,7 +374,9 @@ export const CatalogFilters: React.FC<CatalogFiltersProps> = ({
             placeholder="Mín"
             min={0}
             value={filters.minPrice || ''}
-            onChange={(e) => onFilterChange('minPrice', e.target.value ? Number(e.target.value) : undefined)}
+            onChange={(e) =>
+              onFilterChange('minPrice', e.target.value ? Number(e.target.value) : undefined)
+            }
           />
           <span>-</span>
           <input
@@ -372,7 +384,9 @@ export const CatalogFilters: React.FC<CatalogFiltersProps> = ({
             placeholder="Máx"
             min={0}
             value={filters.maxPrice || ''}
-            onChange={(e) => onFilterChange('maxPrice', e.target.value ? Number(e.target.value) : undefined)}
+            onChange={(e) =>
+              onFilterChange('maxPrice', e.target.value ? Number(e.target.value) : undefined)
+            }
           />
         </div>
       </div>
@@ -409,15 +423,8 @@ import { ProductCard } from '../components/ProductCard';
 import { Pagination } from '../components/Pagination';
 
 export const Catalog: React.FC = () => {
-  const {
-    filters,
-    data,
-    loading,
-    fetchProducts,
-    updateFilter,
-    clearFilters,
-    goToPage,
-  } = useProductFilters();
+  const { filters, data, loading, fetchProducts, updateFilter, clearFilters, goToPage } =
+    useProductFilters();
 
   useEffect(() => {
     fetchProducts();
@@ -440,7 +447,9 @@ export const Catalog: React.FC = () => {
         ) : (
           <>
             <div className="results-info">
-              <p>Mostrando {data?.items.length} de {data?.total} productos</p>
+              <p>
+                Mostrando {data?.items.length} de {data?.total} productos
+              </p>
             </div>
 
             <div className="products">
@@ -470,23 +479,24 @@ export const Catalog: React.FC = () => {
 
 Los siguientes productos tienen variantes de color disponibles:
 
-| Producto | Colores Disponibles |
-|----------|---------------------|
-| Logitech MX Master 3S | Negro, Gris |
-| HyperX Cloud II | Negro/Rojo, Negro/Gun Metal |
-| Blue Yeti USB | Blackout, Silver, Midnight Blue |
-| NZXT H510 | Matte Black, Matte White, Matte Red |
+| Producto              | Colores Disponibles                 |
+| --------------------- | ----------------------------------- |
+| Logitech MX Master 3S | Negro, Gris                         |
+| HyperX Cloud II       | Negro/Rojo, Negro/Gun Metal         |
+| Blue Yeti USB         | Blackout, Silver, Midnight Blue     |
+| NZXT H510             | Matte Black, Matte White, Matte Red |
 
 **Ejemplo de búsqueda por color:**
+
 ```javascript
 // Buscar productos negros
-fetch('/products?color=negro')
-fetch('/products?color=black')
-fetch('/products?color=Blackout')
+fetch('/products?color=negro');
+fetch('/products?color=black');
+fetch('/products?color=Blackout');
 
 // Buscar productos blancos
-fetch('/products?color=white')
-fetch('/products?color=blanco')
+fetch('/products?color=white');
+fetch('/products?color=blanco');
 ```
 
 ---
@@ -495,9 +505,11 @@ fetch('/products?color=blanco')
 
 1. **Case-insensitive:** Los filtros `name`, `brand` y `color` no distinguen mayúsculas/minúsculas.
 
-2. **Búsqueda parcial:** Los filtros `name`, `brand` y `color` buscan coincidencias parciales (contiene).
+2. **Búsqueda parcial:** Los filtros `name`, `brand` y `color` buscan coincidencias parciales
+   (contiene).
 
-3. **Orden de resultados:** Los productos se ordenan por fecha de creación descendente (más recientes primero).
+3. **Orden de resultados:** Los productos se ordenan por fecha de creación descendente (más
+   recientes primero).
 
 4. **Productos activos:** Solo se retornan productos con `isActive: true`.
 
@@ -525,23 +537,25 @@ Para la barra de búsqueda del Home (estilo Google), usar:
 GET /products/search
 ```
 
-Este endpoint está optimizado para búsquedas rápidas y retorna resultados relevantes basados en nombre, descripción y marca.
+Este endpoint está optimizado para búsquedas rápidas y retorna resultados relevantes basados en
+nombre, descripción y marca.
 
 ```javascript
 // Búsqueda desde la barra del home
-fetch('/products/search?query=laptop&limit=5')
+fetch('/products/search?query=laptop&limit=5');
 ```
 
 ---
 
 ## Respuestas de Error
 
-| Código | Descripción |
-|--------|-------------|
-| 400 | Parámetros de validación incorrectos |
-| 500 | Error interno del servidor |
+| Código | Descripción                          |
+| ------ | ------------------------------------ |
+| 400    | Parámetros de validación incorrectos |
+| 500    | Error interno del servidor           |
 
 **Ejemplo de error 400:**
+
 ```json
 {
   "statusCode": 400,

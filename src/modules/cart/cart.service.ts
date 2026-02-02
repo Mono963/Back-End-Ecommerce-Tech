@@ -14,20 +14,22 @@ import { Users } from '../users/entities/users.entity';
 import { Product } from '../products/entities/products.entity';
 import { ProductVariant } from '../products/entities/products_variant.entity';
 import { CartItem } from './entities/cart.item.entity';
-import { AddToCartDTO, UpdateCartItemDTO } from './dto/create-cart.dto';
 import { ProductsService } from '../products/products.service';
 import { OrdersService } from '../orders/orders.service';
 import {
+  IAddToCart,
   ICartItemResponse,
   ICartResponse,
   IResponseCartSummary,
   IStockValidationIssue,
   IStockValidationResult,
+  IUpdateCartItem,
   IVariantValidationResult,
 } from './interfaces/interface.cart';
-import { IShippingAddress } from '../orders/interfaces/orders.interface';
-import { ResponseOrderDto } from '../orders/dto/order.Dto';
+import { ICreateAddress, IAddress } from '../users/interfaces/user.interface';
 import { ICategory } from '../category/interface/category.interface';
+import { UsersService } from '../users/users.service';
+import { IResponseOrder } from '../orders/interfaces/orders.interface';
 
 @Injectable()
 export class CartService {
@@ -50,6 +52,9 @@ export class CartService {
     private readonly variantRepository: Repository<ProductVariant>,
 
     private readonly productsService: ProductsService,
+
+    @Inject(forwardRef(() => UsersService))
+    private readonly usersService: UsersService,
 
     @Inject(forwardRef(() => OrdersService))
     private readonly ordersService: OrdersService,
@@ -81,7 +86,7 @@ export class CartService {
     };
   }
 
-  async addProductToCart(userId: string, dto: AddToCartDTO): Promise<ICartResponse> {
+  async addProductToCart(userId: string, dto: IAddToCart): Promise<ICartResponse> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -102,6 +107,7 @@ export class CartService {
         cart = queryRunner.manager.create(Cart, {
           user,
           total: 0,
+          item_count: 0,
           items: [],
         });
         await queryRunner.manager.save(cart);
@@ -152,7 +158,7 @@ export class CartService {
 
       await queryRunner.manager.save(cartItem);
 
-      await this.recalculateCartTotal(queryRunner, cart);
+      await this.recalculateCartTotals(queryRunner, cart);
 
       await queryRunner.commitTransaction();
       return await this.getCartById(userId);
@@ -167,7 +173,7 @@ export class CartService {
     }
   }
 
-  async updateCartItemQuantity(userId: string, cartItemId: string, dto: UpdateCartItemDTO): Promise<ICartResponse> {
+  async updateCartItemQuantity(userId: string, cartItemId: string, dto: IUpdateCartItem): Promise<ICartResponse> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -191,12 +197,13 @@ export class CartService {
         // Eliminar el item directamente sin usar cascade
         await queryRunner.manager.delete(CartItem, { id: cartItemId });
 
-        // Calcular el nuevo total sin el item eliminado
+        // Calcular el nuevo total e item_count sin el item eliminado
         const remainingItems = cart.items.filter((item) => item.id !== cartItemId);
         const newTotal = parseFloat(remainingItems.reduce((sum, item) => sum + Number(item.subtotal), 0).toFixed(2));
+        const newItemCount = remainingItems.reduce((sum, item) => sum + item.quantity, 0);
 
-        // Actualizar solo el total del carrito
-        await queryRunner.manager.update(Cart, cart.id, { total: newTotal });
+        // Actualizar total e item_count del carrito
+        await queryRunner.manager.update(Cart, cart.id, { total: newTotal, item_count: newItemCount });
       } else {
         const variantIds = cartItem.variants?.map((v) => v.id) || [];
         const availableStock = await this.productsService.getAvailableStock(cartItem.product.id, variantIds);
@@ -211,7 +218,7 @@ export class CartService {
         cartItem.subtotal = parseFloat((dto.quantity * Number(cartItem.priceAtAddition)).toFixed(2));
         await queryRunner.manager.save(cartItem);
 
-        await this.recalculateCartTotal(queryRunner, cart);
+        await this.recalculateCartTotals(queryRunner, cart);
       }
 
       await queryRunner.commitTransaction();
@@ -250,12 +257,13 @@ export class CartService {
       // Eliminar el item directamente de la base de datos
       await queryRunner.manager.delete(CartItem, { id: cartItemId });
 
-      // Calcular el nuevo total sin el item eliminado
+      // Calcular el nuevo total e item_count sin el item eliminado
       const remainingItems = cart.items.filter((item) => item.id !== cartItemId);
       const newTotal = parseFloat(remainingItems.reduce((sum, item) => sum + Number(item.subtotal), 0).toFixed(2));
+      const newItemCount = remainingItems.reduce((sum, item) => sum + item.quantity, 0);
 
-      // Actualizar solo el total del carrito sin usar cascade
-      await queryRunner.manager.update(Cart, cart.id, { total: newTotal });
+      // Actualizar total e item_count del carrito
+      await queryRunner.manager.update(Cart, cart.id, { total: newTotal, item_count: newItemCount });
 
       await queryRunner.commitTransaction();
 
@@ -295,8 +303,8 @@ export class CartService {
         await queryRunner.manager.delete(CartItem, { cart_id: cart.id });
       }
 
-      // Actualizar solo el total del carrito sin usar save con cascade
-      await queryRunner.manager.update(Cart, cart.id, { total: 0 });
+      // Actualizar total e item_count del carrito
+      await queryRunner.manager.update(Cart, cart.id, { total: 0, item_count: 0 });
 
       await queryRunner.commitTransaction();
 
@@ -330,16 +338,14 @@ export class CartService {
     // Validar que el usuario tenga esa dirección
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      select: ['id', 'addresses'],
+      relations: ['addresses'],
     });
 
     if (!user) {
       throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
     }
 
-    const addressExists = user.addresses?.some((addr) => addr.id === addressId);
-
-    if (!addressExists) {
+    if (!user.addresses) {
       throw new BadRequestException(
         `La dirección con id ${addressId} no existe en las direcciones guardadas del usuario`,
       );
@@ -433,7 +439,7 @@ export class CartService {
     };
   }
 
-  async createOrderFromCartCheckout(userId: string, shippingAddress: IShippingAddress): Promise<ResponseOrderDto> {
+  async createOrderFromCartCheckout(userId: string, shippingAddress: ICreateAddress): Promise<IResponseOrder> {
     const stockValidation = await this.validateCartStock(userId);
 
     if (!stockValidation.valid) {
@@ -443,7 +449,20 @@ export class CartService {
       });
     }
 
-    return await this.ordersService.createOrderFromCart(userId, shippingAddress);
+    const newAddress = await this.usersService.addAddress(userId, shippingAddress);
+
+    const addressForOrder: IAddress = {
+      id: newAddress.id,
+      label: newAddress.label,
+      street: newAddress.street,
+      city: newAddress.city,
+      province: newAddress.province,
+      postalCode: newAddress.postalCode,
+      country: newAddress.country,
+      isDefault: newAddress.isDefault,
+    };
+
+    return await this.ordersService.createOrderFromCart(userId, addressForOrder);
   }
 
   async cleanupAbandonedCarts(daysOld: number = 30): Promise<{
@@ -471,6 +490,7 @@ export class CartService {
         if (cart.items.length > 0) {
           await queryRunner.manager.remove(cart.items);
           cart.total = 0;
+          cart.item_count = 0;
           await queryRunner.manager.save(cart);
           cleanedCount++;
         }
@@ -505,6 +525,7 @@ export class CartService {
       cart = this.cartRepository.create({
         user,
         total: 0,
+        item_count: 0,
         items: [],
       });
       await this.cartRepository.save(cart);
@@ -617,16 +638,20 @@ export class CartService {
     });
   }
 
-  private async recalculateCartTotal(queryRunner: QueryRunner | EntityManager, cart: Cart): Promise<void> {
+  private async recalculateCartTotals(queryRunner: QueryRunner | EntityManager, cart: Cart): Promise<void> {
     cart.total = parseFloat(cart.items.reduce((sum, item) => sum + Number(item.subtotal), 0).toFixed(2));
+    cart.item_count = this.calculateItemCount(cart.items);
 
     if ('manager' in queryRunner) {
-      // Es un QueryRunner
       await queryRunner.manager.save(cart);
     } else {
-      // Es un EntityManager
       await queryRunner.save(cart);
     }
+  }
+
+  private calculateItemCount(items: CartItem[] | undefined): number {
+    if (!items || items.length === 0) return 0;
+    return items.reduce((sum, item) => sum + item.quantity, 0);
   }
 
   /**
@@ -664,7 +689,7 @@ export class CartService {
           category: item.product.category
             ? {
                 id: item.product.category.id,
-                name: (item.product.category as ICategory).categoryName || 'Sin nombre',
+                category_name: (item.product.category as ICategory).category_name || 'Sin nombre',
               }
             : null,
         },

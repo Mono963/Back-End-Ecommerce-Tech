@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToOne, OneToMany, Index } from 'typeorm';
 import { Order } from './order.entity';
 import { OrderItem } from './order.item';
-import { IUserAddress } from '../../users/interfaces/user.interface';
+import { IAddress } from '../../users/interfaces/user.interface';
 
 @Index(['total'])
 @Index(['paymentMethod'])
@@ -23,10 +23,10 @@ export class OrderDetail {
   total: number;
 
   @Column({ type: 'uuid', nullable: true })
-  shippingAddressId: string | null;
+  shippingAddressId: string;
 
   @Column({ type: 'jsonb', nullable: true })
-  shippingAddressSnapshot: IUserAddress | null;
+  shippingAddressSnapshot: IAddress;
 
   @Column({ nullable: true })
   paymentMethod: string;

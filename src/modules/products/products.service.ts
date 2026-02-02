@@ -6,7 +6,6 @@ import { ProductVariant } from './entities/products_variant.entity';
 import { CategoriesService } from '../category/category.service';
 import { ProductsSearchQueryDto } from './dto/PaginationQueryDto';
 import { paginate } from 'src/common/pagination/paginate';
-import { IPaginatedResultProducts } from './interface/IPaginatedResult';
 import { CreateProductDto, CreateVariantDto, ResponseProductDto, UpdateProductDto } from './dto/products.Dto';
 import { mapToProductDto } from './validate/products.validate';
 import { PRODUCTS_SEED } from 'src/seeds/products.data';
@@ -19,6 +18,7 @@ import {
   IHybridSearchStreamPayload,
 } from './interface/products.interface';
 import { EMPTY, Observable } from 'rxjs';
+import { IPaginatedResult } from '../../common/pagination';
 
 @Injectable()
 export class ProductsService {
@@ -39,7 +39,7 @@ export class ProductsService {
     private readonly n8nService: N8nService,
   ) {}
 
-  async getProducts(searchQuery: ProductsSearchQueryDto): Promise<IPaginatedResultProducts<ResponseProductDto>> {
+  async getProducts(searchQuery: ProductsSearchQueryDto): Promise<IPaginatedResult<ResponseProductDto>> {
     const { name, basePrice, minPrice, maxPrice, brand, categoryId, color, featured, ...pagination } = searchQuery;
 
     const hasFilters: boolean = Boolean(
@@ -157,9 +157,9 @@ export class ProductsService {
     await queryRunner.startTransaction();
 
     try {
-      const category = await this.categoriesService.findByName(dto.categoryName);
+      const category = await this.categoriesService.findByName(dto.category_name);
       if (!category) {
-        throw new NotFoundException(`Categoría '${dto.categoryName}' no encontrada`);
+        throw new NotFoundException(`Categoría '${dto.category_name}' no encontrada`);
       }
 
       const existingProduct = await queryRunner.manager.findOne(Product, {
@@ -239,10 +239,10 @@ export class ProductsService {
       }
     }
 
-    if (dto.categoryName) {
-      const category = await this.categoriesService.findByName(dto.categoryName);
+    if (dto.category_name) {
+      const category = await this.categoriesService.findByName(dto.category_name);
       if (!category) {
-        throw new NotFoundException(`Categoría '${dto.categoryName}' no encontrada`);
+        throw new NotFoundException(`Categoría '${dto.category_name}' no encontrada`);
       }
       product.category = category;
     }
@@ -520,7 +520,7 @@ export class ProductsService {
       };
     }
 
-    const invalidProducts = PRODUCTS_SEED.filter((p) => !p.categoryName || p.categoryName.trim() === '');
+    const invalidProducts = PRODUCTS_SEED.filter((p) => !p.category_name || p.category_name.trim() === '');
 
     if (invalidProducts.length > 0) {
       return {
@@ -537,9 +537,9 @@ export class ProductsService {
           continue;
         }
 
-        const category = await this.categoriesService.findByName(seedData.categoryName);
+        const category = await this.categoriesService.findByName(seedData.category_name);
         if (!category) {
-          this.logger.log(`Categoría ${seedData.categoryName} no encontrada para ${seedData.name}`);
+          this.logger.log(`Categoría ${seedData.category_name} no encontrada para ${seedData.name}`);
           continue;
         }
 
@@ -662,7 +662,7 @@ export class ProductsService {
         'product.basePrice',
         'product.imgUrls',
         'product.featured',
-        'category.categoryName',
+        'category.category_name',
       ])
       .where('product.isActive = :isActive', { isActive: true })
       .andWhere(
@@ -686,7 +686,7 @@ export class ProductsService {
       brand: p.brand,
       basePrice: Number(p.basePrice),
       image: p.imgUrls?.[0] || null,
-      category: p.category?.categoryName || null,
+      category: p.category?.category_name || null,
     }));
   }
 

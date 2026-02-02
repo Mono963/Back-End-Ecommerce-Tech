@@ -17,10 +17,10 @@ import { Users } from '../users/entities/users.entity';
 import { Cart } from '../cart/entities/cart.entity';
 import { CartItem } from '../cart/entities/cart.item.entity';
 import { ProductsService } from '../products/products.service';
-import { IOrderFilters, IResponseOrder, IShippingAddressInternal, OrderStatus } from './interfaces/orders.interface';
+import { IOrderFilters, IResponseOrder, OrderStatus } from './interfaces/orders.interface';
 import { CartService } from '../cart/cart.service';
-import { IUserAddress } from '../users/interfaces/user.interface';
 import { OrderItem } from './entities/order.item';
+import { IAddress } from '../users/interfaces/user.interface';
 
 @Injectable()
 export class OrdersService {
@@ -78,7 +78,7 @@ export class OrdersService {
     return this.mapOrderToDto(order);
   }
 
-  async createOrderFromCart(userId: string, shippingAddress: IShippingAddressInternal): Promise<IResponseOrder> {
+  async createOrderFromCart(userId: string, shippingAddress: IAddress): Promise<IResponseOrder> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -94,13 +94,13 @@ export class OrdersService {
       }
 
       // Obtener la dirección seleccionada del usuario (si existe)
-      let shippingAddressSnapshot: IUserAddress | null = null;
+      let shippingAddressSnapshot: IAddress;
       let shippingAddressId: string | null = null;
 
       if (cart.selectedAddressId) {
         const user = await queryRunner.manager.findOne(Users, {
           where: { id: userId },
-          select: ['id', 'addresses'],
+          relations: ['addresses'],
         });
 
         const selectedAddress = user?.addresses?.find((addr) => addr.id === cart.selectedAddressId);
@@ -246,8 +246,8 @@ export class OrdersService {
       shipping: number;
       total: number;
       shippingAddressId?: string | null;
-      shippingAddressSnapshot?: IUserAddress | null;
-      shippingAddress: IShippingAddressInternal | null;
+      shippingAddressSnapshot?: IAddress | null;
+      shippingAddress: IAddress | null;
       items: OrderItem[];
     },
   ): Promise<OrderDetail> {

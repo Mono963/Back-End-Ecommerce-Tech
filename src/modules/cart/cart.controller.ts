@@ -88,10 +88,7 @@ export class CartController {
     status: 404,
     description: 'Product not found',
   })
-  async addProductToCart(
-    @Req() req: AuthRequest,
-    @Body() addToCartDTO: AddToCartDTO,
-  ): Promise<CartResponseDto> {
+  async addProductToCart(@Req() req: AuthRequest, @Body() addToCartDTO: AddToCartDTO): Promise<CartResponseDto> {
     return await this.cartService.addProductToCart(req.user.sub, addToCartDTO);
   }
 

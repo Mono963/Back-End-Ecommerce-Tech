@@ -7,5 +7,5 @@ export class CreateCategoryDto {
   })
   @IsString()
   @MaxLength(50)
-  categoryName: string;
+  category_name: string;
 }

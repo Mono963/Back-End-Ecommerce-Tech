@@ -6,11 +6,9 @@ import {
   Param,
   Body,
   Query,
-  HttpCode,
   BadRequestException,
   ParseUUIDPipe,
   UseGuards,
-  HttpStatus,
   Req,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
@@ -108,7 +106,8 @@ export class OrdersController {
     description: 'Orders list retrieved',
     type: [ResponseOrderDto],
   })
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RoleGuard)
+  @Roles(UserRole.CLIENT)
   async getMyOrders(@Req() req: AuthRequest): Promise<ResponseOrderDto[]> {
     const userId = req.user.sub;
     return await this.ordersService.getUserOrders(userId);
@@ -152,7 +151,8 @@ export class OrdersController {
     status: 404,
     description: 'Order not found',
   })
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RoleGuard)
+  @Roles(UserRole.CLIENT)
   async getOrderById(@Param('id', ParseUUIDPipe) id: string, @Req() req: AuthRequest): Promise<ResponseOrderDto> {
     const userId = req.user.sub;
     return await this.ordersService.getOrder(id, userId);
@@ -230,62 +230,5 @@ export class OrdersController {
     }
 
     return await this.ordersService.updateOrderStatus(orderId, OrderStatus.CANCELLED);
-  }
-
-  @Post(':id/confirm-payment')
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Confirmar el pago de una orden',
-    description: 'Marca una orden como pagada con el método de pago especificado',
-  })
-  @ApiParam({
-    name: 'id',
-    type: 'string',
-    description: 'ID de la orden',
-  })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['paymentMethod'],
-      properties: {
-        paymentMethod: {
-          type: 'string',
-          enum: ['credit_card', 'debit_card', 'mercadopago', 'paypal', 'cash'],
-          example: 'credit_card',
-        },
-        transactionId: {
-          type: 'string',
-          example: 'TRX-123456789',
-          description: 'ID de la transacción del procesador de pagos',
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Pago confirmado exitosamente',
-    type: ResponseOrderDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'La orden no está en estado pendiente',
-  })
-  @HttpCode(HttpStatus.OK)
-  @UseGuards(AuthGuard)
-  async confirmPayment(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { paymentMethod: string; transactionId?: string },
-    @Req() req: AuthRequest,
-  ): Promise<ResponseOrderDto> {
-    const isAdminUser = req.user && (req.user.role as UserRole) === UserRole.ADMIN;
-    const userId = isAdminUser ? undefined : req.user.sub;
-
-    const order = await this.ordersService.getOrder(id, userId);
-
-    if (order.status !== OrderStatus.PENDING) {
-      throw new BadRequestException('Solo se pueden pagar órdenes pendientes');
-    }
-
-    return await this.ordersService.updateOrderStatus(id, OrderStatus.PAID, body.paymentMethod);
   }
 }

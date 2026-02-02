@@ -11,11 +11,12 @@ import {
   IsDateString,
   Min,
   Max,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IUserAddress } from '../../users/interfaces/user.interface';
 import { OrderStatus } from '../interfaces/orders.interface';
+import { IAddress } from '../../users/interfaces/user.interface';
 
 export class ProductSnapshotDto {
   @ApiProperty({ example: 'Dell Inspiron 15' })
@@ -55,35 +56,33 @@ export class VariantSnapshotDto {
 }
 
 export class ShippingAddressDto {
-  @ApiProperty({ example: 'Av. Corrientes', description: 'Nombre de la calle' })
+  @ApiProperty({ example: 'Casa' })
   @IsString()
-  @IsNotEmpty()
-  @Length(3, 100)
+  label: string;
+
+  @ApiProperty({ example: 'Av. Corrientes 1234' })
+  @IsString()
   street: string;
 
-  @ApiProperty({ example: '1234', description: 'Número de la dirección' })
+  @ApiProperty({ example: 'Buenos Aires' })
   @IsString()
-  @IsNotEmpty()
-  @Length(1, 10)
-  number: string;
-
-  @ApiProperty({ example: 'Buenos Aires', description: 'Ciudad' })
-  @IsString()
-  @IsNotEmpty()
-  @Length(2, 50)
   city: string;
 
-  @ApiProperty({ example: 'Buenos Aires', description: 'Provincia/Estado' })
+  @ApiProperty({ example: 'CABA' })
   @IsString()
-  @IsNotEmpty()
-  @Length(2, 50)
-  state: string;
+  province: string;
 
-  @ApiProperty({ example: '1001', description: 'Código postal' })
+  @ApiProperty({ example: 'C1043' })
   @IsString()
-  @IsNotEmpty()
-  @Length(3, 10)
-  zipCode: string;
+  postalCode: string;
+
+  @ApiProperty({ example: 'Argentina' })
+  @IsString()
+  country: string;
+
+  @ApiProperty({ example: true })
+  @IsBoolean()
+  isDefault: boolean;
 }
 
 export class UpdateShippingAddressDto {
@@ -196,7 +195,7 @@ export class OrderDetailResponseDto {
       isDefault: true,
     },
   })
-  shippingAddress?: IUserAddress | null;
+  shippingAddress?: IAddress;
 
   @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440000' })
   shippingAddressId?: string | null;

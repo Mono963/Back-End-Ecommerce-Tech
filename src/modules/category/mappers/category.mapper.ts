@@ -5,15 +5,15 @@ export class ResponseCategoryDto {
   static toDTO(category: Category): ICategory {
     return {
       id: category.id,
-      categoryName: category.categoryName,
+      category_name: category.category_name,
       products: category.products?.map((product) => ({
         id: product.id,
-        name: product.name, // ✅ Mantener 'name'
+        name: product.name,
         description: product.description,
         brand: product.brand,
         model: product.model,
-        basePrice: product.basePrice, // ✅ Mantener 'basePrice'
-        baseStock: product.baseStock, // ✅ Mantener 'baseStock'
+        basePrice: product.basePrice,
+        baseStock: product.baseStock,
         imgUrls: product.imgUrls,
         specifications: product.specifications,
         isActive: product.isActive,
@@ -24,7 +24,7 @@ export class ResponseCategoryDto {
         category: product.category
           ? {
               id: product.category.id,
-              categoryName: product.category.categoryName,
+              category_name: product.category.category_name,
             }
           : null,
         variants:

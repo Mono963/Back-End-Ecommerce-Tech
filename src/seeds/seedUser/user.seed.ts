@@ -39,7 +39,6 @@ export async function seedSuperAdmin(dataSource: DataSource): Promise<void> {
     password: hashedPassword,
     birthDate: new Date('1990-01-01'),
     phone: '1234567890',
-    address: 'Oficina Central',
     role: superAdminRole,
   });
 

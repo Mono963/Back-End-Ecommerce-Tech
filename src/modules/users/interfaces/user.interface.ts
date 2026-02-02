@@ -1,3 +1,4 @@
+import { ICartResponse } from '../../cart/interfaces/interface.cart';
 import { OrderStatus } from '../../orders/interfaces/orders.interface';
 
 export interface IUserResponse {
@@ -6,25 +7,14 @@ export interface IUserResponse {
   email: string;
   birthDate: Date;
   phone: string;
-  address: IUserAddress | string;
   username: string;
   createdAt: Date;
   deletedAt: Date | null;
+  address: IAddress[];
   orders?: IOrderResponse[];
   wishlistCount?: number;
   cart?: ICartResponse;
   role?: string;
-}
-
-export interface IUserAddress {
-  id: string;
-  label: string;
-  street: string;
-  city: string;
-  province: string;
-  postalCode: string;
-  country: string;
-  isDefault: boolean;
 }
 
 export interface IOrderResponse {
@@ -33,36 +23,8 @@ export interface IOrderResponse {
   status: OrderStatus;
 }
 
-export interface ICartResponse {
-  id: string;
-  total: number;
-  createdAt: Date;
-  updatedAt: Date;
-  items: unknown[];
-}
-
 export interface IUserResponseWithAdmin extends IUserResponse {
   password: string;
-}
-
-export interface ICreateAddress {
-  label: string;
-  street: string;
-  city: string;
-  province: string;
-  postalCode: string;
-  country?: string;
-  isDefault?: boolean;
-}
-
-export interface IUpdateAddress {
-  label?: string;
-  street?: string;
-  city?: string;
-  province?: string;
-  postalCode?: string;
-  country?: string;
-  isDefault?: boolean;
 }
 
 export interface ICreateUser {
@@ -124,4 +86,39 @@ export interface IResetPassword {
 export interface IUpdatePassword {
   currentPassword: string;
   newPassword: string;
+}
+
+export interface ICreateAddress {
+  label: string;
+  street: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  country?: string;
+  isDefault?: boolean;
+}
+
+export interface IUpdateAddress {
+  label?: string;
+  street?: string;
+  city?: string;
+  province?: string;
+  postalCode?: string;
+  country?: string;
+  isDefault?: boolean;
+}
+
+export interface IAddress {
+  id: string;
+  label: string;
+  street: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  country: string;
+  isDefault: boolean;
+}
+
+export interface INewCreateAddress extends ICreateAddress {
+  user_id: string;
 }

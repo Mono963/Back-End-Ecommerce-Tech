@@ -4,9 +4,9 @@ import { Repository } from 'typeorm';
 
 import { CreatePreferenceDto, PaymentStatusDto, PreferenceResponseDto } from '../payments/dto/create-payment.dto';
 
-import { MailService } from '../mail/mail.service';
+import { MailQueueService } from '../mail/mail-queue.service';
 import { Payment } from './entities/payment.entity';
-import { Order, OrderStatus } from '../orders/entities/order.entity';
+import { Order } from '../orders/entities/order.entity';
 import { OrderDetail } from '../orders/entities/order.details.entity';
 import { Users } from '../users/entities/users.entity';
 import { MercadoPagoService } from '../mercadopago/mercadopago.service';
@@ -17,6 +17,7 @@ import {
   IPaymentResponse,
   IWebhookNotificationInterface,
 } from './interface/payment.interface';
+import { OrderStatus } from '../orders/interfaces/orders.interface';
 
 @Injectable()
 export class PaymentsService implements IPaymentService {
@@ -30,7 +31,7 @@ export class PaymentsService implements IPaymentService {
     private readonly orderRepository: Repository<Order>,
     @InjectRepository(OrderDetail)
     private readonly orderDetailRepository: Repository<OrderDetail>,
-    private readonly mailService: MailService,
+    private readonly mailQueueService: MailQueueService,
     @InjectRepository(Users)
     private readonly userRepository: Repository<Users>,
   ) {}
@@ -211,14 +212,14 @@ export class PaymentsService implements IPaymentService {
       return;
     }
 
-    this.mailService
-      .sendPurchaseConfirmation(user.email)
+    this.mailQueueService
+      .queuePurchaseConfirmation(user.email)
       .then(() => {
-        this.logger.log(`Correo de notificación de compra enviado a ${user.email}`);
+        this.logger.log(`Email de compra encolado para ${user.email}`);
       })
       .catch((error) => {
         this.logger.error(
-          `Error enviando notificación de compra a ${user.email}:`,
+          `Error encolando notificación de compra para ${user.email}:`,
           error instanceof Error ? error.message : String(error),
         );
       });
@@ -232,14 +233,14 @@ export class PaymentsService implements IPaymentService {
       return;
     }
 
-    this.mailService
-      .sendPaymentPendingEmail(user.email, user.username)
+    this.mailQueueService
+      .queuePaymentPendingEmail(user.email, user.username)
       .then(() => {
-        this.logger.log(`Correo de notificación de pago pendiente enviado a ${user.email}`);
+        this.logger.log(`Email de pago pendiente encolado para ${user.email}`);
       })
       .catch((error) => {
         this.logger.error(
-          `Error enviando notificación de pago pendiente a ${user.email}:`,
+          `Error encolando notificación de pago pendiente para ${user.email}:`,
           error instanceof Error ? error.message : String(error),
         );
       });
@@ -253,14 +254,14 @@ export class PaymentsService implements IPaymentService {
       return;
     }
 
-    this.mailService
-      .sendPaymentRejectedEmail(user.email, user.username)
+    this.mailQueueService
+      .queuePaymentRejectedEmail(user.email, user.username)
       .then(() => {
-        this.logger.log(`Correo de notificación de pago rechazado enviado a ${user.email}`);
+        this.logger.log(`Email de pago rechazado encolado para ${user.email}`);
       })
       .catch((error) => {
         this.logger.error(
-          `Error enviando notificación de pago rechazado a ${user.email}:`,
+          `Error encolando notificación de pago rechazado para ${user.email}:`,
           error instanceof Error ? error.message : String(error),
         );
       });
@@ -274,14 +275,14 @@ export class PaymentsService implements IPaymentService {
       return;
     }
 
-    this.mailService
-      .sendPurchaseAlertToAdmin(user.username, user.email, order.id, order.orderDetail.total, order.createdAt)
+    this.mailQueueService
+      .queuePurchaseAlertToAdmin(user.username, user.email, order.id, order.orderDetail.total, order.createdAt)
       .then(() => {
-        this.logger.log(`Correo de notificación de compra enviado a ${user.username}`);
+        this.logger.log(`Email de alerta de compra al admin encolado para ${user.username}`);
       })
       .catch((error) => {
         this.logger.error(
-          `Error enviando notificación de compra a ${user.username}:`,
+          `Error encolando notificación de compra para admin (${user.username}):`,
           error instanceof Error ? error.message : String(error),
         );
       });

@@ -2,10 +2,10 @@ import { IProducts } from 'src/modules/products/interface/products.interface';
 
 export interface ICategory {
   id: string;
-  categoryName: string;
+  category_name: string;
   products?: IProducts[];
 }
 
 export interface ICreateCategory {
-  categoryName: string;
+  category_name: string;
 }

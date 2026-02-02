@@ -214,7 +214,7 @@ export class WishlistService {
         category: item.product.category
           ? {
               id: item.product.category.id,
-              name: item.product.category.categoryName,
+              name: item.product.category.category_name,
             }
           : null,
       },

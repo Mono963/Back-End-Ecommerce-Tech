@@ -85,7 +85,7 @@ export class CreateProductDto {
   @ApiProperty({ example: 'notebooks', description: 'Nombre de la categoría' })
   @IsString()
   @Length(3, 50)
-  categoryName: string;
+  category_name: string;
 
   @ApiPropertyOptional({
     type: [String],
@@ -179,7 +179,7 @@ export class UpdateProductDto {
   @IsOptional()
   @IsString()
   @Length(3, 50)
-  categoryName?: string;
+  category_name?: string;
 
   @ApiPropertyOptional({
     type: [String],

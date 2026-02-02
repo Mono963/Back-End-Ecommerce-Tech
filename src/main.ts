@@ -6,6 +6,7 @@ import compression from 'compression';
 import { AppModule } from './app.module';
 import { WinstonModule } from 'nest-winston';
 import { loggerConfig } from './config/logger.config';
+import Redis from 'ioredis';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
@@ -55,7 +56,21 @@ async function bootstrap(): Promise<void> {
   SwaggerModule.setup('api/docs', app, document);
 
   const port = process.env.PORT ?? 3001;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
+
+  // Verificar conexión a Redis
+  const redisHost = process.env.REDIS_HOST || 'localhost';
+  const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
+  const redis = new Redis({ host: redisHost, port: redisPort, maxRetriesPerRequest: 1 });
+
+  try {
+    await redis.ping();
+    logger.log(`🔴 Redis connected on ${redisHost}:${redisPort}`);
+  } catch {
+    logger.warn(`⚠️ Redis not available on ${redisHost}:${redisPort}`);
+  } finally {
+    await redis.quit();
+  }
 
   logger.log(`🚀 Application running on: http://localhost:${port}`);
   logger.log(`📚 Swagger documentation: http://localhost:${port}/api/docs`);

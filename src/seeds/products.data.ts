@@ -7,7 +7,7 @@ interface ProductSeedData {
   model?: string;
   basePrice: number;
   baseStock: number;
-  categoryName: string;
+  category_name: string;
   imgUrls?: string[];
   specifications?: LaptopSpecs | MouseSpecs | Record<string, unknown>;
   hasVariants?: boolean;
@@ -32,7 +32,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Inspiron 15 3520',
     basePrice: 699.99,
     baseStock: 10,
-    categoryName: 'Laptops',
+    category_name: 'Laptops',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=Dell+Inspiron+15+3520'],
     specifications: {
@@ -62,7 +62,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Pavilion 14',
     basePrice: 649.99,
     baseStock: 18,
-    categoryName: 'Laptops',
+    category_name: 'Laptops',
     imgUrls: ['https://placehold.co/600x400/png?text=HP+Pavilion+14'],
     specifications: {
       screenSize: '14"',
@@ -82,7 +82,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'WS66 11UMT',
     basePrice: 3299.99,
     baseStock: 5,
-    categoryName: 'Laptops',
+    category_name: 'Laptops',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=MSI+WS66'],
     specifications: {
@@ -109,7 +109,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'WS75',
     basePrice: 2899.99,
     baseStock: 4,
-    categoryName: 'Laptops',
+    category_name: 'Laptops',
     imgUrls: ['https://placehold.co/600x400/png?text=MSI+WS75'],
     specifications: {
       screenSize: '17.3"',
@@ -128,7 +128,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Prestige 14 Evo',
     basePrice: 1499.99,
     baseStock: 12,
-    categoryName: 'Laptops',
+    category_name: 'Laptops',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=MSI+Prestige+14'],
     specifications: {
@@ -155,7 +155,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Prestige 16 Studio',
     basePrice: 2199.99,
     baseStock: 6,
-    categoryName: 'Laptops',
+    category_name: 'Laptops',
     imgUrls: ['https://placehold.co/600x400/png?text=MSI+Prestige+16'],
     specifications: {
       screenSize: '16"',
@@ -174,7 +174,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'ROG Strix G15',
     basePrice: 1599.99,
     baseStock: 5,
-    categoryName: 'Laptops',
+    category_name: 'Laptops',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=ASUS+ROG+Strix+G15'],
     specifications: {
@@ -202,7 +202,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Legion 5 Pro',
     basePrice: 1899.99,
     baseStock: 8,
-    categoryName: 'Laptops',
+    category_name: 'Laptops',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=Lenovo+Legion+5+Pro'],
     specifications: {
@@ -223,7 +223,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Infinity X17',
     basePrice: 3799.99,
     baseStock: 3,
-    categoryName: 'Laptops',
+    category_name: 'Laptops',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=MSI+Infinity+X17'],
     specifications: {
@@ -250,7 +250,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Aspire 5 A515-58M',
     basePrice: 549.99,
     baseStock: 22,
-    categoryName: 'Laptops',
+    category_name: 'Laptops',
     imgUrls: ['https://placehold.co/600x400/png?text=Acer+Aspire+5'],
     specifications: {
       screenSize: '15.6"',
@@ -276,7 +276,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'MacBook Air M3',
     basePrice: 1299.99,
     baseStock: 15,
-    categoryName: 'Laptops',
+    category_name: 'Laptops',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=MacBook+Air+M3'],
     specifications: {
@@ -304,7 +304,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'iPad Air M2',
     basePrice: 699.99,
     baseStock: 20,
-    categoryName: 'tablets-y-pads',
+    category_name: 'tablets-y-pads',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=iPad+Air+M2'],
     specifications: {
@@ -330,7 +330,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Galaxy Tab S9',
     basePrice: 849.99,
     baseStock: 15,
-    categoryName: 'tablets-y-pads',
+    category_name: 'tablets-y-pads',
     imgUrls: ['https://placehold.co/600x400/png?text=Samsung+Tab+S9'],
     specifications: {
       screenSize: '11"',
@@ -349,7 +349,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'iPad Pro 12.9"',
     basePrice: 1299.99,
     baseStock: 10,
-    categoryName: 'tablets-y-pads',
+    category_name: 'tablets-y-pads',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=iPad+Pro+12.9'],
     specifications: {
@@ -374,7 +374,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Tab P11 Pro Gen 2',
     basePrice: 449.99,
     baseStock: 18,
-    categoryName: 'tablets-y-pads',
+    category_name: 'tablets-y-pads',
     imgUrls: ['https://placehold.co/600x400/png?text=Lenovo+Tab+P11+Pro'],
     specifications: {
       screenSize: '11.5"',
@@ -395,7 +395,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'VivoBook E210',
     basePrice: 299.99,
     baseStock: 25,
-    categoryName: 'Netbooks',
+    category_name: 'Netbooks',
     imgUrls: ['https://placehold.co/600x400/png?text=ASUS+VivoBook+E210'],
     specifications: {
       screenSize: '11.6"',
@@ -414,7 +414,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Stream 11-ak0013dx',
     basePrice: 249.99,
     baseStock: 30,
-    categoryName: 'Netbooks',
+    category_name: 'Netbooks',
     imgUrls: ['https://placehold.co/600x400/png?text=HP+Stream+11'],
     specifications: {
       screenSize: '11.6"',
@@ -433,7 +433,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Chromebook 311',
     basePrice: 279.99,
     baseStock: 28,
-    categoryName: 'Netbooks',
+    category_name: 'Netbooks',
     imgUrls: ['https://placehold.co/600x400/png?text=Acer+Chromebook+311'],
     specifications: {
       screenSize: '11.6"',
@@ -452,7 +452,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'GS66 Stealth',
     basePrice: 2299.99,
     baseStock: 7,
-    categoryName: 'Laptops',
+    category_name: 'Laptops',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=MSI+GS66'],
     specifications: {
@@ -473,7 +473,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'GT77 Titan',
     basePrice: 4299.99,
     baseStock: 2,
-    categoryName: 'Laptops',
+    category_name: 'Laptops',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=MSI+GT77+Titan'],
     specifications: {
@@ -494,7 +494,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Katana 15 B13V',
     basePrice: 1199.99,
     baseStock: 12,
-    categoryName: 'Laptops',
+    category_name: 'Laptops',
     imgUrls: ['https://placehold.co/600x400/png?text=MSI+Katana+15'],
     specifications: {
       screenSize: '15.6"',
@@ -514,7 +514,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Creator Z16P B13V',
     basePrice: 2799.99,
     baseStock: 5,
-    categoryName: 'Laptops',
+    category_name: 'Laptops',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=MSI+Creator+Z16P'],
     specifications: {
@@ -537,7 +537,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'OptiPlex 7090',
     basePrice: 899.99,
     baseStock: 10,
-    categoryName: 'Desktop-pcs',
+    category_name: 'Desktop-pcs',
     imgUrls: ['https://placehold.co/600x400/png?text=Dell+OptiPlex'],
     specifications: {
       processor: 'Intel Core i5-11500',
@@ -556,7 +556,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'EliteDesk 800 G9',
     basePrice: 1099.99,
     baseStock: 8,
-    categoryName: 'Desktop-pcs',
+    category_name: 'Desktop-pcs',
     imgUrls: ['https://placehold.co/600x400/png?text=HP+EliteDesk+800'],
     specifications: {
       processor: 'Intel Core i7-12700',
@@ -575,7 +575,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'ThinkCentre M90q Gen 3',
     basePrice: 849.99,
     baseStock: 15,
-    categoryName: 'Desktop-pcs',
+    category_name: 'Desktop-pcs',
     imgUrls: ['https://placehold.co/600x400/png?text=Lenovo+ThinkCentre'],
     specifications: {
       processor: 'Intel Core i5-12500T',
@@ -596,7 +596,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Odyssey G5',
     basePrice: 399.99,
     baseStock: 4,
-    categoryName: 'Monitors',
+    category_name: 'Monitors',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=Samsung+Odyssey+G5'],
     specifications: {
@@ -616,7 +616,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'ROG Swift PG279QM',
     basePrice: 699.99,
     baseStock: 12,
-    categoryName: 'Monitors',
+    category_name: 'Monitors',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=ASUS+ROG+Swift'],
     specifications: {
@@ -637,7 +637,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'C27G2Z',
     basePrice: 299.99,
     baseStock: 20,
-    categoryName: 'Monitors',
+    category_name: 'Monitors',
     imgUrls: ['https://placehold.co/600x400/png?text=AOC+C27G2Z'],
     specifications: {
       screenSize: '27"',
@@ -659,7 +659,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'G502 HERO',
     basePrice: 79.99,
     baseStock: 35,
-    categoryName: 'Mouses',
+    category_name: 'Mouses',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=Logitech+G502'],
     specifications: {
@@ -680,7 +680,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'DeathAdder V3 Pro',
     basePrice: 149.99,
     baseStock: 25,
-    categoryName: 'Mouses',
+    category_name: 'Mouses',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=Razer+DeathAdder+V3'],
     specifications: {
@@ -701,7 +701,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Rival 3',
     basePrice: 29.99,
     baseStock: 45,
-    categoryName: 'Mouses',
+    category_name: 'Mouses',
     imgUrls: ['https://placehold.co/600x400/png?text=SteelSeries+Rival+3'],
     specifications: {
       sensorType: 'TrueMove Core',
@@ -720,7 +720,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'MX Master 3S',
     basePrice: 99.99,
     baseStock: 30,
-    categoryName: 'Mouses',
+    category_name: 'Mouses',
     imgUrls: ['https://placehold.co/600x400/png?text=Logitech+MX+Master+3S'],
     specifications: {
       sensorType: 'Darkfield',
@@ -746,7 +746,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'MM300 Extended',
     basePrice: 29.99,
     baseStock: 50,
-    categoryName: 'Accessories',
+    category_name: 'Accessories',
     imgUrls: ['https://placehold.co/600x400/png?text=Corsair+MM300'],
     specifications: {
       material: 'Tela',
@@ -763,7 +763,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'C920 HD Pro',
     basePrice: 79.99,
     baseStock: 40,
-    categoryName: 'Accessories',
+    category_name: 'Accessories',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=Logitech+C920'],
     specifications: {
@@ -783,7 +783,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Cloud II',
     basePrice: 99.99,
     baseStock: 35,
-    categoryName: 'Accessories',
+    category_name: 'Accessories',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=HyperX+Cloud+II'],
     specifications: {
@@ -807,7 +807,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'BlackWidow V3',
     basePrice: 139.99,
     baseStock: 25,
-    categoryName: 'Accessories',
+    category_name: 'Accessories',
     imgUrls: ['https://placehold.co/600x400/png?text=Razer+BlackWidow+V3'],
     specifications: {
       switchType: 'Razer Green Mechanical',
@@ -826,7 +826,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Wave:3',
     basePrice: 159.99,
     baseStock: 20,
-    categoryName: 'Accessories',
+    category_name: 'Accessories',
     imgUrls: ['https://placehold.co/600x400/png?text=Elgato+Wave+3'],
     specifications: {
       type: 'Condensador',
@@ -845,7 +845,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Yeti',
     basePrice: 129.99,
     baseStock: 30,
-    categoryName: 'Accessories',
+    category_name: 'Accessories',
     imgUrls: ['https://placehold.co/600x400/png?text=Blue+Yeti'],
     specifications: {
       type: 'Condensador',
@@ -871,7 +871,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'K70 RGB PRO',
     basePrice: 169.99,
     baseStock: 22,
-    categoryName: 'Keyboards',
+    category_name: 'Keyboards',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=Corsair+K70+RGB+PRO'],
     specifications: {
@@ -898,7 +898,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'G915 TKL',
     basePrice: 229.99,
     baseStock: 15,
-    categoryName: 'Keyboards',
+    category_name: 'Keyboards',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=Logitech+G915+TKL'],
     specifications: {
@@ -924,7 +924,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'K8 Pro',
     basePrice: 109.99,
     baseStock: 28,
-    categoryName: 'Keyboards',
+    category_name: 'Keyboards',
     imgUrls: ['https://placehold.co/600x400/png?text=Keychron+K8+Pro'],
     specifications: {
       switchType: 'Gateron/Keychron Hotswappable',
@@ -950,7 +950,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Apex Pro',
     basePrice: 199.99,
     baseStock: 18,
-    categoryName: 'Keyboards',
+    category_name: 'Keyboards',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=SteelSeries+Apex+Pro'],
     specifications: {
@@ -972,7 +972,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'One 3 Matcha',
     basePrice: 139.99,
     baseStock: 20,
-    categoryName: 'Keyboards',
+    category_name: 'Keyboards',
     imgUrls: ['https://placehold.co/600x400/png?text=Ducky+One+3+Matcha'],
     specifications: {
       switchType: 'Cherry MX',
@@ -997,7 +997,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Alloy Origins Core',
     basePrice: 89.99,
     baseStock: 32,
-    categoryName: 'Keyboards',
+    category_name: 'Keyboards',
     imgUrls: ['https://placehold.co/600x400/png?text=HyperX+Alloy+Origins+Core'],
     specifications: {
       switchType: 'HyperX Mechanical',
@@ -1021,7 +1021,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Sculpt Ergonomic',
     basePrice: 79.99,
     baseStock: 25,
-    categoryName: 'Keyboards',
+    category_name: 'Keyboards',
     imgUrls: ['https://placehold.co/600x400/png?text=Microsoft+Sculpt'],
     specifications: {
       switchType: 'Membrana',
@@ -1041,7 +1041,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'ROG Falchion',
     basePrice: 159.99,
     baseStock: 14,
-    categoryName: 'Keyboards',
+    category_name: 'Keyboards',
     imgUrls: ['https://placehold.co/600x400/png?text=ASUS+ROG+Falchion'],
     specifications: {
       switchType: 'Cherry MX RGB',
@@ -1068,7 +1068,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Ryzen 5 5600X',
     basePrice: 199.99,
     baseStock: 30,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     imgUrls: ['https://placehold.co/600x400/png?text=AMD+Ryzen+5+5600X'],
     specifications: {
       cores: 6,
@@ -1088,7 +1088,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'RTX 4060 Ti',
     basePrice: 449.99,
     baseStock: 4,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=RTX+4060+Ti'],
     specifications: {
@@ -1113,7 +1113,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Vengeance RGB Pro',
     basePrice: 79.99,
     baseStock: 4,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     imgUrls: ['https://placehold.co/600x400/png?text=Corsair+Vengeance'],
     specifications: {
       type: 'DDR4',
@@ -1137,7 +1137,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: '980 PRO',
     basePrice: 79.99,
     baseStock: 4,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     imgUrls: ['https://placehold.co/600x400/png?text=Samsung+980+PRO'],
     specifications: {
       interface: 'PCIe 4.0 NVMe M.2',
@@ -1160,7 +1160,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'ROG Strix B550-F',
     basePrice: 189.99,
     baseStock: 15,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     imgUrls: ['https://placehold.co/600x400/png?text=ASUS+B550'],
     specifications: {
       socket: 'AM4',
@@ -1181,7 +1181,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'RM750x',
     basePrice: 109.99,
     baseStock: 20,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     imgUrls: ['https://placehold.co/600x400/png?text=Corsair+RM750x'],
     specifications: {
       wattage: '750W',
@@ -1199,7 +1199,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'H510',
     basePrice: 79.99,
     baseStock: 4,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     imgUrls: ['https://placehold.co/600x400/png?text=NZXT+H510'],
     specifications: {
       formFactor: 'Mid-Tower',
@@ -1223,7 +1223,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Core i7-13700K',
     basePrice: 409.99,
     baseStock: 18,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=Intel+i7-13700K'],
     specifications: {
@@ -1244,7 +1244,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Radeon RX 7800 XT',
     basePrice: 549.99,
     baseStock: 14,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=AMD+RX+7800+XT'],
     specifications: {
@@ -1267,7 +1267,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Gamer-4060',
     basePrice: 1299.99,
     baseStock: 5,
-    categoryName: 'Custom Builds',
+    category_name: 'Custom Builds',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=PC+Gamer+RTX+4060'],
     specifications: {
@@ -1296,7 +1296,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Office-i5',
     basePrice: 699.99,
     baseStock: 10,
-    categoryName: 'Custom Builds',
+    category_name: 'Custom Builds',
     imgUrls: ['https://placehold.co/600x400/png?text=PC+Oficina+i5'],
     specifications: {
       processor: 'Intel Core i5-12400',
@@ -1322,7 +1322,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Workstation-Pro',
     basePrice: 3499.99,
     baseStock: 3,
-    categoryName: 'Custom Builds',
+    category_name: 'Custom Builds',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=PC+Workstation+Pro'],
     specifications: {
@@ -1345,7 +1345,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Elite-Stream',
     basePrice: 2199.99,
     baseStock: 6,
-    categoryName: 'Custom Builds',
+    category_name: 'Custom Builds',
     imgUrls: ['https://placehold.co/600x400/png?text=PC+Streaming+Elite'],
     specifications: {
       processor: 'AMD Ryzen 9 7900X',
@@ -1369,7 +1369,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Archer AX55',
     basePrice: 119.99,
     baseStock: 18,
-    categoryName: 'Networking',
+    category_name: 'Networking',
     imgUrls: ['https://placehold.co/600x400/png?text=TP-Link+AX55'],
     specifications: {
       standard: 'WiFi 6 (802.11ax)',
@@ -1387,7 +1387,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'RT-AX86U',
     basePrice: 249.99,
     baseStock: 12,
-    categoryName: 'Networking',
+    category_name: 'Networking',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=ASUS+RT-AX86U'],
     specifications: {
@@ -1407,7 +1407,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Nighthawk M6 MR6150',
     basePrice: 699.99,
     baseStock: 8,
-    categoryName: 'Networking',
+    category_name: 'Networking',
     imgUrls: ['https://placehold.co/600x400/png?text=Netgear+Nighthawk+M6'],
     specifications: {
       standard: 'WiFi 6 (802.11ax)',
@@ -1428,7 +1428,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'LaserJet Pro M404dn',
     basePrice: 349.99,
     baseStock: 12,
-    categoryName: 'Printers',
+    category_name: 'Printers',
     imgUrls: ['https://placehold.co/600x400/png?text=HP+LaserJet+M404dn'],
     specifications: {
       type: 'Láser Monocromo',
@@ -1446,7 +1446,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'EcoTank L3250',
     basePrice: 299.99,
     baseStock: 20,
-    categoryName: 'Printers',
+    category_name: 'Printers',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=Epson+EcoTank+L3250'],
     specifications: {
@@ -1466,7 +1466,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'imageCLASS MF445dw',
     basePrice: 429.99,
     baseStock: 10,
-    categoryName: 'Printers',
+    category_name: 'Printers',
     imgUrls: ['https://placehold.co/600x400/png?text=Canon+MF445dw'],
     specifications: {
       type: 'Láser Monocromo',
@@ -1488,7 +1488,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Kone Pro Air',
     basePrice: 129.99,
     baseStock: 20,
-    categoryName: 'Mouses',
+    category_name: 'Mouses',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=ROCCAT+Kone+Pro+Air'],
     specifications: {
@@ -1514,7 +1514,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Vulcan TKL Pro',
     basePrice: 159.99,
     baseStock: 15,
-    categoryName: 'Keyboards',
+    category_name: 'Keyboards',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=ROCCAT+Vulcan+TKL+Pro'],
     specifications: {
@@ -1536,7 +1536,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Optix MAG274QRF-QD',
     basePrice: 449.99,
     baseStock: 10,
-    categoryName: 'Monitors',
+    category_name: 'Monitors',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=MSI+MAG274QRF-QD'],
     specifications: {
@@ -1558,7 +1558,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'MAG B650 TOMAHAWK WIFI',
     basePrice: 239.99,
     baseStock: 12,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     imgUrls: ['https://placehold.co/600x400/png?text=MSI+B650+TOMAHAWK'],
     specifications: {
       socket: 'AM5',
@@ -1581,7 +1581,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Viper V3 Pro',
     basePrice: 159.99,
     baseStock: 18,
-    categoryName: 'Mouses',
+    category_name: 'Mouses',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=Razer+Viper+V3+Pro'],
     specifications: {
@@ -1607,7 +1607,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Huntsman V3 Pro',
     basePrice: 249.99,
     baseStock: 12,
-    categoryName: 'Keyboards',
+    category_name: 'Keyboards',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=Razer+Huntsman+V3+Pro'],
     specifications: {
@@ -1630,7 +1630,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'View 71 TG RGB',
     basePrice: 229.99,
     baseStock: 8,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     imgUrls: ['https://placehold.co/600x400/png?text=Thermaltake+View+71'],
     specifications: {
       formFactor: 'Full Tower',
@@ -1650,7 +1650,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Toughpower GF3 1000W',
     basePrice: 189.99,
     baseStock: 15,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=Thermaltake+GF3+1000W'],
     specifications: {
@@ -1673,7 +1673,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'XPG Spectrix D50 RGB',
     basePrice: 89.99,
     baseStock: 25,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     imgUrls: ['https://placehold.co/600x400/png?text=ADATA+XPG+D50+RGB'],
     specifications: {
       type: 'DDR4',
@@ -1697,7 +1697,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'XPG SX8200 Pro',
     basePrice: 69.99,
     baseStock: 30,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     imgUrls: ['https://placehold.co/600x400/png?text=ADATA+SX8200+Pro'],
     specifications: {
       interface: 'PCIe 3.0 NVMe M.2',
@@ -1722,7 +1722,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'OMEN 27i',
     basePrice: 499.99,
     baseStock: 10,
-    categoryName: 'Monitors',
+    category_name: 'Monitors',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=HP+OMEN+27i'],
     specifications: {
@@ -1744,7 +1744,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Z2 Tower G9',
     basePrice: 1599.99,
     baseStock: 6,
-    categoryName: 'Desktop-pcs',
+    category_name: 'Desktop-pcs',
     imgUrls: ['https://placehold.co/600x400/png?text=HP+Z2+Tower+G9'],
     specifications: {
       processor: 'Intel Core i7-13700',
@@ -1766,7 +1766,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'AORUS RTX 4070 MASTER',
     basePrice: 649.99,
     baseStock: 8,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=GIGABYTE+RTX+4070+MASTER'],
     specifications: {
@@ -1788,7 +1788,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'M27Q X',
     basePrice: 479.99,
     baseStock: 12,
-    categoryName: 'Monitors',
+    category_name: 'Monitors',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=GIGABYTE+M27Q+X'],
     specifications: {
@@ -1812,7 +1812,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Core i5-14600K',
     basePrice: 319.99,
     baseStock: 20,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     imgUrls: ['https://placehold.co/600x400/png?text=Intel+i5-14600K'],
     specifications: {
       cores: 14,
@@ -1833,7 +1833,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Core i9-14900K',
     basePrice: 579.99,
     baseStock: 10,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=Intel+i9-14900K'],
     specifications: {
@@ -1857,7 +1857,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'UltraSharp U2723QE',
     basePrice: 799.99,
     baseStock: 8,
-    categoryName: 'Monitors',
+    category_name: 'Monitors',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=Dell+U2723QE'],
     specifications: {
@@ -1879,7 +1879,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'XPS 15 9530',
     basePrice: 1899.99,
     baseStock: 7,
-    categoryName: 'Laptops',
+    category_name: 'Laptops',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=Dell+XPS+15'],
     specifications: {
@@ -1908,7 +1908,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'ProArt PA279CRV',
     basePrice: 599.99,
     baseStock: 10,
-    categoryName: 'Monitors',
+    category_name: 'Monitors',
     imgUrls: ['https://placehold.co/600x400/png?text=ASUS+ProArt+PA279CRV'],
     specifications: {
       screenSize: '27"',
@@ -1929,7 +1929,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'TUF Gaming B650-PLUS WIFI',
     basePrice: 219.99,
     baseStock: 15,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     imgUrls: ['https://placehold.co/600x400/png?text=ASUS+TUF+B650'],
     specifications: {
       socket: 'AM5',
@@ -1952,7 +1952,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Ryzen 7 7800X3D',
     basePrice: 449.99,
     baseStock: 12,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=AMD+Ryzen+7+7800X3D'],
     specifications: {
@@ -1974,7 +1974,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Radeon RX 7900 XTX',
     basePrice: 999.99,
     baseStock: 6,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=AMD+RX+7900+XTX'],
     specifications: {
@@ -1997,7 +1997,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Predator X27U',
     basePrice: 1299.99,
     baseStock: 5,
-    categoryName: 'Monitors',
+    category_name: 'Monitors',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=Acer+Predator+X27U'],
     specifications: {
@@ -2019,7 +2019,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'Nitro 5 AN515-58',
     basePrice: 1199.99,
     baseStock: 10,
-    categoryName: 'Laptops',
+    category_name: 'Laptops',
     imgUrls: ['https://placehold.co/600x400/png?text=Acer+Nitro+5'],
     specifications: {
       screenSize: '15.6"',
@@ -2047,7 +2047,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'RTX 4080 SUPER',
     basePrice: 999.99,
     baseStock: 6,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=RTX+4080+SUPER'],
     specifications: {
@@ -2068,7 +2068,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'RTX 4090',
     basePrice: 1599.99,
     baseStock: 4,
-    categoryName: 'pc-parts',
+    category_name: 'pc-parts',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=RTX+4090'],
     specifications: {
@@ -2091,7 +2091,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'G Pro X Superlight 2',
     basePrice: 159.99,
     baseStock: 20,
-    categoryName: 'Mouses',
+    category_name: 'Mouses',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=Logitech+Superlight+2'],
     specifications: {
@@ -2117,7 +2117,7 @@ export const PRODUCTS_SEED: ProductSeedData[] = [
     model: 'G715 Wireless',
     basePrice: 199.99,
     baseStock: 15,
-    categoryName: 'Keyboards',
+    category_name: 'Keyboards',
     featured: true,
     imgUrls: ['https://placehold.co/600x400/png?text=Logitech+G715'],
     specifications: {

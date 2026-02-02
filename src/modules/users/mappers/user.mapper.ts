@@ -9,11 +9,21 @@ export class UserMapper {
       email: user.email,
       birthDate: user.birthDate,
       phone: user.phone,
-      address: user.address || '',
       username: user.username,
       role: user.role?.name,
       createdAt: user.createdAt ?? new Date(),
       deletedAt: user.deletedAt,
+      address:
+        user.addresses?.map((address) => ({
+          id: address.id,
+          label: address.label,
+          street: address.street,
+          city: address.city,
+          province: address.province,
+          postalCode: address.postalCode,
+          country: address.country,
+          isDefault: address.isDefault,
+        })) ?? [],
       orders:
         user.orders?.map((order) => ({
           id: order.id,
@@ -29,6 +39,7 @@ export class UserMapper {
             createdAt: user.cart.createdAt,
             updatedAt: user.cart.updatedAt,
             items: user.cart.items ?? [],
+            itemCount: user.cart.item_count,
           }
         : undefined,
     };

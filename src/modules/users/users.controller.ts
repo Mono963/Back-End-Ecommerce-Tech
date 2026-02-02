@@ -167,34 +167,62 @@ export class UsersController {
     return { message: 'Password reset successfully' };
   }
 
+  @Get('stats/me')
+  @ApiOperation({
+    summary: 'Get personal user statistics',
+    description:
+      'Returns statistics of the authenticated user: total orders, total spent, products on wishlist and reviews',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully Obtained Statistics',
+    schema: {
+      type: 'object',
+      properties: {
+        totalOrders: { type: 'number', example: 15 },
+        totalSpent: { type: 'number', example: 5499.99 },
+        wishlistItemsCount: { type: 'number', example: 8 },
+        reviewsCount: { type: 'number', example: 12 },
+      },
+    },
+  })
+  @UseGuards(AuthGuard)
+  async getMyStats(@Req() req: AuthRequest): Promise<{
+    totalOrders: number;
+    totalSpent: number;
+    wishlistItemsCount: number;
+    reviewsCount: number;
+  }> {
+    return await this.usersService.getUserStats(req.user.sub);
+  }
+
+  // ==================== ADDRESS MANAGEMENT ==================================================================================
+
   @Get('addresses/my-addresses')
   @ApiOperation({ summary: 'Get all addresses for the authenticated user' })
   @ApiResponse({
     status: 200,
     description: 'List of user addresses',
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-          label: { type: 'string' },
-          street: { type: 'string' },
-          city: { type: 'string' },
-          province: { type: 'string' },
-          postalCode: { type: 'string' },
-          country: { type: 'string' },
-          isDefault: { type: 'boolean' },
-        },
-      },
-    },
   })
-  @UseGuards(AuthGuard)
-  async getMyAddresses(@Req() req: AuthRequest): Promise<UserAddressDto[]> {
-    return await this.usersService.getAddresses(req.user.sub);
+  @UseGuards(AuthGuard, RoleGuard)
+  @Roles(UserRole.ADMIN)
+  async getAddresses(@Req() req: AuthRequest): Promise<UserAddressDto[]> {
+    return await this.usersService.getByUserAddresses(req.user.sub);
   }
 
-  @Post('addresses')
+  @Get('addresses/my-addresses')
+  @ApiOperation({ summary: 'Get all addresses for the authenticated user' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of user addresses',
+  })
+  @UseGuards(AuthGuard, RoleGuard)
+  @Roles(UserRole.CLIENT)
+  async getMyAddresses(@Req() req: AuthRequest): Promise<UserAddressDto[]> {
+    return await this.usersService.getByUserAddresses(req.user.sub);
+  }
+
+  @Post('addresses/add')
   @ApiOperation({ summary: 'Add a new address for the authenticated user' })
   @ApiBody({ type: CreateAddressDto })
   @ApiResponse({
@@ -267,11 +295,8 @@ export class UsersController {
     description: 'Address deleted successfully',
   })
   @UseGuards(AuthGuard)
-  async deleteAddress(
-    @Req() req: AuthRequest,
-    @Param('addressId', ParseUUIDPipe) addressId: string,
-  ): Promise<{ message: string }> {
-    return await this.usersService.deleteAddress(req.user.sub, addressId);
+  async deleteAddress(@Param('addressId', ParseUUIDPipe) addressId: string): Promise<{ message: string }> {
+    return await this.usersService.deleteAddress(addressId);
   }
 
   @Patch('addresses/:addressId/set-default')
@@ -304,34 +329,5 @@ export class UsersController {
     @Param('addressId', ParseUUIDPipe) addressId: string,
   ): Promise<UserAddressDto> {
     return await this.usersService.setDefaultAddress(req.user.sub, addressId);
-  }
-
-  @Get('stats/me')
-  @ApiOperation({
-    summary: 'Get personal user statistics',
-    description:
-      'Returns statistics of the authenticated user: total orders, total spent, products on wishlist and reviews',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Successfully Obtained Statistics',
-    schema: {
-      type: 'object',
-      properties: {
-        totalOrders: { type: 'number', example: 15 },
-        totalSpent: { type: 'number', example: 5499.99 },
-        wishlistItemsCount: { type: 'number', example: 8 },
-        reviewsCount: { type: 'number', example: 12 },
-      },
-    },
-  })
-  @UseGuards(AuthGuard)
-  async getMyStats(@Req() req: AuthRequest): Promise<{
-    totalOrders: number;
-    totalSpent: number;
-    wishlistItemsCount: number;
-    reviewsCount: number;
-  }> {
-    return await this.usersService.getUserStats(req.user.sub);
   }
 }

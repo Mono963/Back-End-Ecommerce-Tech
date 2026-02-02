@@ -10,6 +10,7 @@ import { AuthsModule } from '../auths/auths.module';
 import { CartItem } from './entities/cart.item.entity';
 import { ProductsModule } from '../products/products.module';
 import { OrdersModule } from '../orders/orders.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { OrdersModule } from '../orders/orders.module';
     forwardRef(() => AuthsModule),
     forwardRef(() => ProductsModule),
     forwardRef(() => OrdersModule),
+    forwardRef(() => UsersModule),
   ],
   controllers: [CartController],
   providers: [CartService],

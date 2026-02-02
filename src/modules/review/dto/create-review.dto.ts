@@ -1,7 +1,6 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { Rating } from '../interface/IReview.interface';
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsEnum, IsNotEmpty, IsString, IsUUID } from 'class-validator';
 
 export class CreateReviewDto {
   @IsUUID()
@@ -22,57 +21,6 @@ export class CreateReviewDto {
   @IsNotEmpty()
   @IsString()
   message: string;
-}
-
-export class ReviewFiltersDto {
-  @ApiPropertyOptional({
-    example: 1,
-    description: 'Página',
-    default: 1,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Type(() => Number)
-  @Min(1)
-  page?: number;
-
-  @ApiPropertyOptional({
-    example: 10,
-    description: 'Límite de resultados',
-    default: 10,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Type(() => Number)
-  @Min(1)
-  @Max(100)
-  limit?: number;
-
-  @ApiPropertyOptional({
-    enum: Rating,
-    description: 'Filtrar por calificación',
-    example: 5,
-  })
-  @IsOptional()
-  @IsEnum(Rating)
-  @Type(() => Number)
-  rating?: Rating;
-
-  @ApiPropertyOptional({
-    example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Filtrar por ID de producto',
-  })
-  @IsOptional()
-  @IsString()
-  productId?: string;
-
-  @ApiPropertyOptional({
-    example: 'Juan',
-    description: 'Buscar por nombre de usuario',
-  })
-  @IsOptional()
-  @IsString()
-  userName?: string;
 }
 
 export class PaginatedReviewsDto {

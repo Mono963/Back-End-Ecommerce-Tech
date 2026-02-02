@@ -30,7 +30,7 @@ export interface IProducts {
   updatedAt: Date;
   category: {
     id: string;
-    categoryName: string;
+    category_name: string;
   } | null;
   variants: IProductVariant[];
   reviews: IReviewResponsePublic[];

@@ -1,6 +1,6 @@
 import { ProductVariant } from '../../products/entities/products_variant.entity';
 
-export class ICartItemVariant {
+export interface ICartItemVariant {
   id: string;
   type: string;
   name: string;
@@ -9,7 +9,7 @@ export class ICartItemVariant {
   isAvailable: boolean;
 }
 
-export class ICartItemResponse {
+export interface ICartItemResponse {
   id: string;
   quantity: number;
   priceAtAddition: number;
@@ -37,12 +37,12 @@ export class ICartItemResponse {
     isActive: boolean;
     category: {
       id: string;
-      name: string;
+      category_name: string;
     } | null;
   };
 }
 
-export class ICartResponse {
+export interface ICartResponse {
   id: string;
   total: number;
   createdAt: Date;
@@ -79,4 +79,14 @@ export interface IResponseCartSummary {
   itemCount: number;
   total: number;
   hasItems: boolean;
+}
+
+export interface IAddToCart {
+  productId: string;
+  quantity: number;
+  variantIds?: string[];
+}
+
+export interface IUpdateCartItem {
+  quantity: number;
 }

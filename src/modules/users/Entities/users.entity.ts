@@ -14,8 +14,8 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { IUserAddress } from '../interfaces/user.interface';
 import { Review } from 'src/modules/review/entities/review.entity';
+import { Address } from './address.entity';
 import { Payment } from '../../payments/entities/payment.entity';
 
 @Entity({
@@ -38,17 +38,11 @@ export class Users {
   @Column({ type: 'varchar', length: 50, unique: true, nullable: false })
   username: string;
 
-  @Column('text', { nullable: true })
-  address: string;
-
   @Column({ type: 'varchar', length: 255, nullable: false })
   password: string;
 
   @Column({ type: 'bigint', nullable: false })
   phone: string;
-
-  @Column({ type: 'jsonb', nullable: true, default: [] })
-  addresses: IUserAddress[];
 
   @CreateDateColumn()
   createdAt?: Date;
@@ -58,6 +52,9 @@ export class Users {
 
   @DeleteDateColumn({ name: 'deleted_at', select: false })
   deletedAt: Date | null;
+
+  @OneToMany(() => Address, (address) => address.user)
+  addresses: Address[];
 
   @OneToMany(() => Order, (order) => order.user)
   orders: Order[];

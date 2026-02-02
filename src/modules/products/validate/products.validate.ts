@@ -78,7 +78,7 @@ export function mapToProductDto(product: Product): ResponseProductDto {
     baseStock: product.baseStock,
     finalPrice: calculateFinalPrice(),
     totalStock: calculateTotalStock(),
-    category_name: product.category?.categoryName ?? '',
+    category_name: product.category?.category_name ?? '',
     imgUrls: getAllImageUrls(),
     specifications: product.specifications || {},
     hasVariants: product.hasVariants,

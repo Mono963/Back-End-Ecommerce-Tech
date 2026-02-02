@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import { IsNotEmpty, IsUUID } from 'class-validator';
 import { OrderStatus } from '../../orders/interfaces/orders.interface';
+import { CartResponseDto } from '../../cart/dto/create-cart.dto';
 
 export class OrderResponseDto {
   @ApiProperty({ description: 'ID de la orden' })
@@ -40,23 +41,6 @@ export class UserAddressResponseDto {
   isDefault: boolean;
 }
 
-export class CartResponseDto {
-  @ApiProperty({ description: 'ID del carrito' })
-  id: string;
-
-  @ApiProperty({ description: 'Total del carrito' })
-  total: number;
-
-  @ApiProperty({ description: 'Fecha de creación' })
-  createdAt: Date;
-
-  @ApiProperty({ description: 'Fecha de actualización' })
-  updatedAt: Date;
-
-  @ApiProperty({ description: 'Items del carrito', type: [Object] })
-  items: unknown[];
-}
-
 export class UserResponseDto {
   @ApiProperty({ description: 'ID del usuario' })
   id: string;
@@ -73,12 +57,6 @@ export class UserResponseDto {
   @ApiProperty({ description: 'Teléfono' })
   phone: string;
 
-  @ApiProperty({
-    description: 'Dirección del usuario',
-    oneOf: [{ $ref: '#/components/schemas/UserAddressResponseDto' }, { type: 'string' }],
-  })
-  address: UserAddressResponseDto | string;
-
   @ApiProperty({ description: 'Nombre de usuario' })
   username: string;
 
@@ -87,6 +65,12 @@ export class UserResponseDto {
 
   @ApiPropertyOptional({ description: 'Fecha de eliminación', nullable: true })
   deletedAt: Date | null;
+
+  @ApiProperty({
+    description: 'Dirección del usuario',
+    oneOf: [{ $ref: '#/components/schemas/UserAddressResponseDto' }, { type: 'string' }],
+  })
+  address: UserAddressResponseDto[] | string;
 
   @ApiPropertyOptional({ description: 'Órdenes del usuario', type: [OrderResponseDto] })
   orders?: OrderResponseDto[];

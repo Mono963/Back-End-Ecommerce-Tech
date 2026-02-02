@@ -39,6 +39,9 @@ export class Cart {
   @JoinColumn({ name: 'user_id' })
   user: Users;
 
+  @Column({ type: 'int', default: 0 })
+  item_count: number;
+
   @OneToMany(() => CartItem, (cartItem) => cartItem.cart, {
     cascade: true,
   })
