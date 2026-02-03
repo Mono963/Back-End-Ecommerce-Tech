@@ -31,9 +31,9 @@ export class AuthsController {
     description: 'User signed in successfully',
   })
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @Post('signin/user')
+  @Post('singin/user')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  async signinUser(@Body() credentials: LoginUserDto): Promise<AuthResponse> {
+  async singinUser(@Body() credentials: LoginUserDto): Promise<AuthResponse> {
     const { email, password } = credentials;
     return await this.authService.singin(email, password);
   }
@@ -55,12 +55,8 @@ export class AuthsController {
       forbidNonWhitelisted: true,
     }),
   )
-  @Post('signup')
-  async signup(@Body() newUser: CreateUserDto): Promise<UserResponseDto> {
-    if (!newUser || typeof newUser !== 'object') {
-      throw new Error('Invalid user data format');
-    }
-
+  @Post('singup')
+  async singup(@Body() newUser: CreateUserDto): Promise<UserResponseDto> {
     return await this.authService.signup(newUser);
   }
 
@@ -69,7 +65,7 @@ export class AuthsController {
   @UseGuards(PassportAuthGuard('google'))
   @Get('google')
   async googleAuth(): Promise<void> {
-    // PassportAuthGuard maneja esto
+    // Handled by PassportAuthGuard
   }
 
   @ApiOperation({ summary: 'Google OAuth callback handler' })
@@ -83,11 +79,11 @@ export class AuthsController {
 
     const result = await this.authService.googleLogin(googleUser);
 
-    // Generar código temporal en lugar de enviar el token directamente en la URL
+    // Generate a temporary code instead of sending the token directly in the URL
     const authCode = this.authService.generateAuthCode(result.user.id, result.accessToken);
 
-    // Redirigir con código temporal (30 seg de vida, un solo uso)
-    // El frontend debe intercambiar este código por el token real via POST /auth/exchange-code
+    // Redirect with a temporary code (30s TTL, single-use)
+    // The frontend must exchange this code for the real token via POST /auth/exchange-code
     res.redirect(`${frontendUrl}/auth/callback?code=${authCode}`);
   }
 
@@ -117,12 +113,12 @@ export class AuthsController {
   ): { userId: string; success: boolean } {
     const tokenData = this.authService.exchangeAuthCode(code);
 
-    // Establecer token en cookie HttpOnly (más seguro que localStorage)
+    // Set token in HttpOnly cookie (safer than localStorage)
     res.cookie('access_token', tokenData.accessToken, {
-      httpOnly: true, // No accesible desde JavaScript
-      secure: process.env.NODE_ENV === 'production', // Solo HTTPS en producción
-      sameSite: 'strict', // Protección CSRF
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
+      httpOnly: true, // Not accessible from JavaScript
+      secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+      sameSite: 'strict', // CSRF protection
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     return {
@@ -139,7 +135,7 @@ export class AuthsController {
   @SkipThrottle()
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response): { success: boolean } {
-    // Limpiar la cookie de acceso
+    // Clear the access cookie
     res.clearCookie('access_token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

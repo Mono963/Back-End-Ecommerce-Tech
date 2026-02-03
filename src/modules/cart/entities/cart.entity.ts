@@ -35,6 +35,12 @@ export class Cart {
   @UpdateDateColumn()
   updatedAt: Date;
 
+  @Column({ default: false })
+  abandonedNotificationSent: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastActivityAt: Date;
+
   @ManyToOne(() => Users, (user) => user.cart)
   @JoinColumn({ name: 'user_id' })
   user: Users;

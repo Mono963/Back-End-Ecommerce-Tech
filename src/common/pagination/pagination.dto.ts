@@ -4,7 +4,7 @@ import { IsInt, IsOptional, IsPositive, Max, Min } from 'class-validator';
 
 export class PaginationQueryDto {
   @ApiProperty({
-    description: 'Número de elementos por página',
+    description: 'Number of items per page',
     example: 10,
     default: 10,
     required: false,
@@ -20,7 +20,7 @@ export class PaginationQueryDto {
   limit: number = 10;
 
   @ApiProperty({
-    description: 'Número de página (1-indexed)',
+    description: 'Page number (1-indexed)',
     example: 1,
     default: 1,
     required: false,
@@ -33,10 +33,6 @@ export class PaginationQueryDto {
   @Min(1)
   page: number = 1;
 
-  /**
-   * Calcula el offset para queries SQL/TypeORM.
-   * Útil para queries con .skip() y .take()
-   */
   get offset(): number {
     return (this.page - 1) * this.limit;
   }

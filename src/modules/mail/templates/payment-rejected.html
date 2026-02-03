@@ -1,213 +1,338 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Pago Rechazado</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Unica+One&display=swap" rel="stylesheet">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pago Rechazado</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: #ffffff;
-      font-family: 'Montserrat', sans-serif;
-      color: #333333;
-    }
+    <style>
+      body {
+        margin: 0;
+        padding: 30px 10px;
+        background-color: #ffffff;
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        color: #333333;
+        line-height: 1.6;
+      }
 
-    .container {
-      max-width: 600px;
-      margin: 30px auto;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+      }
 
-    .header {
-      background-color: #f5f5f5;
-      padding: 15px 20px;
-    }
+      .header {
+        background: #111827;
+        padding: 24px 32px;
+      }
 
-   .header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 600px;
-  margin: 0 auto;
-  width: 100%;
-  box-sizing: border-box;
-}
+      .header table {
+        width: 100%;
+      }
 
-.header img {
-  max-width: 160px;
-  height: auto;
-  display: block;
-  margin: 0;
-}
-
-    .title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #4d206c;
-      letter-spacing: 0.5px;
-    }
-
-    .content {
-      padding: 30px 20px;
-      background-color: #ffffff;
-    }
-
-    .subtitle {
-      font-family: 'Montserrat', sans-serif;
-      font-size: 26px;
-      color: #017d74;
-      margin-bottom: 15px;
-    }
-
-    .content p {
-      margin: 10px 0;
-      font-weight: 500;
-      line-height: 1.6;
-    }
-
-    .content a {
-      color: #4d206c;
-      text-decoration: underline;
-      font-weight: 600;
-    }
-    .content h1 { font-size: 26px; color: #f11010; margin-bottom: 25px; }
-
-    .btn {
-      display: inline-block;
-      margin-top: 20px;
-      background-color: #922f4e;
-      color: #fff !important;
-      padding: 12px 24px;
-      border-radius: 6px;
-      text-decoration: none !important;
-      font-weight: 600;
-    }
-
-    .social-container {
-  text-align: center;
-  padding: 30px 20px 40px;
-}
-
-.social-container p {
-  margin-bottom: 15px;
-  font-weight: 600;
-  color: #642d91;
-}
-.social-icons {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  gap: 50px;
-}
-
-.social-icon img {
-  width: 28px;
-  height: 28px;
-  display: block;
-}
-
-    .footer {
-      background-color: #f1f1f1;
-      color: #333;
-      text-align: center;
-      padding: 20px;
-      font-size: 14px;
-    }
-
-    .footer a {
-      color: #922f4e;
-      text-decoration: underline;
-      font-weight: 500;
-    }
-
-    @media screen and (max-width: 600px) {
-      .header-content {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        gap: 10px;
+      .header-text {
+        color: #ffffff;
+        font-family: 'Inter', sans-serif;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
       }
 
       .header img {
-        max-width: 140px;
+        max-width: 120px;
+        height: auto;
+        display: block;
       }
 
       .content {
-        padding: 20px;
+        padding: 40px 32px;
+        background-color: #ffffff;
       }
 
-      .subtitle {
-        font-size: 24px;
+      .content h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #ff4444;
+        margin: 0 0 24px 0;
+        text-align: center;
       }
 
-      .social-icons {
-        gap: 20px;
+      .content p {
+        margin: 16px 0;
+        font-size: 16px;
+        font-weight: 400;
+        color: #333333;
       }
 
-      .social-icon img {
-        width: 24px;
-        height: 24px;
+      .content p strong {
+        color: #1a1a2e;
+        font-weight: 600;
       }
-    }
-  </style>
-</head>
-<body>
- <div class="container">
-    <!-- Encabezado institucional -->
-    <div class="header">
-  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto;">
-  <tr>
-    <!-- Texto a la izquierda -->
-    <td align="left" style="padding: 15px; font-family: 'Unica One', Arial, sans-serif; font-size: 22px; color: #4d206c; letter-spacing: 1px;">
-  ROOTS COOPERATIVA
-</td>
 
+      .alert-error {
+        background: #ffebee;
+        border-left: 4px solid #ff4444;
+        padding: 16px 20px;
+        border-radius: 0 8px 8px 0;
+        margin: 24px 0;
+      }
 
-    <!-- Logo a la derecha -->
-    <td align="right" style="padding: 15px;">
-      <img src="https://res.cloudinary.com/djzcrrbfb/image/upload/v1753703082/sol_sf2bpt.png" alt="Logo ROOTS COOPERATIVA" style="max-width: 160px; height: auto; display: block;" />
-    </td>
-  </tr>
-</table>
+      .btn {
+        display: inline-block;
+        margin: 24px 0;
+        background: #0066ff;
+        color: #ffffff !important;
+        padding: 14px 32px;
+        border-radius: 8px;
+        text-decoration: none !important;
+        font-weight: 600;
+        font-size: 16px;
+        box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);
+      }
 
-    <div class="content">
-      <h1>Pago rechazado</h1>
-      <p>Hola <strong>{{userName}}</strong>,</p>
-      <p>Tu intento de pago fue <strong style="color: #cc0000;">rechazado</strong>.</p>
-      <p>Si el problema persiste, podés volver a intentar el pago</p>
-       <p>Saludos cordiales,<br>El equipo de <strong>{{appName}}</strong>.</p>
-      <div style="text-align: center;">
-          <a href="https://frontend-rootscoop.vercel.app/contacto" class="btn">Contactar Soporte</a>
+      @media screen and (max-width: 600px) {
+        .header {
+          padding: 20px 16px;
+        }
+
+        .header-text {
+          font-size: 16px;
+        }
+
+        .header img {
+          max-width: 80px;
+        }
+
+        .content {
+          padding: 32px 20px;
+        }
+
+        .content h1 {
+          font-size: 24px;
+        }
+
+        .btn {
+          padding: 12px 24px;
+          font-size: 15px;
+        }
+
+        .footer {
+          background: #07090f;
+          color: #ffffff;
+          text-align: center;
+          padding: 32px;
+          font-size: 14px;
+          border-top: 1px solid #10161d;
+        }
+
+        .footer-social a {
+          display: inline-block;
+          margin: 0 8px;
+          color: #ffffff;
+          text-decoration: none;
+          font-size: 20px;
+        }
+
+        .footer-payments span {
+          display: inline-block;
+          background: #374151;
+          color: #ffffff;
+          padding: 6px 12px;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 600;
+          margin: 4px;
+        }
+      }
+
+      /* Tech theme override */
+      body {
+        background: #111827;
+        color: #e5e7eb;
+      }
+
+      .container {
+        border-radius: 16px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+        background: #0f172a;
+      }
+
+      .header {
+        background: radial-gradient(120% 120% at 100% 0%, #1b2a4a 0%, #0f172a 55%, #0b1020 100%);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .header-text {
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+      }
+
+      .content {
+        background: linear-gradient(180deg, #0f172a 0%, #0b1222 100%);
+      }
+
+      .content h1 {
+        color: #60a5fa;
+      }
+
+      .content p {
+        color: #cbd5f5;
+      }
+
+      .content p strong {
+        color: #f8fafc;
+      }
+
+      .btn {
+        background: linear-gradient(135deg, #2563eb, #3b82f6);
+        border-radius: 10px;
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
+      }
+
+      .btn:hover {
+        background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      } /* Footer (front palette) */
+      .footer {
+        background: #111827;
+        color: #ffffff;
+        text-align: center;
+        padding: 32px;
+        font-size: 14px;
+        border-top: 1px solid #1f2937;
+      }
+
+      .footer-social {
+        margin-bottom: 16px;
+      }
+
+      .footer-social a {
+        display: inline-block;
+        margin: 0 8px;
+        color: #ffffff;
+        text-decoration: none;
+        font-size: 20px;
+      }
+
+      .footer p {
+        margin: 8px 0;
+        color: #9ca3af;
+      }
+
+      .footer a {
+        color: #ffffff;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .footer-payments {
+        margin-top: 16px;
+      }
+
+      .footer-payments span {
+        display: inline-block;
+        background: #374151;
+        color: #ffffff;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        margin: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td align="left" valign="middle" class="header-text">WorldAssemblyTechnology</td>
+            <td align="right" valign="middle">
+              <img
+                src="https://res.cloudinary.com/dub48rf0p/image/upload/v1770006657/WorldAsseblyTechnologyPNGEmail_b6bsll.png"
+                alt="Logo"
+                style="
+                  border-radius: 8px;
+                  filter: drop-shadow(0 0 12px rgba(0, 102, 255, 0.6)) drop-shadow(0 0 25px rgba(0, 102, 255, 0.4))
+                    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+                "
+              />
+            </td>
+          </tr>
+        </table>
       </div>
-     
-    </div>
-    <!-- Redes sociales -->
-<div class="social-container" style="text-align: center; margin: 30px auto;">
-  <p style="font-weight: 600; color: #642d91; margin-bottom: 15px;">Seguinos en nuestras redes:</p>
-  <div class="social-icons" style="display: inline-flex; gap: 40px; justify-content: center; align-items: center;">
-    <a href="https://wa.link/b4wyji" target="_blank" style="display: inline-block; padding: 10px; border-radius: 50%; background: #fff;">
-      <img src="https://cdn-icons-png.flaticon.com/512/124/124034.png" alt="WhatsApp" width="28" height="28" />
-    </a>
-    <a href="https://www.instagram.com/roots_cooperativa?igsh=MWx3OTI3NjZidDJ3dg==" target="_blank" style="display: inline-block; padding: 10px; border-radius: 50%; background: #fff;">
-      <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" width="28" height="28" />
-    </a>
-    <a href="http://www.youtube.com/@rootscooperativa561" target="_blank" style="display: inline-block; padding: 10px; border-radius: 50%; background: #fff;">
-      <img src="https://cdn-icons-png.flaticon.com/512/1384/1384060.png" alt="YouTube" width="28" height="28" />
-    </a>
-  </div>
-</div>
 
-    <!-- Pie de página -->
-    <div class="footer">
-      <p>Este correo fue enviado por <strong>{{appName}}</strong>.</p>
-      <p><a href="https://frontend-rootscoop.vercel.app">Visita nuestro sitio web</a></p>
+      <div class="content">
+        <h1>Pago Rechazado</h1>
+
+        <p>Hola <strong>{{userName}}</strong>,</p>
+
+        <div class="alert-error">
+          <p style="margin: 0; color: #c62828">
+            Tu intento de pago fue <strong>rechazado</strong> por el procesador de pagos.
+          </p>
+        </div>
+
+        <p>Esto puede deberse a:</p>
+        <ul style="color: #666; padding-left: 20px">
+          <li>Fondos insuficientes</li>
+          <li>Datos de tarjeta incorrectos</li>
+          <li>Límite de compra excedido</li>
+        </ul>
+
+        <p>Te recomendamos verificar los datos e intentar nuevamente, o contactar a soporte si el problema persiste.</p>
+
+        <div style="text-align: center">
+          <a href="https://frontend-rootscoop.vercel.app/contacto" class="btn">Contactar Soporte</a>
+        </div>
+
+        <p>Saludos cordiales,<br />El equipo de <strong>{{appName}}</strong>.</p>
+      </div>
+
+      <!-- Footer oscuro estilo tech -->
+      <div class="footer">
+        <div class="footer-social">
+          <p style="color: #9ca3af; margin-bottom: 12px">Seguinos en nuestras redes:</p>
+          <a href="https://web.whatsapp.com" target="_blank" rel="noopener noreferrer">
+            <img src="https://cdn-icons-png.flaticon.com/128/3670/3670051.png" alt="WhatsApp" width="28" height="28" />
+          </a>
+          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer">
+            <img
+              src="https://cdn-icons-png.flaticon.com/128/15707/15707749.png"
+              alt="Instagram"
+              width="28"
+              height="28"
+            />
+          </a>
+          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">
+            <img
+              src="https://cdn-icons-png.flaticon.com/128/15047/15047435.png"
+              alt="Facebook"
+              width="28"
+              height="28"
+            />
+          </a>
+        </div>
+        <p style="color: #ffffff; font-size: 13px">
+          Copyright © 2025 <strong>WorldAssemblyTechnology</strong>. Todos los derechos reservados.
+        </p>
+        <p style="margin-top: 12px">
+          <a href="https://frontend-rootscoop.vercel.app">Visitar sitio web</a> ·
+          <a href="https://frontend-rootscoop.vercel.app/contacto">Contacto</a>
+        </p>
+        <div class="footer-payments">
+          <span>VISA</span>
+          <span>MC</span>
+          <span>MP</span>
+        </div>
+      </div>
     </div>
-  </div>
-</body>
+  </body>
 </html>

@@ -3,7 +3,7 @@
   "compilerOptions": {
     "sourceMap": false,
     "declaration": false,
-    "declarationMap": false, // No necesario en build
+    "declarationMap": false,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true
   },

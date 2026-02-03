@@ -42,7 +42,7 @@ export class AuthValidations {
   }
 
   static handleSignupError(error: unknown): never {
-    AuthValidations.logger.error('[AuthsService:signup] →', error);
+    AuthValidations.logger.error('[AuthsService:signup] ->', error);
 
     if (error && typeof error === 'object' && 'code' in error && (error as { code?: unknown }).code === '23505') {
       throw new BadRequestException('The email or username already exists');
@@ -65,7 +65,7 @@ export class AuthValidations {
 
   static validateEmailIsNotTaken(email?: string | null): void {
     if (email) {
-      throw new UnauthorizedException('El email ya está registrado');
+      throw new UnauthorizedException('Email is already registered');
     }
   }
 
@@ -105,7 +105,7 @@ export class AuthValidations {
     const bcrypt = await import('bcrypt');
     const isSame = await bcrypt.compare(newPassword, currentHashedPassword);
     if (isSame) {
-      throw new BadRequestException('La nueva contraseña no puede ser igual a la actual');
+      throw new BadRequestException('New password cannot be the same as the current one');
     }
   }
 }

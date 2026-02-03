@@ -12,7 +12,7 @@ export const loggerConfig: WinstonModuleOptions = {
         winston.format.printf((info) => {
           const { timestamp, level, message, context, ...meta } = info;
           const ctx = typeof context === 'string' ? context : 'App';
-          const msg = typeof message === 'string' ? message : String(message);
+          const msg = typeof message === 'string' ? message : JSON.stringify(message);
           const ts = typeof timestamp === 'string' ? timestamp : '';
           const metaStr = Object.keys(meta).length ? JSON.stringify(meta) : '';
           return `${ts} [${ctx}] ${level}: ${msg} ${metaStr}`;

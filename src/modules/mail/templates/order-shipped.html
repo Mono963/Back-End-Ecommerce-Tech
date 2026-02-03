@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>¡Tu pedido está en camino!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <style>
+      body {
+        margin: 0;
+        padding: 30px 10px;
+        background-color: #ffffff;
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        color: #333333;
+        line-height: 1.6;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+      }
+
+      .header {
+        background: #111827;
+        padding: 24px 32px;
+      }
+
+      .header table {
+        width: 100%;
+      }
+
+      .header-text {
+        color: #ffffff;
+        font-family: 'Inter', sans-serif;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+      }
+
+      .header img {
+        max-width: 120px;
+        height: auto;
+        display: block;
+      }
+
+      .content {
+        padding: 40px 32px;
+        background-color: #ffffff;
+      }
+
+      .content h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #0066ff;
+        margin: 0 0 24px 0;
+        text-align: center;
+      }
+
+      .content p {
+        margin: 16px 0;
+        font-size: 16px;
+        font-weight: 400;
+        color: #333333;
+      }
+
+      .content p strong {
+        color: #1a1a2e;
+        font-weight: 600;
+      }
+
+      .status-badge {
+        display: inline-block;
+        background: #e3f2fd;
+        color: #1976d2;
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .order-id {
+        font-family: 'Courier New', monospace;
+        background: #f5f5f5;
+        padding: 4px 8px;
+        border-radius: 4px;
+        color: #0066ff;
+        font-weight: 600;
+      }
+
+      /* Timeline */
+      .timeline {
+        display: flex;
+        justify-content: space-between;
+        margin: 32px 0;
+        padding: 0 10px;
+      }
+
+      .timeline-step {
+        text-align: center;
+        flex: 1;
+        position: relative;
+      }
+
+      .timeline-step::after {
+        content: '';
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        width: 100%;
+        height: 3px;
+        background: #e8e8e8;
+        z-index: 0;
+      }
+
+      .timeline-step:last-child::after {
+        display: none;
+      }
+
+      .timeline-step.completed::after {
+        background: #4caf50;
+      }
+
+      .timeline-dot {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #e8e8e8;
+        margin: 0 auto 8px;
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        color: white;
+      }
+
+      .timeline-dot.active {
+        background: #0066ff;
+        box-shadow: 0 0 0 4px rgba(0, 102, 255, 0.2);
+      }
+
+      .timeline-dot.completed {
+        background: #4caf50;
+      }
+
+      .timeline-label {
+        font-size: 11px;
+        color: #666;
+        font-weight: 500;
+      }
+
+      .timeline-label.active {
+        color: #0066ff;
+        font-weight: 600;
+      }
+
+      /* Tracking card */
+      .tracking-card {
+        background: linear-gradient(135deg, #0066ff 0%, #0052cc 100%);
+        border-radius: 12px;
+        padding: 24px;
+        margin: 24px 0;
+        color: white;
+        text-align: center;
+      }
+
+      .tracking-card h3 {
+        margin: 0 0 8px 0;
+        font-size: 14px;
+        font-weight: 500;
+        opacity: 0.9;
+      }
+
+      .tracking-card .tracking-number {
+        font-family: 'Courier New', monospace;
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        margin: 8px 0 16px;
+      }
+
+      .tracking-card .carrier {
+        font-size: 14px;
+        opacity: 0.9;
+        margin-bottom: 16px;
+      }
+
+      .tracking-card .btn-track {
+        display: inline-block;
+        background: white;
+        color: #0066ff;
+        padding: 12px 24px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .info-card {
+        background: #f5f5f5;
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin: 24px 0;
+      }
+
+      .info-card h3 {
+        margin: 0 0 12px 0;
+        font-size: 14px;
+        color: #1a1a2e;
+        font-weight: 600;
+      }
+
+      .info-card p {
+        margin: 6px 0;
+        font-size: 14px;
+        color: #555;
+      }
+
+      .delivery-estimate {
+        background: #111827;
+        border-left: 4px solid #ff9800;
+        padding: 16px 20px;
+        border-radius: 0 8px 8px 0;
+        margin: 24px 0;
+      }
+
+      .delivery-estimate p {
+        margin: 0;
+        color: #e65100;
+      }
+
+      .product-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 24px 0;
+      }
+
+      .product-table th {
+        background: #1a1a2e;
+        color: #ffffff;
+        padding: 12px;
+        text-align: left;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .product-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e8e8e8;
+        font-size: 14px;
+      }
+
+      .product-table .price {
+        font-family: 'Courier New', monospace;
+        font-weight: 600;
+        color: #0066ff;
+      }
+
+      @media screen and (max-width: 600px) {
+        .header {
+          padding: 20px 16px;
+        }
+
+        .header-text {
+          font-size: 16px;
+        }
+
+        .header img {
+          max-width: 80px;
+        }
+
+        .content {
+          padding: 32px 20px;
+        }
+
+        .content h1 {
+          font-size: 24px;
+        }
+
+        .tracking-card {
+          padding: 20px 16px;
+        }
+
+        .tracking-card .tracking-number {
+          font-size: 18px;
+        }
+
+        .timeline-label {
+          font-size: 9px;
+        }
+
+        .product-table th,
+        .product-table td {
+          padding: 8px;
+          font-size: 13px;
+        }
+
+        .footer {
+          background: #07090f;
+          color: #ffffff;
+          text-align: center;
+          padding: 32px;
+          font-size: 14px;
+          border-top: 1px solid #10161d;
+        }
+
+        .footer-social a {
+          display: inline-block;
+          margin: 0 8px;
+          color: #ffffff;
+          text-decoration: none;
+          font-size: 20px;
+        }
+
+        .footer-payments span {
+          display: inline-block;
+          background: #374151;
+          color: #ffffff;
+          padding: 6px 12px;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 600;
+          margin: 4px;
+        }
+      }
+
+      /* Tech theme override */
+      body {
+        background: #111827;
+        color: #e5e7eb;
+      }
+
+      .container {
+        border-radius: 16px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+        background: #0f172a;
+      }
+
+      .header {
+        background: radial-gradient(120% 120% at 100% 0%, #1b2a4a 0%, #0f172a 55%, #0b1020 100%);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .header-text {
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+      }
+
+      .content {
+        background: linear-gradient(180deg, #0f172a 0%, #0b1222 100%);
+      }
+
+      .content h1 {
+        color: #60a5fa;
+      }
+
+      .content p {
+        color: #cbd5f5;
+      }
+
+      .content p strong {
+        color: #f8fafc;
+      }
+
+      .btn {
+        background: linear-gradient(135deg, #2563eb, #3b82f6);
+        border-radius: 10px;
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
+      }
+
+      .btn:hover {
+        background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      } /* Footer (front palette) */
+      .footer {
+        background: #111827;
+        color: #ffffff;
+        text-align: center;
+        padding: 32px;
+        font-size: 14px;
+        border-top: 1px solid #1f2937;
+      }
+
+      .footer-social {
+        margin-bottom: 16px;
+      }
+
+      .footer-social a {
+        display: inline-block;
+        margin: 0 8px;
+        color: #ffffff;
+        text-decoration: none;
+        font-size: 20px;
+      }
+
+      .footer p {
+        margin: 8px 0;
+        color: #9ca3af;
+      }
+
+      .footer a {
+        color: #ffffff;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .footer-payments {
+        margin-top: 16px;
+      }
+
+      .footer-payments span {
+        display: inline-block;
+        background: #374151;
+        color: #ffffff;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        margin: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td align="left" valign="middle" class="header-text">WorldAssemblyTechnology</td>
+            <td align="right" valign="middle">
+              <img
+                src="https://res.cloudinary.com/dub48rf0p/image/upload/v1770006657/WorldAsseblyTechnologyPNGEmail_b6bsll.png"
+                alt="Logo"
+                style="
+                  border-radius: 8px;
+                  filter: drop-shadow(0 0 12px rgba(0, 102, 255, 0.6)) drop-shadow(0 0 25px rgba(0, 102, 255, 0.4))
+                    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+                "
+              />
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="content">
+        <h1>¡Tu pedido está en camino!</h1>
+
+        <p>Hola <strong>{{userName}}</strong>,</p>
+        <p>
+          ¡Buenas noticias! Tu orden <span class="order-id">#{{orderNumber}}</span> ha sido despachada y está
+          <span class="status-badge">En Camino</span>
+        </p>
+
+        <!-- Timeline visual -->
+        <div class="timeline">
+          <div class="timeline-step completed">
+            <div class="timeline-dot completed"></div>
+            <div class="timeline-label">Pagado</div>
+          </div>
+          <div class="timeline-step completed">
+            <div class="timeline-dot completed"></div>
+            <div class="timeline-label">Procesado</div>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-dot active"></div>
+            <div class="timeline-label active">Enviado</div>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-dot"></div>
+            <div class="timeline-label">Entregado</div>
+          </div>
+        </div>
+
+        <!-- Tracking card -->
+        <div class="tracking-card">
+          <h3>Número de Seguimiento</h3>
+          <div class="tracking-number">{{trackingNumber}}</div>
+          <div class="carrier">Enviado por: <strong>{{carrier}}</strong></div>
+          {{#if trackingUrl}}
+          <a href="{{trackingUrl}}" class="btn-track" target="_blank">Seguir mi pedido</a>
+          {{/if}}
+        </div>
+
+        <!-- Fecha estimada -->
+        {{#if estimatedDelivery}}
+        <div class="delivery-estimate">
+          <p>… <strong>Entrega estimada:</strong> {{estimatedDelivery}}</p>
+        </div>
+        {{/if}}
+
+        <!-- Dirección de envío -->
+        <div class="info-card">
+          <h3>📍 Enviamos a</h3>
+          <p><strong>{{shippingAddress.street}}</strong></p>
+          <p>{{shippingAddress.city}}, {{shippingAddress.province}}</p>
+          <p>CP: {{shippingAddress.postalCode}}</p>
+        </div>
+
+        <!-- Productos -->
+        <table class="product-table">
+          <thead>
+            <tr>
+              <th>Cant.</th>
+              <th>Producto</th>
+              <th>Precio</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each products}}
+            <tr>
+              <td>{{quantity}}</td>
+              <td>{{name}}</td>
+              <td class="price">${{price}}</td>
+            </tr>
+            {{/each}}
+            <tr style="background: #f5f5f5">
+              <td colspan="2"><strong>Total</strong></td>
+              <td class="price"><strong>${{orderTotal}}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>Te notificaremos cuando tu pedido sea entregado.</p>
+        <p>Saludos cordiales,<br />El equipo de <strong>WorldAssemblyTechnology</strong>.</p>
+      </div>
+
+      <!-- Footer oscuro estilo tech -->
+      <div class="footer">
+        <div class="footer-social">
+          <p style="color: #9ca3af; margin-bottom: 12px">Seguinos en nuestras redes:</p>
+          <a href="https://web.whatsapp.com" target="_blank" rel="noopener noreferrer">
+            <img src="https://cdn-icons-png.flaticon.com/128/3670/3670051.png" alt="WhatsApp" width="28" height="28" />
+          </a>
+          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer">
+            <img
+              src="https://cdn-icons-png.flaticon.com/128/15707/15707749.png"
+              alt="Instagram"
+              width="28"
+              height="28"
+            />
+          </a>
+          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">
+            <img
+              src="https://cdn-icons-png.flaticon.com/128/15047/15047435.png"
+              alt="Facebook"
+              width="28"
+              height="28"
+            />
+          </a>
+        </div>
+        <p style="color: #ffffff; font-size: 13px">
+          Copyright © 2025 <strong>WorldAssemblyTechnology</strong>. Todos los derechos reservados.
+        </p>
+        <p style="margin-top: 12px">
+          <a href="https://frontend-rootscoop.vercel.app">Visitar sitio web</a> ·
+          <a href="https://frontend-rootscoop.vercel.app/contacto">Contacto</a>
+        </p>
+        <div class="footer-payments">
+          <span>VISA</span>
+          <span>MC</span>
+          <span>MP</span>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

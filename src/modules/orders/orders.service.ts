@@ -21,6 +21,7 @@ import { IOrderFilters, IResponseOrder, OrderStatus } from './interfaces/orders.
 import { CartService } from '../cart/cart.service';
 import { OrderItem } from './entities/order.item';
 import { IAddress } from '../users/interfaces/user.interface';
+import { MailQueueService } from '../mail/mail-queue_email.service';
 
 @Injectable()
 export class OrdersService {
@@ -53,6 +54,7 @@ export class OrdersService {
 
     private readonly productsService: ProductsService,
     private readonly dataSource: DataSource,
+    private readonly mailQueueService: MailQueueService,
   ) {}
 
   async getOrder(id: string, userId?: string): Promise<IResponseOrder> {
@@ -68,11 +70,11 @@ export class OrdersService {
     });
 
     if (!order) {
-      throw new NotFoundException(`Orden con id ${id} no encontrada`);
+      throw new NotFoundException(`Order with id ${id} not found`);
     }
 
     if (userId && order.user.id !== userId) {
-      throw new BadRequestException('No tienes acceso a esta orden');
+      throw new BadRequestException('You do not have access to this order');
     }
 
     return this.mapOrderToDto(order);
@@ -90,10 +92,9 @@ export class OrdersService {
       });
 
       if (!cart?.items || cart.items.length === 0) {
-        throw new BadRequestException('El carrito está vacío');
+        throw new BadRequestException('Cart is empty');
       }
 
-      // Obtener la dirección seleccionada del usuario (si existe)
       let shippingAddressSnapshot: IAddress;
       let shippingAddressId: string | null = null;
 
@@ -117,12 +118,9 @@ export class OrdersService {
             country: selectedAddress.country,
             isDefault: selectedAddress.isDefault,
           };
-          this.logger.log(`Usando dirección guardada ${shippingAddressId} para orden`);
+          this.logger.log(`Using saved address ${shippingAddressId} for order`);
         } else {
-          // Corregido: Formato de línea larga
-          this.logger.warn(
-            `Dirección ${cart.selectedAddressId} no encontrada, usando dirección temporal si se proveyo`,
-          );
+          this.logger.warn(`Address ${cart.selectedAddressId} not found; using temporary address if provided`);
         }
       }
 
@@ -179,8 +177,8 @@ export class OrdersService {
 
       if (availableStock < cartItem.quantity) {
         throw new BadRequestException(
-          `Stock insuficiente para ${cartItem.product.name}. ` +
-            `Disponible: ${availableStock}, Solicitado: ${cartItem.quantity}`,
+          `Insufficient stock for ${cartItem.product.name}. ` +
+            `Available: ${availableStock}, Requested: ${cartItem.quantity}`,
         );
       }
     }
@@ -288,7 +286,7 @@ export class OrdersService {
   private async clearUserCart(userId: string): Promise<void> {
     const clear = await this.cartService.clearCart(userId);
     if (!clear) {
-      throw new InternalServerErrorException('Error al limpiar el carrito después de crear la orden');
+      throw new InternalServerErrorException('Failed to clear cart after creating the order');
     }
   }
 
@@ -296,8 +294,8 @@ export class OrdersService {
     if (error instanceof NotFoundException || error instanceof BadRequestException) {
       throw error;
     }
-    this.logger.error('Error al crear la orden:', error);
-    throw new InternalServerErrorException('Error al crear la orden');
+    this.logger.error('Error creating order:', error);
+    throw new InternalServerErrorException('Error creating order');
   }
 
   private async updateProductStock(
@@ -306,43 +304,37 @@ export class OrdersService {
     variantIds: string[],
     quantity: number,
   ): Promise<void> {
-    // 🔒 Pessimistic write lock para evitar race conditions en stock
-    // NOTA: No usar relations con lock porque PostgreSQL no permite FOR UPDATE con LEFT JOIN
     const product = await queryRunner.manager.findOne(Product, {
       where: { id: productId },
       lock: { mode: 'pessimistic_write' },
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto ${productId} no encontrado`);
+      throw new NotFoundException(`Product ${productId} not found`);
     }
 
     if (!product.hasVariants || variantIds.length === 0) {
-      // Actualizar stock base del producto
       product.baseStock -= quantity;
       if (product.baseStock < 0) {
-        throw new BadRequestException(`Stock insuficiente para ${product.name}`);
+        throw new BadRequestException(`Insufficient stock for ${product.name}`);
       }
       await queryRunner.manager.save(Product, product);
     } else {
-      // Actualizar stock de las variantes seleccionadas
       for (const variantId of variantIds) {
-        // 🔒 Lock también en cada variante
         const variant = await queryRunner.manager.findOne(ProductVariant, {
           where: { id: variantId },
           lock: { mode: 'pessimistic_write' },
         });
 
         if (!variant) {
-          throw new NotFoundException(`Variante ${variantId} no encontrada`);
+          throw new NotFoundException(`Variant ${variantId} not found`);
         }
 
         variant.stock -= quantity;
         if (variant.stock < 0) {
-          throw new BadRequestException(`Stock insuficiente para variante ${variant.name} de ${product.name}`);
+          throw new BadRequestException(`Insufficient stock for variant ${variant.name} of ${product.name}`);
         }
 
-        // Si el stock llega a 0, marcar como no disponible
         if (variant.stock === 0) {
           variant.isAvailable = false;
         }
@@ -352,11 +344,6 @@ export class OrdersService {
     }
   }
 
-  /**
-   * Obtiene las órdenes de un usuario específico
-   * @param userId - ID del usuario
-   * @returns Lista de órdenes del usuario
-   */
   async getUserOrders(userId: string): Promise<IResponseOrder[]> {
     const orders = await this.orderRepo.find({
       where: { user: { id: userId } },
@@ -380,10 +367,8 @@ export class OrdersService {
   }> {
     const { status, startDate, endDate, orderNumber, userEmail, page = 1, limit = 10 } = filters;
 
-    // Si no hay filtros, usar findAndCount directo
     if (!status && !startDate && !endDate && !orderNumber && !userEmail) {
       const [orders, total] = await this.orderRepo.findAndCount({
-        // Corregido: Formato de array largo
         relations: [
           'user',
           'orderDetail',
@@ -405,7 +390,6 @@ export class OrdersService {
       };
     }
 
-    // Si hay filtros, usar QueryBuilder
     const queryBuilder = this.orderRepo.createQueryBuilder('order');
     queryBuilder.leftJoinAndSelect('order.user', 'user');
     queryBuilder.leftJoinAndSelect('order.orderDetail', 'orderDetail');
@@ -414,12 +398,10 @@ export class OrdersService {
     queryBuilder.leftJoinAndSelect('items.variants', 'variants');
     queryBuilder.where('1 = 1');
 
-    // Aplicar filtro de estado
     if (status) {
       queryBuilder.andWhere('order.status = :status', { status });
     }
 
-    // Aplicar filtro de fechas
     if (startDate && endDate) {
       queryBuilder.andWhere('order.createdAt BETWEEN :startDate AND :endDate', {
         startDate: new Date(startDate),
@@ -431,14 +413,12 @@ export class OrdersService {
       });
     }
 
-    // Filtro por número de orden
     if (orderNumber) {
       queryBuilder.andWhere('LOWER(order.orderNumber) LIKE LOWER(:orderNumber)', {
         orderNumber: `%${orderNumber}%`,
       });
     }
 
-    // Filtro por email del usuario
     if (userEmail) {
       queryBuilder.andWhere('LOWER(user.email) LIKE LOWER(:userEmail)', {
         userEmail: `%${userEmail}%`,
@@ -460,42 +440,47 @@ export class OrdersService {
     };
   }
 
-  async updateOrderStatus(orderId: string, status: OrderStatus, paymentMethod?: string): Promise<IResponseOrder> {
+  async updateOrderStatus(orderId: string, status: OrderStatus): Promise<IResponseOrder> {
     const order = await this.orderRepo.findOne({
       where: { id: orderId },
-      relations: ['orderDetail'],
+      relations: ['user', 'orderDetail', 'orderDetail.items', 'orderDetail.items.product'],
     });
 
     if (!order) {
-      throw new NotFoundException(`Orden ${orderId} no encontrada`);
+      throw new NotFoundException(`Order ${orderId} not found`);
     }
 
-    // Validar transiciones de estado permitidas
     this.validateStatusTransition(order.status, status);
 
     order.status = status;
 
-    // Si se está marcando como pagada, actualizar método de pago
-    if (status === OrderStatus.PAID && paymentMethod) {
-      order.orderDetail.paymentMethod = paymentMethod;
-      await this.orderDetailRepo.save(order.orderDetail);
-    }
-
-    // Si se cancela, devolver stock
     if (status === OrderStatus.CANCELLED) {
       await this.restoreStock(orderId);
     }
 
     await this.orderRepo.save(order);
 
+    if (status === OrderStatus.PROCESSING) {
+      const products =
+        order.orderDetail.items?.map((item) => ({
+          name: item.productSnapshot?.name || item.product?.name || 'Producto',
+          quantity: item.quantity,
+          price: Number(item.unitPrice),
+        })) || [];
+
+      void this.mailQueueService.queueOrderProcessingNotification(
+        order.user.email,
+        order.user.name,
+        order.orderNumber || order.id,
+        products,
+        Number(order.orderDetail.total),
+        order.createdAt,
+      );
+    }
+
     return await this.getOrder(orderId);
   }
 
-  /**
-   * Valida las transiciones de estado permitidas
-   * @param currentStatus - Estado actual
-   * @param newStatus - Nuevo estado
-   */
   private validateStatusTransition(currentStatus: OrderStatus, newStatus: OrderStatus): void {
     const validTransitions: Record<OrderStatus, OrderStatus[]> = {
       [OrderStatus.PENDING]: [OrderStatus.PAID, OrderStatus.CANCELLED],
@@ -509,14 +494,10 @@ export class OrdersService {
     const allowedStatuses = validTransitions[currentStatus];
 
     if (!allowedStatuses.includes(newStatus)) {
-      throw new BadRequestException(`No se puede cambiar el estado de ${currentStatus} a ${newStatus}`);
+      throw new BadRequestException(`Cannot change status from ${currentStatus} to ${newStatus}`);
     }
   }
 
-  /**
-   * Restaura el stock cuando se cancela una orden
-   * @param orderId - ID de la orden a cancelar
-   */
   private async restoreStock(orderId: string): Promise<void> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -534,8 +515,6 @@ export class OrdersService {
       }
 
       for (const item of order.orderDetail.items) {
-        // 🔒 Lock para evitar race conditions al restaurar stock
-        // NOTA: No usar relations con lock porque PostgreSQL no permite FOR UPDATE con LEFT JOIN
         const product = await queryRunner.manager.findOne(Product, {
           where: { id: item.product_id },
           lock: { mode: 'pessimistic_write' },
@@ -544,13 +523,10 @@ export class OrdersService {
         if (!product) continue;
 
         if (!product.hasVariants || item.variants.length === 0) {
-          // Restaurar stock base del producto
           product.baseStock += item.quantity;
           await queryRunner.manager.save(Product, product);
         } else {
-          // Restaurar stock de variantes
           for (const variant of item.variants) {
-            // 🔒 Lock en cada variante
             const lockedVariant = await queryRunner.manager.findOne(ProductVariant, {
               where: { id: variant.id },
               lock: { mode: 'pessimistic_write' },
@@ -570,8 +546,8 @@ export class OrdersService {
       await queryRunner.commitTransaction();
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      this.logger.error('Error al restaurar stock:', error);
-      throw new InternalServerErrorException('Error al restaurar stock');
+      this.logger.error('Error restoring stock:', error);
+      throw new InternalServerErrorException('Error restoring stock');
     } finally {
       await queryRunner.release();
     }
@@ -583,7 +559,6 @@ export class OrdersService {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const prefix = `ORD-${year}-${month}`;
 
-    // Obtener el último número de orden del mes actual
     const lastOrder = await this.orderRepo
       .createQueryBuilder('order')
       .where('order.orderNumber LIKE :prefix', { prefix: `${prefix}%` })
@@ -592,7 +567,6 @@ export class OrdersService {
 
     let sequence = 1;
     if (lastOrder) {
-      // ✅ CORREGIDO: usar índice [3] para obtener la secuencia
       const orderParts = lastOrder.orderNumber.split('-');
       if (orderParts.length === 4) {
         const lastSequence = parseInt(orderParts[3]);
@@ -612,7 +586,6 @@ export class OrdersService {
   }
 
   private mapOrderToDto(order: Order): IResponseOrder {
-    // Usar el snapshot de dirección si existe
     const shippingAddress = order.orderDetail.shippingAddressSnapshot
       ? {
           ...order.orderDetail.shippingAddressSnapshot,
@@ -653,10 +626,6 @@ export class OrdersService {
     };
   }
 
-  /**
-   * Obtiene estadísticas de órdenes para el dashboard de admin
-   * @returns Estadísticas agregadas de órdenes
-   */
   async getOrderStats(): Promise<Record<string, unknown>> {
     const totalOrders = await this.orderRepo.count();
     const pendingOrders = await this.orderRepo.count({
@@ -678,7 +647,6 @@ export class OrdersService {
       where: { status: OrderStatus.CANCELLED },
     });
 
-    // Calcular ingresos totales
     const revenue: { total?: string } | undefined = await this.orderDetailRepo
       .createQueryBuilder('detail')
       .leftJoin('detail.order', 'order')
@@ -686,7 +654,6 @@ export class OrdersService {
       .where('order.status != :status', { status: OrderStatus.CANCELLED })
       .getRawOne();
 
-    // Calcular ingresos del mes actual
     const currentMonth = new Date();
     currentMonth.setDate(1);
     currentMonth.setHours(0, 0, 0, 0);

@@ -67,7 +67,7 @@ export class UsersController {
   @UseGuards(AuthGuard)
   async changeOwnPassword(@Req() req: AuthRequest, @Body() dto: UpdatePasswordDto): Promise<{ message: string }> {
     await this.usersService.changePassword(req.user.sub, dto);
-    return { message: 'Contraseña actualizada correctamente' };
+    return { message: 'Password updated successfully' };
   }
 
   @Get(':id')
@@ -88,7 +88,7 @@ export class UsersController {
     @Body() dto: UpdateRoleDto,
   ): Promise<{ message: string }> {
     await this.usersService.rollChange(userId, dto);
-    return { message: 'Los roles se actualizaron correctamente' };
+    return { message: 'Roles updated successfully' };
   }
 
   @Put('update/user')

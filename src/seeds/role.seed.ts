@@ -9,7 +9,7 @@ export async function seedRoles(dataSource: DataSource): Promise<void> {
   const roles = [
     {
       name: 'SUPER_ADMIN',
-      description: 'Super Administrador con acceso total al sistema de e-commerce',
+      description: 'Super admin with full access to the e-commerce system',
       permissions: {
         products: ['create', 'read', 'update', 'delete', 'restore'],
         categories: ['create', 'read', 'update', 'delete'],
@@ -24,7 +24,7 @@ export async function seedRoles(dataSource: DataSource): Promise<void> {
     },
     {
       name: 'ADMIN',
-      description: 'Administrador del e-commerce',
+      description: 'E-commerce administrator',
       permissions: {
         products: ['create', 'read', 'update', 'delete'],
         categories: ['create', 'read', 'update', 'delete'],
@@ -38,7 +38,7 @@ export async function seedRoles(dataSource: DataSource): Promise<void> {
     },
     {
       name: 'CLIENT',
-      description: 'Cliente del e-commerce',
+      description: 'E-commerce client',
       permissions: {
         products: ['read'],
         categories: ['read'],
@@ -57,9 +57,9 @@ export async function seedRoles(dataSource: DataSource): Promise<void> {
 
     if (!existingRole) {
       await roleRepository.save(roleData);
-      logger.log(`✅ Rol creado: ${roleData.name}`);
+      logger.log(`Role created: ${roleData.name}`);
     } else {
-      logger.log(`⚠️ Rol ya existe: ${roleData.name}`);
+      logger.log(`Role already exists: ${roleData.name}`);
     }
   }
 }

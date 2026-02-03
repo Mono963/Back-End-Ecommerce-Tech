@@ -7,7 +7,6 @@ import { AuthRequest } from 'src/common/auths/auth-request.interface';
 
 @Injectable()
 export class RoleGuard extends AuthGuard implements CanActivate {
-  // Jerarquía de roles: cada rol incluye los permisos de los roles inferiores
   private readonly roleHierarchy: Record<string, string[]> = {
     SUPER_ADMIN: ['SUPER_ADMIN', 'ADMIN', 'CLIENT'],
     ADMIN: ['ADMIN', 'CLIENT'],
@@ -30,20 +29,15 @@ export class RoleGuard extends AuthGuard implements CanActivate {
       return true;
     }
 
-    // Obtener usuario del request
     const request = context.switchToHttp().getRequest<AuthRequest>();
     const user = request.user;
 
-    // Obtener los roles efectivos del usuario según la jerarquía
     const userEffectiveRoles = this.roleHierarchy[user.role] || [user.role];
 
-    // Convertir los roles requeridos a strings
     const requiredRoles = roles.map((role) => String(role));
 
-    // Verificar si alguno de los roles efectivos del usuario coincide con los requeridos
     const hasRequiredRole = requiredRoles.some((requiredRole) => userEffectiveRoles.includes(requiredRole));
 
-    // Si no tiene el rol, rechazar
     if (!hasRequiredRole) {
       throw new ForbiddenException(
         `Access restricted. This action requires one of the following roles: ${requiredRoles.join(', ')}. ` +

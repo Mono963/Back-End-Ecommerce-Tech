@@ -5,7 +5,7 @@ import { Role } from 'src/modules/roles/entities/role.entity';
 import { Logger } from '@nestjs/common';
 
 export async function seedSuperAdmin(dataSource: DataSource): Promise<void> {
-  const logger = new Logger('seed User Admin');
+  const logger = new Logger('Seed Super Admin');
   const userRepository = dataSource.getRepository(Users);
   const roleRepository = dataSource.getRepository(Role);
 
@@ -14,8 +14,8 @@ export async function seedSuperAdmin(dataSource: DataSource): Promise<void> {
   });
 
   if (!superAdminRole) {
-    logger.log('L Error: El rol SUPER_ADMIN no existe. Ejecuta primero los seeds de roles.');
-    throw new Error('El rol SUPER_ADMIN debe existir antes de crear el usuario super admin');
+    logger.log('Error: SUPER_ADMIN role does not exist. Run the role seeds first.');
+    throw new Error('SUPER_ADMIN role must exist before creating the super admin user');
   }
 
   const existingSuperAdmin = await userRepository.findOne({
@@ -23,7 +23,7 @@ export async function seedSuperAdmin(dataSource: DataSource): Promise<void> {
   });
 
   if (existingSuperAdmin) {
-    logger.log('� Usuario Super Admin ya existe');
+    logger.log('Super admin user already exists');
     return;
   }
 
@@ -33,7 +33,7 @@ export async function seedSuperAdmin(dataSource: DataSource): Promise<void> {
   const hashedPassword = await bcrypt.hash(process.env.SUPER_ADMIN_PASSWORD, 10);
 
   const superAdminUser = userRepository.create({
-    name: 'Super Administrador',
+    name: 'Super Administrator',
     email: 'superadmin@ecommerce.com',
     username: 'superadmin',
     password: hashedPassword,
@@ -44,5 +44,5 @@ export async function seedSuperAdmin(dataSource: DataSource): Promise<void> {
 
   await userRepository.save(superAdminUser);
 
-  logger.log(' Usuario Super Admin creado exitosamente');
+  logger.log('Super admin user created successfully');
 }

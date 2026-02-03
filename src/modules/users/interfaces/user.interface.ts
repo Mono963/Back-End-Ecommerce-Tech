@@ -32,7 +32,6 @@ export interface ICreateUser {
   email: string;
   birthDate: string;
   phone?: string;
-  address?: string;
   username: string;
   password: string;
   confirmPassword: string;
@@ -59,7 +58,6 @@ export interface ICreateUserDb {
   email: string;
   birthDate: string;
   phone?: string;
-  address?: string;
   username: string;
   password: string;
 }

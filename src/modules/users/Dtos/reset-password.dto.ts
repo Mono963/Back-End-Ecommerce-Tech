@@ -4,25 +4,25 @@ import { IsString, Matches } from 'class-validator';
 export class ResetPasswordDto {
   @ApiProperty({
     example: 'andresdelossantos99@gmail.com',
-    description: 'Token recibido en el email (en este caso, el email del usuario)',
+    description: 'Token received by email (in this case, the user email)',
   })
   @IsString()
   token: string;
 
   @ApiProperty({
-    example: 'NuevaPassword123!',
+    example: 'NewPassword123!',
     description:
-      'Nueva contraseña. Debe tener una mayúscula, una minúscula, un número y un carácter especial (!@#$%^&*), entre 8 y 15 caracteres.',
+      'New password. Must include an uppercase, a lowercase, a number, and a special character (!@#$%^&*), between 8 and 15 characters.',
   })
   @IsString()
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,15}$/, {
-    message: 'Password inválida.',
+    message: 'Invalid password.',
   })
   newPassword: string;
 
   @ApiProperty({
-    example: 'NuevaPassword123!',
-    description: 'Confirmación de la nueva contraseña',
+    example: 'NewPassword123!',
+    description: 'Confirm the new password',
   })
   @IsString()
   confirmPassword: string;

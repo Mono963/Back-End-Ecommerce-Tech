@@ -35,10 +35,10 @@ export class CategoriesService {
 
     if (categoriesToInsert.length > 0) {
       await this.categoryRepo.save(categoriesToInsert);
-      return { message: 'Categorías precargadas correctamente' };
+      return { message: 'Categories seeded successfully' };
     }
 
-    throw new HttpException('Las categorías ya existen', HttpStatus.CONFLICT);
+    throw new HttpException('Categories already exist', HttpStatus.CONFLICT);
   }
 
   async getCategories(query?: CategorySearchQueryDto): Promise<IPaginatedResult<Category>> {
@@ -51,21 +51,18 @@ export class CategoriesService {
       .leftJoinAndSelect('products.variants', 'variants')
       .leftJoinAndSelect('products.reviews', 'reviews');
 
-    // Filtro por nombre de categoría
     if (category) {
       queryBuilder.andWhere('LOWER(category.category_name) LIKE LOWER(:category)', {
         category: `%${category}%`,
       });
     }
 
-    // Ordenamiento
     queryBuilder
       .orderBy('category.category_name', 'ASC')
       .addOrderBy('products.featured', 'DESC')
       .addOrderBy('products.createdAt', 'DESC')
       .addOrderBy('variants.sortOrder', 'ASC');
 
-    // Paginación
     const [categories, total] = await queryBuilder
       .skip((page - 1) * limit)
       .take(limit)
@@ -85,7 +82,7 @@ export class CategoriesService {
   async createCategory(dto: ICreateCategory): Promise<Category> {
     const exists = await this.findByName(dto.category_name);
     if (exists) {
-      throw new HttpException(`La categoría "${dto.category_name}" ya existe`, HttpStatus.CONFLICT);
+      throw new HttpException(`Category "${dto.category_name}" already exists`, HttpStatus.CONFLICT);
     }
 
     const category = this.categoryRepo.create({
@@ -97,7 +94,7 @@ export class CategoriesService {
   async getByIdCategory(id: string): Promise<Category> {
     const exist = await this.categoryRepo.findOne({ where: { id }, relations: ['products', 'products.variants'] });
     if (!exist) {
-      throw new NotFoundException(`Categoría con ID ${id} no encontrada`);
+      throw new NotFoundException(`Category with ID ${id} not found`);
     }
     return exist;
   }

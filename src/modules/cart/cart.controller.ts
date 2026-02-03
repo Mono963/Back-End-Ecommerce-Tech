@@ -23,7 +23,7 @@ import {
   StockValidationResultDto,
   UpdateCartItemDTO,
 } from './dto/create-cart.dto';
-import { ResponseOrderDto, ShippingAddressDto } from '../orders/dto/order.Dto';
+import { CreateOrderFromCartDto, ResponseOrderDto } from '../orders/dto/order.Dto';
 import { SelectAddressDto } from './dto/select-address.dto';
 import { RoleGuard } from 'src/guards/auth.guards.role';
 import { Roles, UserRole } from 'src/decorator/role.decorator';
@@ -203,7 +203,7 @@ export class CartController {
     schema: {
       type: 'object',
       properties: {
-        message: { type: 'string', example: 'Dirección seleccionada exitosamente para el checkout' },
+        message: { type: 'string', example: 'Address selected successfully for checkout' },
       },
     },
   })
@@ -246,25 +246,7 @@ export class CartController {
   @ApiOperation({
     summary: 'Create order from cart items',
   })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        shippingAddress: {
-          type: 'object',
-          properties: {
-            street: { type: 'string', example: 'Av. Pellegrini' },
-            number: { type: 'string', example: '1234' },
-            city: { type: 'string', example: 'Rosario' },
-            state: { type: 'string', example: 'Santa Fe' },
-            zipCode: { type: 'string', example: '2000' },
-            country: { type: 'string', example: 'Argentina' },
-          },
-          required: ['street', 'number', 'city', 'state', 'zipCode'],
-        },
-      },
-    },
-  })
+  @ApiBody({ type: CreateOrderFromCartDto })
   @ApiResponse({
     status: 201,
     description: 'Order created successfully from cart',
@@ -275,7 +257,7 @@ export class CartController {
   })
   async createOrder(
     @Req() req: AuthRequest,
-    @Body() body: { shippingAddress: ShippingAddressDto },
+    @Body() body: CreateOrderFromCartDto,
   ): Promise<ResponseOrderDto> {
     return await this.cartService.createOrderFromCartCheckout(req.user.sub, body.shippingAddress);
   }

@@ -7,15 +7,15 @@ export class FileValidationPipe implements PipeTransform<Express.Multer.File> {
 
   transform(file: Express.Multer.File): Express.Multer.File {
     if (!file) {
-      throw new BadRequestException('Archivo no proporcionado');
+      throw new BadRequestException('File not provided');
     }
 
     if (!this.allowedMimeTypes.includes(file.mimetype)) {
-      throw new BadRequestException(`Tipo de archivo no permitido. Permitidos: ${this.allowedMimeTypes.join(', ')}`);
+      throw new BadRequestException(`File type not allowed. Allowed: ${this.allowedMimeTypes.join(', ')}`);
     }
 
     if (file.size > this.maxSizeInBytes) {
-      throw new BadRequestException(`El tamaño del archivo no puede superar los 200 KB`);
+      throw new BadRequestException('File size cannot exceed 200 KB');
     }
 
     return file;

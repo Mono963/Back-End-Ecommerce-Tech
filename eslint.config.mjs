@@ -113,15 +113,12 @@ export default tseslint.config(
       'class-methods-use-this': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
 
-      // 🔒 No permitir alias en entidades
       'no-restricted-imports': [
         'error',
         {
           patterns: ['@/*'],
         },
       ],
-
-      // 🧹 Forzar imports relativos
       'import/no-unresolved': 'off',
     },
   },

@@ -2,7 +2,7 @@ import { Processor, Process } from '@nestjs/bull';
 import { Job } from 'bull';
 import { Logger } from '@nestjs/common';
 import { MailService } from './mail.service';
-import { MailJobData } from './mail-queue.service';
+import { MailJobData } from './mail-queue_email.service';
 
 @Processor('mail')
 export class MailProcessor {
@@ -12,7 +12,7 @@ export class MailProcessor {
 
   @Process('send')
   async handleSend(job: Job<MailJobData>): Promise<void> {
-    this.logger.log(`Procesando email tipo "${job.data.type}" para: ${job.data.to}`);
+    this.logger.log(`Processing email type "${job.data.type}" for: ${job.data.to}`);
 
     try {
       const { type, to, data } = job.data;
@@ -77,75 +77,6 @@ export class MailProcessor {
           await this.mailService.sendPaymentRejectedEmail(to, data.userName as string);
           break;
 
-        // ==================== CITAS ====================
-        case 'appointment-pending':
-          await this.mailService.sendAppointmentPendingNotification(
-            to,
-            data.userName as string,
-            data.appointmentId as string,
-            data.visitTitle as string,
-            data.slotDate as string,
-            data.slotTime as string,
-          );
-          break;
-
-        case 'appointment-pending-admin':
-          await this.mailService.sendPendingAppointmentToAdmin(
-            data.userName as string,
-            data.userEmail as string,
-            data.appointmentId as string,
-            data.visitTitle as string,
-            data.slotDate as string,
-            data.slotTime as string,
-          );
-          break;
-
-        case 'appointment-cancelled':
-          await this.mailService.sendAppointmentCancelledNotification(
-            to,
-            data.userName as string,
-            data.appointmentId as string,
-            data.visitTitle as string,
-            data.slotDate as string,
-            data.slotTime as string,
-            data.reason as string | undefined,
-          );
-          break;
-
-        case 'appointment-cancelled-admin':
-          await this.mailService.sendAppointmentCancelledNotificationToAdmin(
-            data.userName as string,
-            data.userEmail as string,
-            data.appointmentId as string,
-            data.visitTitle as string,
-            data.slotDate as string,
-            data.slotTime as string,
-            data.reason as string | undefined,
-          );
-          break;
-
-        case 'appointment-rejected':
-          await this.mailService.sendAppointmentRejectedToUser(
-            to,
-            data.userName as string,
-            data.appointmentId as string,
-            data.visitTitle as string,
-            data.slotDate as string,
-            data.slotTime as string,
-          );
-          break;
-
-        case 'appointment-approved':
-          await this.mailService.sendAppointmentApprovedEmail(
-            to,
-            data.userName as string,
-            data.visitTitle as string,
-            data.slotDate as string,
-            data.slotTime as string,
-            data.appointmentId as string,
-          );
-          break;
-
         // ==================== CONTACTO ====================
         case 'contact-confirmation':
           await this.mailService.sendContactConfirmation(to, data.name as string, data.reason as string);
@@ -160,28 +91,100 @@ export class MailProcessor {
           );
           break;
 
-        // ==================== DONACIONES ====================
-        case 'donation-thanks':
-          await this.mailService.sendDonationThanks(to);
+        // ==================== NUEVOS TEMPLATES DE ORDEN ====================
+        case 'order-shipped':
+          await this.mailService.sendOrderShippedEmail(
+            to,
+            data.userName as string,
+            data.orderNumber as string,
+            data.trackingNumber as string,
+            data.trackingUrl as string,
+            data.carrier as string,
+            data.estimatedDelivery as string,
+            data.shippingAddress as {
+              street: string;
+              city: string;
+              province: string;
+              postalCode: string;
+            },
+            data.products as { name: string; quantity: number; price: number }[],
+            data.orderTotal as number,
+          );
           break;
 
-        case 'donation-admin':
-          await this.mailService.sendDonationAlertToAdmin(
-            data.name as string,
-            data.amount as number,
-            data.email as string,
-            data.phone as number,
+        case 'order-delivered':
+          await this.mailService.sendOrderDeliveredEmail(
+            to,
+            data.userName as string,
+            data.orderNumber as string,
+            data.deliveryDate as string,
+            data.products as { name: string; quantity: number; price: number }[],
+            data.reviewUrl as string,
+          );
+          break;
+
+        case 'order-cancelled':
+          await this.mailService.sendOrderCancelledEmail(
+            to,
+            data.userName as string,
+            data.orderNumber as string,
+            data.cancellationReason as string | null,
+            data.products as { name: string; quantity: number; price: number }[],
+            data.orderTotal as number,
+            data.refundStatus as string | null,
+          );
+          break;
+
+        case 'refund-processed':
+          await this.mailService.sendRefundProcessedEmail(
+            to,
+            data.userName as string,
+            data.orderNumber as string,
+            data.refundAmount as number,
+            data.refundMethod as string,
+            data.estimatedDays as number | null,
+            data.refundId as string | null,
+          );
+          break;
+
+        case 'abandoned-cart':
+          await this.mailService.sendAbandonedCartEmail(
+            to,
+            data.userName as string,
+            data.cartItems as {
+              productName: string;
+              productImage: string | null;
+              quantity: number;
+              price: number;
+            }[],
+            data.cartTotal as number,
+            data.cartUrl as string,
+            data.discountCode as string | undefined,
+          );
+          break;
+
+        case 'review-request':
+          await this.mailService.sendReviewRequestEmail(
+            to,
+            data.userName as string,
+            data.orderNumber as string,
+            data.products as {
+              productName: string;
+              productImage: string | null;
+              reviewUrl: string;
+            }[],
+            data.reviewUrl as string,
           );
           break;
 
         default:
-          this.logger.warn(`Tipo de email desconocido: ${type}`);
+          this.logger.warn(`Tipo de email desconocido: ${type as string}`);
       }
 
-      this.logger.log(`Email "${type}" enviado exitosamente a: ${to}`);
+      this.logger.log(`Email "${type}" sent successfully to: ${to}`);
     } catch (error) {
-      this.logger.error(`Error enviando email a ${job.data.to}: ${(error as Error).message}`);
-      throw error; // Bull reintentará automáticamente
+      this.logger.error(`Error sending email to ${job.data.to}: ${(error as Error).message}`);
+      throw error;
     }
   }
 }

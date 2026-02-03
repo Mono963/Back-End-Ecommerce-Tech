@@ -4,7 +4,6 @@ import {
   Post,
   Put,
   Param,
-  Body,
   Query,
   BadRequestException,
   ParseUUIDPipe,
@@ -15,14 +14,8 @@ import { OrdersService } from './orders.service';
 import { AuthGuard } from '../../guards/auth.guards';
 import { RoleGuard } from '../../guards/auth.guards.role';
 import { Roles, UserRole } from '../../decorator/role.decorator';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
-import {
-  OrderFiltersDto,
-  OrderStatsDto,
-  PaginatedOrdersDto,
-  ResponseOrderDto,
-  UpdateOrderStatusDto,
-} from './dto/order.Dto';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { OrderFiltersDto, OrderStatsDto, PaginatedOrdersDto, ResponseOrderDto } from './dto/order.Dto';
 import { AuthRequest } from 'src/common/auths/auth-request.interface';
 import { OrderStatus } from './interfaces/orders.interface';
 
@@ -169,7 +162,12 @@ export class OrdersController {
     type: 'string',
     description: 'Order ID',
   })
-  @ApiBody({ type: UpdateOrderStatusDto })
+  @ApiQuery({
+    name: 'status',
+    required: true,
+    enum: OrderStatus,
+    description: 'New order status',
+  })
   @ApiResponse({
     status: 200,
     description: 'Status updated successfully',
@@ -187,9 +185,9 @@ export class OrdersController {
   @Roles(UserRole.ADMIN)
   async updateOrderStatus(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateOrderStatusDto,
+    @Query('status') status: OrderStatus,
   ): Promise<ResponseOrderDto> {
-    return await this.ordersService.updateOrderStatus(id, dto.status, dto.paymentMethod);
+    return await this.ordersService.updateOrderStatus(id, status);
   }
 
   @Post(':OrderId/:UserId/cancel')
@@ -226,7 +224,7 @@ export class OrdersController {
     const order = await this.ordersService.getOrder(orderId, userId);
 
     if (![OrderStatus.PENDING, OrderStatus.PAID].includes(order.status)) {
-      throw new BadRequestException('Solo se pueden cancelar órdenes pendientes o pagadas');
+      throw new BadRequestException('Only pending or paid orders can be cancelled');
     }
 
     return await this.ordersService.updateOrderStatus(orderId, OrderStatus.CANCELLED);

@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    // Configuración de módulos
     "module": "commonjs",
     "moduleResolution": "node",
     "target": "ES2022",
@@ -10,26 +9,23 @@
     "rootDir": "./src",
     "sourceMap": true,
     "declaration": true,
-    "declarationMap": true, // Para mejor debugging
+    "declarationMap": true,
     "removeComments": true,
 
-    // Decoradores y metadatos
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
 
-    // Configuración de paths
     "baseUrl": "./",
     "paths": {
       "../*": ["src/*"],
-      "@/*": ["src/*"], // Alias adicional más común
+      "@/*": ["src/*"],
       "@modules/*": ["src/modules/*"],
       "@common/*": ["src/common/*"],
       "@config/*": ["src/config/*"]
     },
 
-    // Optimizaciones de compilación
     "incremental": true,
-    "tsBuildInfoFile": "./dist/.tsbuildinfo", // Mejor ubicación
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
     "skipLibCheck": true,
 
     "strict": false,

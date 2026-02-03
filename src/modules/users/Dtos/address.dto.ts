@@ -2,22 +2,22 @@ import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsBoolean, IsOptional } from 'class-validator';
 
 export class CreateAddressDto {
-  @ApiProperty({ example: 'Casa' })
+  @ApiProperty({ example: 'Home' })
   @IsString()
   @IsNotEmpty()
   label: string;
 
-  @ApiProperty({ example: 'Av. Corrientes 1234' })
+  @ApiProperty({ example: '1234 Main St' })
   @IsString()
   @IsNotEmpty()
   street: string;
 
-  @ApiProperty({ example: 'Buenos Aires' })
+  @ApiProperty({ example: 'New York' })
   @IsString()
   @IsNotEmpty()
   city: string;
 
-  @ApiProperty({ example: 'CABA' })
+  @ApiProperty({ example: 'NY' })
   @IsString()
   @IsNotEmpty()
   province: string;
@@ -27,7 +27,7 @@ export class CreateAddressDto {
   @IsNotEmpty()
   postalCode: string;
 
-  @ApiPropertyOptional({ default: 'Argentina' })
+  @ApiPropertyOptional({ default: 'United States' })
   @IsOptional()
   @IsString()
   country?: string;
@@ -45,19 +45,19 @@ export class UserAddressDto {
   @IsString()
   id: string;
 
-  @ApiProperty({ example: 'Casa' })
+  @ApiProperty({ example: 'Home' })
   @IsString()
   label: string;
 
-  @ApiProperty({ example: 'Av. Corrientes 1234' })
+  @ApiProperty({ example: '1234 Main St' })
   @IsString()
   street: string;
 
-  @ApiProperty({ example: 'Buenos Aires' })
+  @ApiProperty({ example: 'New York' })
   @IsString()
   city: string;
 
-  @ApiProperty({ example: 'CABA' })
+  @ApiProperty({ example: 'NY' })
   @IsString()
   province: string;
 
@@ -65,7 +65,7 @@ export class UserAddressDto {
   @IsString()
   postalCode: string;
 
-  @ApiProperty({ example: 'Argentina' })
+  @ApiProperty({ example: 'United States' })
   @IsString()
   country: string;
 

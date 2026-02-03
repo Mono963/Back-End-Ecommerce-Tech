@@ -22,7 +22,7 @@ export class ProductSnapshotDto {
   @ApiProperty({ example: 'Dell Inspiron 15' })
   name: string;
 
-  @ApiProperty({ example: 'Notebook para trabajo y estudio' })
+  @ApiProperty({ example: 'Laptop for work and study' })
   description: string;
 
   @ApiProperty({ example: 699.99 })
@@ -56,33 +56,40 @@ export class VariantSnapshotDto {
 }
 
 export class ShippingAddressDto {
-  @ApiProperty({ example: 'Casa' })
+  @ApiProperty({ example: 'Home' })
   @IsString()
+  @IsNotEmpty()
   label: string;
 
-  @ApiProperty({ example: 'Av. Corrientes 1234' })
+  @ApiProperty({ example: '1234 Main St' })
   @IsString()
+  @IsNotEmpty()
   street: string;
 
-  @ApiProperty({ example: 'Buenos Aires' })
+  @ApiProperty({ example: 'New York' })
   @IsString()
+  @IsNotEmpty()
   city: string;
 
-  @ApiProperty({ example: 'CABA' })
+  @ApiProperty({ example: 'NY' })
   @IsString()
+  @IsNotEmpty()
   province: string;
 
-  @ApiProperty({ example: 'C1043' })
+  @ApiProperty({ example: '10001' })
   @IsString()
+  @IsNotEmpty()
   postalCode: string;
 
-  @ApiProperty({ example: 'Argentina' })
+  @ApiProperty({ example: 'United States' })
   @IsString()
+  @IsNotEmpty()
   country: string;
 
-  @ApiProperty({ example: true })
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
   @IsBoolean()
-  isDefault: boolean;
+  isDefault?: boolean;
 }
 
 export class UpdateShippingAddressDto {
@@ -93,8 +100,8 @@ export class UpdateShippingAddressDto {
   shippingAddress: ShippingAddressDto;
 
   @ApiPropertyOptional({
-    example: 'Cambio de dirección solicitado por el cliente',
-    description: 'Razón del cambio de dirección',
+    example: 'Address change requested by the client',
+    description: 'Reason for address change',
   })
   @IsOptional()
   @IsString()
@@ -186,12 +193,12 @@ export class OrderDetailResponseDto {
     description: 'Address snapshot at time of order (unified address structure)',
     example: {
       id: '550e8400-e29b-41d4-a716-446655440000',
-      label: 'Casa',
-      street: 'Av. Corrientes 1234',
-      city: 'Buenos Aires',
-      province: 'Buenos Aires',
+      label: 'Home',
+      street: '1234 Main St',
+      city: 'New York',
+      province: 'NY',
       postalCode: '1001',
-      country: 'Argentina',
+      country: 'United States',
       isDefault: true,
     },
   })
@@ -211,13 +218,13 @@ export class UserSummaryDto {
   @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
   id: string;
 
-  @ApiProperty({ example: 'Juan Pérez' })
+  @ApiProperty({ example: 'John Doe' })
   name: string;
 
-  @ApiProperty({ example: 'juan@example.com' })
+  @ApiProperty({ example: 'john@example.com' })
   email: string;
 
-  @ApiPropertyOptional({ example: '+54 11 1234-5678' })
+  @ApiPropertyOptional({ example: '+1 212-555-1234' })
   phone?: string;
 }
 
@@ -250,7 +257,7 @@ export class ResponseOrderDto {
 export class ConfirmPaymentDto {
   @ApiProperty({
     example: 'credit_card',
-    description: 'Método de pago utilizado',
+    description: 'Payment method used',
     enum: ['credit_card', 'debit_card', 'mercadopago', 'paypal', 'cash', 'transfer'],
   })
   @IsString()
@@ -259,14 +266,14 @@ export class ConfirmPaymentDto {
 
   @ApiPropertyOptional({
     example: 'TRX-123456789',
-    description: 'ID de transacción del procesador de pagos',
+    description: 'Payment processor transaction ID',
   })
   @IsOptional()
   @IsString()
   transactionId?: string;
 
   @ApiPropertyOptional({
-    description: 'Detalles adicionales del pago',
+    description: 'Additional payment details',
     example: {
       cardLast4: '4242',
       cardBrand: 'Visa',
@@ -315,7 +322,7 @@ export class OrderStatsDto {
 export class OrderFiltersDto {
   @ApiPropertyOptional({
     enum: OrderStatus,
-    description: 'Filtrar por estado',
+    description: 'Filter by status',
   })
   @IsOptional()
   @IsEnum(OrderStatus)
@@ -323,7 +330,7 @@ export class OrderFiltersDto {
 
   @ApiPropertyOptional({
     example: '2024-01-01',
-    description: 'Fecha de inicio (YYYY-MM-DD)',
+    description: 'Start date (YYYY-MM-DD)',
   })
   @IsOptional()
   @IsDateString()
@@ -331,7 +338,7 @@ export class OrderFiltersDto {
 
   @ApiPropertyOptional({
     example: '2024-12-31',
-    description: 'Fecha de fin (YYYY-MM-DD)',
+    description: 'End date (YYYY-MM-DD)',
   })
   @IsOptional()
   @IsDateString()
@@ -339,7 +346,7 @@ export class OrderFiltersDto {
 
   @ApiPropertyOptional({
     example: 'ORD-2024-01-0001',
-    description: 'Buscar por número de orden',
+    description: 'Search by order number',
   })
   @IsOptional()
   @IsString()
@@ -347,7 +354,7 @@ export class OrderFiltersDto {
 
   @ApiPropertyOptional({
     example: 'juan@example.com',
-    description: 'Buscar por email del usuario',
+    description: 'Search by user email',
   })
   @IsOptional()
   @IsString()
@@ -355,7 +362,7 @@ export class OrderFiltersDto {
 
   @ApiPropertyOptional({
     example: 10,
-    description: 'Límite de resultados',
+    description: 'Result limit',
     default: 10,
   })
   @IsOptional()
@@ -367,7 +374,7 @@ export class OrderFiltersDto {
 
   @ApiPropertyOptional({
     example: 1,
-    description: 'Página',
+    description: 'Page',
     default: 1,
   })
   @IsOptional()
@@ -381,39 +388,29 @@ export class PaginatedOrdersDto {
   @ApiProperty({ type: [ResponseOrderDto] })
   items: ResponseOrderDto[];
 
-  @ApiProperty({ example: 100, description: 'Total de órdenes' })
+  @ApiProperty({ example: 100, description: 'Total orders' })
   total: number;
 
-  @ApiProperty({ example: 10, description: 'Total de páginas' })
+  @ApiProperty({ example: 10, description: 'Total pages' })
   pages: number;
 }
 
 export class CreateOrderFromCartDto {
-  @ApiPropertyOptional({
+  @ApiProperty({
     type: ShippingAddressDto,
-    description: 'Dirección de envío (opcional si el usuario ya tiene una guardada)',
+    description: 'Shipping address for checkout',
   })
-  @IsOptional()
   @IsObject()
   @ValidateNested()
   @Type(() => ShippingAddressDto)
-  shippingAddress?: ShippingAddressDto;
+  shippingAddress: ShippingAddressDto;
 }
 export class UpdateOrderStatusDto {
   @ApiProperty({
     enum: OrderStatus,
     example: OrderStatus.PAID,
-    description: 'Nuevo estado de la orden',
+    description: 'New order status',
   })
   @IsEnum(OrderStatus)
   status: OrderStatus;
-
-  @ApiPropertyOptional({
-    example: 'credit_card',
-    description: 'Método de pago (requerido cuando se marca como PAID)',
-    enum: ['credit_card', 'debit_card', 'mercadopago', 'paypal', 'cash'],
-  })
-  @IsOptional()
-  @IsString()
-  paymentMethod?: string;
 }

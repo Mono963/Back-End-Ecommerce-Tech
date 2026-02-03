@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 
 import { CreatePreferenceDto, PaymentStatusDto, PreferenceResponseDto } from '../payments/dto/create-payment.dto';
 
-import { MailQueueService } from '../mail/mail-queue.service';
+import { MailQueueService } from '../mail/mail-queue_email.service';
 import { Payment } from './entities/payment.entity';
 import { Order } from '../orders/entities/order.entity';
 import { OrderDetail } from '../orders/entities/order.details.entity';
@@ -66,10 +66,8 @@ export class PaymentsService implements IPaymentService {
       throw new BadRequestException(`Order with ID ${dto.orderId} not found or doesn't belong to user ${userId}`);
     }
     const cartTotal = Number(order.orderDetail.total);
-    const dtoAmount = Number(order);
-
-    if (cartTotal !== dtoAmount) {
-      throw new BadRequestException(`Amount mismatch: Cart total is ${cartTotal}, but received amount is ${dtoAmount}`);
+    if (Number.isNaN(cartTotal)) {
+      throw new BadRequestException('Invalid cart total');
     }
 
     return await this.mercadoPagoService.createPreference(userId, dto.orderId, dto);
@@ -111,9 +109,27 @@ export class PaymentsService implements IPaymentService {
         return;
       }
 
-      // Crear registro de Payment para todos los estados
+      const paymentId = paymentInfo.id.toString();
+      const existingPayment = await this.PaymentsRepository.findOne({
+        where: [{ paymentId }, { order: { id: orderId } }],
+        relations: ['order', 'user'],
+      });
+
+      if (existingPayment) {
+        this.logger.log(`Payment already exists for order ${orderId} (paymentId: ${paymentId}), skipping insert`);
+
+        // Ensure order state is up to date on duplicated webhooks
+        if (existingPayment.order) {
+          if (paymentInfo.status === 'approved' && existingPayment.order.status !== OrderStatus.PAID) {
+            existingPayment.order.status = OrderStatus.PAID;
+            await this.orderRepository.save(existingPayment.order);
+          }
+        }
+        return;
+      }
+
       const orderPayment = this.PaymentsRepository.create({
-        paymentId: paymentInfo.id.toString(),
+        paymentId,
         status: paymentInfo.status,
         statusDetail: paymentInfo.status_detail,
         amount: paymentInfo.transaction_amount,
@@ -127,18 +143,15 @@ export class PaymentsService implements IPaymentService {
 
       await this.PaymentsRepository.save(orderPayment);
 
-      // Solo actualizar Order.status a PAID cuando el pago está aprobado
       if (paymentInfo.status === 'approved') {
         order.status = OrderStatus.PAID;
         await this.orderRepository.save(order);
 
-        // Sincronizar método de pago en OrderDetail
         if (order.orderDetail) {
           order.orderDetail.paymentMethod = paymentInfo.payment_method_id;
           await this.orderDetailRepository.save(order.orderDetail);
         }
 
-        // Notificaciones de pago aprobado
         await this.sendOrderPaymentNotificationAsync(order.user.id);
         await this.sendOrderPaymentNotificationAsyncToAdmin(order.user.id, order);
 
@@ -146,14 +159,12 @@ export class PaymentsService implements IPaymentService {
           `Order payment approved and saved for order: ${orderId}, payment: ${paymentInfo.id}, user: ${order.user.id}`,
         );
       } else if (paymentInfo.status === 'pending' || paymentInfo.status === 'in_process') {
-        // Notificación de pago pendiente (Order.status sigue en PENDING)
         await this.sendOrderPaymentPendingNotificationAsync(order.user.id);
 
         this.logger.log(
           `Order payment pending for order: ${orderId}, payment: ${paymentInfo.id}, status: ${paymentInfo.status}`,
         );
       } else if (paymentInfo.status === 'rejected' || paymentInfo.status === 'cancelled') {
-        // Notificación de pago rechazado (Order.status sigue en PENDING)
         await this.sendOrderPaymentFailureNotificationAsync(order.user.id);
 
         this.logger.log(
@@ -208,18 +219,18 @@ export class PaymentsService implements IPaymentService {
     const user = await this.userRepository.findOne({ where: { id } });
 
     if (!user) {
-      this.logger.warn(`Usuario con ID ${id} no encontrado para notificación de orden`);
+      this.logger.warn(`User with ID ${id} not found for order notification`);
       return;
     }
 
     this.mailQueueService
       .queuePurchaseConfirmation(user.email)
       .then(() => {
-        this.logger.log(`Email de compra encolado para ${user.email}`);
+        this.logger.log(`Purchase email enqueued for ${user.email}`);
       })
       .catch((error) => {
         this.logger.error(
-          `Error encolando notificación de compra para ${user.email}:`,
+          `Error enqueuing purchase notification for ${user.email}:`,
           error instanceof Error ? error.message : String(error),
         );
       });
@@ -229,18 +240,18 @@ export class PaymentsService implements IPaymentService {
     const user = await this.userRepository.findOne({ where: { id } });
 
     if (!user) {
-      this.logger.warn(`Usuario con ID ${id} no encontrado para notificación de pago pendiente`);
+      this.logger.warn(`User with ID ${id} not found for pending payment notification`);
       return;
     }
 
     this.mailQueueService
       .queuePaymentPendingEmail(user.email, user.username)
       .then(() => {
-        this.logger.log(`Email de pago pendiente encolado para ${user.email}`);
+        this.logger.log(`Pending payment email enqueued for ${user.email}`);
       })
       .catch((error) => {
         this.logger.error(
-          `Error encolando notificación de pago pendiente para ${user.email}:`,
+          `Error enqueuing pending payment notification for ${user.email}:`,
           error instanceof Error ? error.message : String(error),
         );
       });
@@ -250,18 +261,18 @@ export class PaymentsService implements IPaymentService {
     const user = await this.userRepository.findOne({ where: { id } });
 
     if (!user) {
-      this.logger.warn(`Usuario con ID ${id} no encontrado para notificación de pago rechazado`);
+      this.logger.warn(`User with ID ${id} not found for rejected payment notification`);
       return;
     }
 
     this.mailQueueService
       .queuePaymentRejectedEmail(user.email, user.username)
       .then(() => {
-        this.logger.log(`Email de pago rechazado encolado para ${user.email}`);
+        this.logger.log(`Rejected payment email enqueued for ${user.email}`);
       })
       .catch((error) => {
         this.logger.error(
-          `Error encolando notificación de pago rechazado para ${user.email}:`,
+          `Error enqueuing rejected payment notification for ${user.email}:`,
           error instanceof Error ? error.message : String(error),
         );
       });
@@ -271,18 +282,18 @@ export class PaymentsService implements IPaymentService {
     const user = await this.userRepository.findOne({ where: { id } });
 
     if (!user) {
-      this.logger.warn(`Usuario con ID ${id} no encontrado para notificación de orden`);
+      this.logger.warn(`User with ID ${id} not found for order notification`);
       return;
     }
 
     this.mailQueueService
       .queuePurchaseAlertToAdmin(user.username, user.email, order.id, order.orderDetail.total, order.createdAt)
       .then(() => {
-        this.logger.log(`Email de alerta de compra al admin encolado para ${user.username}`);
+        this.logger.log(`Admin purchase alert email enqueued for ${user.username}`);
       })
       .catch((error) => {
         this.logger.error(
-          `Error encolando notificación de compra para admin (${user.username}):`,
+          `Error enqueuing purchase notification for admin (${user.username}):`,
           error instanceof Error ? error.message : String(error),
         );
       });

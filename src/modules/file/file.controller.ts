@@ -59,7 +59,7 @@ export class FileController {
     @UploadedFile(FileValidationPipe) file: Express.Multer.File,
   ): Promise<FileResponseDto> {
     if (!file) {
-      throw new BadRequestException('No se envió ningún archivo');
+      throw new BadRequestException('No file was provided');
     }
     return this.fileService.uploadImage(id, file);
   }

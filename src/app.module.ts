@@ -26,6 +26,8 @@ import { cacheConfig } from './config/cache.config';
 import { bullConfig } from './config/bull.config';
 import { PaymentsModule } from './modules/payments/payment.module';
 import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
+import { MailModule } from './modules/mail/mail.module';
+import { ContactModule } from './modules/contact/contact.module';
 
 @Module({
   imports: [
@@ -61,6 +63,8 @@ import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
     N8nModule,
     PaymentsModule,
     MercadoPagoModule,
+    MailModule,
+    ContactModule,
   ],
   controllers: [AppController],
   providers: [

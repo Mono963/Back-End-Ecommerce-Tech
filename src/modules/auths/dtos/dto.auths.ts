@@ -6,11 +6,11 @@ export class GoogleUserDto {
   @IsString()
   id: string;
 
-  @ApiProperty({ example: 'Juan Pérez' })
+  @ApiProperty({ example: 'John Doe' })
   @IsString()
   name: string;
 
-  @ApiProperty({ example: 'juanperez@gmail.com' })
+  @ApiProperty({ example: 'johndoe@gmail.com' })
   @IsString()
   email: string;
 

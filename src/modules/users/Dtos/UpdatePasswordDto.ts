@@ -2,15 +2,15 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsString, Matches } from 'class-validator';
 
 export class UpdatePasswordDto {
-  @ApiProperty({ example: 'contraseñaActual123' })
+  @ApiProperty({ example: 'currentPassword123' })
   @IsString()
   currentPassword: string;
 
-  @ApiProperty({ example: 'NuevaPassword!1' })
+  @ApiProperty({ example: 'NewPassword!1' })
   @IsString()
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,15}$/, {
     message:
-      'La nueva contraseña debe tener una mayúscula, una minúscula, un número y un carácter especial (!@#$%^&*), entre 8 y 15 caracteres.',
+      'The new password must include an uppercase, a lowercase, a number, and a special character (!@#$%^&*), between 8 and 15 characters.',
   })
   newPassword: string;
 }

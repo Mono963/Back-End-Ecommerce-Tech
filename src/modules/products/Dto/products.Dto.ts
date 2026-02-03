@@ -29,7 +29,7 @@ export class CreateVariantDto {
   @Length(0, 200)
   description?: string;
 
-  @ApiProperty({ example: 200.0, description: 'Modificador de precio (puede ser positivo o negativo)' })
+  @ApiProperty({ example: 200.0, description: 'Price modifier (can be positive or negative)' })
   @IsNumber()
   priceModifier: number;
 
@@ -56,17 +56,17 @@ export class CreateProductDto {
   @Length(3, 200)
   name: string;
 
-  @ApiProperty({ example: 'Notebook ideal para trabajo y estudio con procesador Intel Core i5' })
+  @ApiProperty({ example: 'Laptop ideal for work and study with Intel Core i5 processor' })
   @IsString()
   @Length(10, 500)
   description: string;
 
-  @ApiProperty({ example: 'Dell', description: 'Marca del producto' })
+  @ApiProperty({ example: 'Dell', description: 'Product brand' })
   @IsString()
   @Length(2, 50)
   brand: string;
 
-  @ApiPropertyOptional({ example: 'Inspiron 15 3520', description: 'Modelo específico del producto' })
+  @ApiPropertyOptional({ example: 'Inspiron 15 3520', description: 'Specific product model' })
   @IsOptional()
   @IsString()
   @Length(2, 100)
@@ -77,12 +77,12 @@ export class CreateProductDto {
   @Min(0.01)
   basePrice: number;
 
-  @ApiProperty({ example: 10, description: 'Stock base cuando no hay variantes' })
+  @ApiProperty({ example: 10, description: 'Base stock when no variants exist' })
   @IsNumber()
   @Min(0)
   baseStock: number;
 
-  @ApiProperty({ example: 'notebooks', description: 'Nombre de la categoría' })
+  @ApiProperty({ example: 'notebooks', description: 'Category name' })
   @IsString()
   @Length(3, 50)
   category_name: string;
@@ -90,7 +90,7 @@ export class CreateProductDto {
   @ApiPropertyOptional({
     type: [String],
     example: ['https://example.com/product1.jpg', 'https://example.com/product2.jpg'],
-    description: 'URLs de imágenes del producto',
+    description: 'Product image URLs',
   })
   @IsOptional()
   @IsArray()
@@ -100,7 +100,7 @@ export class CreateProductDto {
   @ApiPropertyOptional({
     example: false,
     default: false,
-    description: 'Marcar como producto destacado',
+    description: 'Mark as featured product',
   })
   @IsOptional()
   @IsBoolean()
@@ -110,10 +110,10 @@ export class CreateProductDto {
     example: {
       screenSize: '15.6"',
       resolution: '1920x1080',
-      batteryLife: '8 horas',
-      warranty: '1 año',
+      batteryLife: '8 hours',
+      warranty: '1 year',
     },
-    description: 'Especificaciones técnicas del producto',
+    description: 'Product technical specifications',
   })
   @IsOptional()
   specifications?: LaptopSpecs | MouseSpecs | Record<string, unknown>;
@@ -121,7 +121,7 @@ export class CreateProductDto {
   @ApiPropertyOptional({
     example: true,
     default: false,
-    description: 'Indica si el producto tiene variantes',
+    description: 'Indicates whether the product has variants',
   })
   @IsOptional()
   @IsBoolean()
@@ -129,7 +129,7 @@ export class CreateProductDto {
 
   @ApiPropertyOptional({
     type: [CreateVariantDto],
-    description: 'Lista de variantes del producto',
+    description: 'List of product variants',
   })
   @IsOptional()
   @IsArray()
@@ -145,7 +145,7 @@ export class UpdateProductDto {
   @Length(3, 200)
   name?: string;
 
-  @ApiPropertyOptional({ example: 'Descripción actualizada del producto' })
+  @ApiPropertyOptional({ example: 'Updated product description' })
   @IsOptional()
   @IsString()
   @Length(10, 500)
@@ -249,7 +249,7 @@ export class ResponseProductDto {
   @ApiProperty({ example: 'Dell Inspiron 15 3520' })
   name: string;
 
-  @ApiProperty({ example: 'Notebook ideal para trabajo y estudio' })
+  @ApiProperty({ example: 'Laptop ideal for work and study' })
   description: string;
 
   @ApiProperty({ example: 'Dell' })
@@ -266,13 +266,13 @@ export class ResponseProductDto {
 
   @ApiProperty({
     example: 699.99,
-    description: 'Precio final calculado con la variante más barata disponible',
+    description: 'Final price calculated using the cheapest available variant',
   })
   finalPrice: number;
 
   @ApiProperty({
     example: 150,
-    description: 'Stock total disponible considerando todas las variantes',
+    description: 'Total stock available considering all variants',
   })
   totalStock: number;
 
@@ -289,8 +289,8 @@ export class ResponseProductDto {
     example: {
       screenSize: '15.6"',
       resolution: '1920x1080',
-      batteryLife: '8 horas',
-      warranty: '1 año',
+      batteryLife: '8 hours',
+      warranty: '1 year',
     },
   })
   specifications?: LaptopSpecs | MouseSpecs | Record<string, unknown>;
@@ -306,7 +306,7 @@ export class ResponseProductDto {
 
   @ApiProperty({
     type: [ResponseVariantDto],
-    description: 'Lista de variantes disponibles para el producto',
+    description: 'List of available product variants',
   })
   variants: ResponseVariantDto[];
 

@@ -145,7 +145,7 @@ export class ProductsService {
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con id ${id} no encontrado`);
+      throw new NotFoundException(`Product with id ${id} not found`);
     }
 
     return mapToProductDto(product);
@@ -159,7 +159,7 @@ export class ProductsService {
     try {
       const category = await this.categoriesService.findByName(dto.category_name);
       if (!category) {
-        throw new NotFoundException(`Categoría '${dto.category_name}' no encontrada`);
+        throw new NotFoundException(`Category '${dto.category_name}' not found`);
       }
 
       const existingProduct = await queryRunner.manager.findOne(Product, {
@@ -167,7 +167,7 @@ export class ProductsService {
       });
 
       if (existingProduct) {
-        throw new BadRequestException(`Ya existe un producto con el nombre '${dto.name}'`);
+        throw new BadRequestException(`A product with the name '${dto.name}' already exists`);
       }
 
       if (dto.variants && dto.variants.length > 0) {
@@ -226,7 +226,7 @@ export class ProductsService {
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con id ${id} no encontrado`);
+      throw new NotFoundException(`Product with id ${id} not found`);
     }
 
     if (dto.name && dto.name !== product.name) {
@@ -235,14 +235,14 @@ export class ProductsService {
       });
 
       if (existingProduct) {
-        throw new BadRequestException(`Ya existe un producto con el nombre '${dto.name}'`);
+        throw new BadRequestException(`A product with the name '${dto.name}' already exists`);
       }
     }
 
     if (dto.category_name) {
       const category = await this.categoriesService.findByName(dto.category_name);
       if (!category) {
-        throw new NotFoundException(`Categoría '${dto.category_name}' no encontrada`);
+        throw new NotFoundException(`Category '${dto.category_name}' not found`);
       }
       product.category = category;
     }
@@ -272,7 +272,7 @@ export class ProductsService {
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con id ${id} no encontrado`);
+      throw new NotFoundException(`Product with id ${id} not found`);
     }
 
     product.isActive = false;
@@ -280,7 +280,7 @@ export class ProductsService {
 
     return {
       id,
-      message: 'Producto desactivado correctamente',
+      message: 'Product deactivated successfully',
     };
   }
 
@@ -291,7 +291,7 @@ export class ProductsService {
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con id ${productId} no encontrado`);
+      throw new NotFoundException(`Product with id ${productId} not found`);
     }
 
     this.validateUniqueVariant(product, variantDto);
@@ -318,7 +318,7 @@ export class ProductsService {
     });
 
     if (!variant) {
-      throw new NotFoundException(`Variante con id ${variantId} no encontrada`);
+      throw new NotFoundException(`Variant with id ${variantId} not found`);
     }
 
     if (updateData.type || updateData.name) {
@@ -344,7 +344,7 @@ export class ProductsService {
     });
 
     if (!variant) {
-      throw new NotFoundException(`Variante con id ${variantId} no encontrada`);
+      throw new NotFoundException(`Variant with id ${variantId} not found`);
     }
 
     await this.variantRepo.remove(variant);
@@ -360,7 +360,7 @@ export class ProductsService {
 
     return {
       id: variantId,
-      message: 'Variante eliminada correctamente',
+      message: 'Variant deleted successfully',
     };
   }
 
@@ -371,7 +371,7 @@ export class ProductsService {
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con id ${productId} no encontrado`);
+      throw new NotFoundException(`Product with id ${productId} not found`);
     }
 
     let totalPrice = Number(product.basePrice);
@@ -385,12 +385,12 @@ export class ProductsService {
       });
 
       if (variants.length !== variantIds.length) {
-        throw new BadRequestException('Una o más variantes no pertenecen a este producto');
+        throw new BadRequestException('One or more variants do not belong to this product');
       }
 
       const typesSet = new Set(variants.map((v) => v.type));
       if (typesSet.size !== variants.length) {
-        throw new BadRequestException('No se pueden seleccionar múltiples variantes del mismo tipo');
+        throw new BadRequestException('Multiple variants of the same type cannot be selected');
       }
 
       totalPrice += variants.reduce((sum, variant) => sum + Number(variant.priceModifier), 0);
@@ -406,7 +406,7 @@ export class ProductsService {
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con id ${productId} no encontrado`);
+      throw new NotFoundException(`Product with id ${productId} not found`);
     }
 
     if (!product.hasVariants || !product.variants || product.variants.length === 0) {
@@ -420,7 +420,7 @@ export class ProductsService {
     const selectedVariants = product.variants.filter((v) => variantIds.includes(v.id) && v.isAvailable);
 
     if (selectedVariants.length !== variantIds.length) {
-      throw new BadRequestException('Una o más variantes no están disponibles');
+      throw new BadRequestException('One or more variants are not available');
     }
 
     return Math.min(...selectedVariants.map((v) => v.stock));
@@ -460,7 +460,7 @@ export class ProductsService {
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con id ${id} no encontrado`);
+      throw new NotFoundException(`Product with id ${id} not found`);
     }
 
     return product;
@@ -476,7 +476,9 @@ export class ProductsService {
 
       const namesForType = variantMap.get(variant.type);
       if (namesForType?.has(variant.name)) {
-        throw new BadRequestException(`Variante duplicada: tipo '${variant.type}' con nombre '${variant.name}'`);
+        throw new BadRequestException(
+          `Duplicate variant: type '${variant.type}' with name '${variant.name}'`,
+        );
       } else {
         variantMap.set(variant.type, variantMap.get(variant.type)?.add(variant.name) || new Set([variant.name]));
       }
@@ -490,7 +492,7 @@ export class ProductsService {
 
     if (existingVariant) {
       throw new BadRequestException(
-        `Ya existe una variante de tipo '${variantDto.type}' con nombre '${variantDto.name}'`,
+        `A variant of type '${variantDto.type}' with name '${variantDto.name}' already exists`,
       );
     }
   }
@@ -501,14 +503,14 @@ export class ProductsService {
     const categoriasSeeder = await this.categoriesService.getCategories();
     if (!categoriasSeeder || categoriasSeeder.items.length === 0) {
       return {
-        message: 'No hay categorías. Primero precarga las categorías.',
+        message: 'No categories found. Seed categories first.',
         total: 0,
       };
     }
 
     if (!PRODUCTS_SEED || PRODUCTS_SEED.length === 0) {
       return {
-        message: 'No hay datos para precargar',
+        message: 'No seed data available',
         total: 0,
       };
     }
@@ -524,7 +526,7 @@ export class ProductsService {
 
     if (invalidProducts.length > 0) {
       return {
-        message: 'Todos los productos deben tener un nombre de categoría válido',
+        message: 'All products must have a valid category name',
         total: 0,
       };
     }
@@ -533,13 +535,13 @@ export class ProductsService {
       try {
         const existing = await this.productRepo.findOneBy({ name: seedData.name });
         if (existing) {
-          this.logger.log(`Producto ${seedData.name} ya existe, omitiendo...`);
+          this.logger.log(`Product ${seedData.name} already exists, skipping...`);
           continue;
         }
 
         const category = await this.categoriesService.findByName(seedData.category_name);
         if (!category) {
-          this.logger.log(`Categoría ${seedData.category_name} no encontrada para ${seedData.name}`);
+          this.logger.log(`Category ${seedData.category_name} not found for ${seedData.name}`);
           continue;
         }
 
@@ -580,19 +582,19 @@ export class ProductsService {
           savedProduct.hasVariants = true;
           await this.productRepo.save(savedProduct);
 
-          this.logger.log(`Producto ${seedData.name} creado con ${variants.length} variantes`);
+          this.logger.log(`Product ${seedData.name} created with ${variants.length} variants`);
         } else {
-          this.logger.log(`Producto ${seedData.name} creado sin variantes`);
+          this.logger.log(`Product ${seedData.name} created without variants`);
         }
 
         created.push(savedProduct);
       } catch (error) {
-        this.logger.error(`Error creando producto ${seedData.name}:`, error);
+        this.logger.error(`Error creating product ${seedData.name}:`, error);
       }
     }
 
     return {
-      message: `Productos precargados correctamente. Creados: ${created.length}/${PRODUCTS_SEED.length}`,
+      message: `Products seeded successfully. Created: ${created.length}/${PRODUCTS_SEED.length}`,
       total: created.length,
     };
   }
@@ -601,7 +603,7 @@ export class ProductsService {
     const category = await this.categoriesService.getByIdCategory(categoryId);
 
     if (!category) {
-      throw new NotFoundException(`Categoría con ID ${categoryId} no encontrada`);
+      throw new NotFoundException(`Category with ID ${categoryId} not found`);
     }
 
     const products = await this.productRepo.find({
@@ -616,9 +618,6 @@ export class ProductsService {
     return products.map(mapToProductDto);
   }
 
-  /**
-   * Búsqueda local simple
-   */
   async searchProducts(query: string, limit: number = 10): Promise<ResponseProductDto[]> {
     if (!query?.trim()) return [];
 
@@ -643,9 +642,6 @@ export class ProductsService {
     return products.map(mapToProductDto);
   }
 
-  /**
-   * Autocomplete optimizado: startsWith + contains en un solo query
-   */
   async autocomplete(query: string, limit: number = 8): Promise<IAutocompleteResult[]> {
     if (!query || query.trim().length < 1) return [];
 
@@ -672,7 +668,6 @@ export class ProductsService {
       .take(limit)
       .getMany();
 
-    // Orden en memoria: primero startsWith, luego featured
     const sorted = products.sort((a, b) => {
       const aStarts = a.name.toLowerCase().startsWith(startsWith) ? 0 : 1;
       const bStarts = b.name.toLowerCase().startsWith(startsWith) ? 0 : 1;
@@ -690,12 +685,9 @@ export class ProductsService {
     }));
   }
 
-  /**
-   * Búsqueda vía AI (n8n) con fallback local
-   */
   async aiSearch(query: string): Promise<AiSearchResponse> {
     if (!query?.trim() || query.trim().length < 3) {
-      return { products: [], message: 'Consulta muy corta' };
+      return { products: [], message: 'Query is too short' };
     }
 
     try {
@@ -704,17 +696,13 @@ export class ProductsService {
       }
       return await this.n8nService.productSearch(query.trim());
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Error desconocido';
+      const message = error instanceof Error ? error.message : 'Unknown error';
       this.logger.warn(`AI search failed: ${message}`);
       return { products: await this.searchProducts(query, 10), fallback: true };
     }
   }
 
-  /**
-   * Búsqueda híbrida: local + AI
-   */
   async hybridSearch(query: string, useAi: boolean = false, limit: number = 8): Promise<IHybridSearchResponse> {
-    // 🔒 Anti-spam REAL
     if (!query || query.trim().length < 2) {
       return { results: [], source: 'local' };
     }
@@ -744,7 +732,7 @@ export class ProductsService {
         source: 'hybrid',
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Error desconocido';
+      const message = error instanceof Error ? error.message : 'Unknown error';
       this.logger.warn(`Hybrid AI search failed: ${message}`);
       return { results: localResults, source: 'local' };
     }
@@ -755,7 +743,6 @@ export class ProductsService {
       return EMPTY;
     }
     return new Observable<{ data: IHybridSearchStreamPayload }>((subscriber) => {
-      // 🔹 BÚSQUEDA LOCAL (rápida)
       this.autocomplete(query, 8)
         .then((localResults) => {
           subscriber.next({
@@ -766,10 +753,9 @@ export class ProductsService {
           });
         })
         .catch(() => {
-          // opcional: no rompemos el stream
+          // Ignorar errores locales
         });
 
-      // 🔹 BÚSQUEDA AI (lenta)
       this.n8nService
         .productSearch(query)
         .then((aiResponse) => {
@@ -805,7 +791,7 @@ export class ProductsService {
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con ID ${productId} no encontrado`);
+      throw new NotFoundException(`Product with ID ${productId} not found`);
     }
 
     const relatedProducts = await this.productRepo

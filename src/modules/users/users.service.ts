@@ -13,7 +13,7 @@ import { paginate } from 'src/common/pagination/paginate';
 import { AuthValidations } from '../auths/validate/auth.validate';
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
-import { MailQueueService } from '../mail/mail-queue.service';
+import { MailQueueService } from '../mail/mail-queue_email.service';
 import { IPaginatedResult } from '../../common/pagination/IPaginatedResult';
 import { RolesService } from '../roles/roles.service';
 import {
@@ -116,7 +116,7 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundException(`Usuario con id ${id} no encontrado.`);
+      throw new NotFoundException(`User with id ${id} not found.`);
     }
 
     // Obtener el contador de wishlist
@@ -125,7 +125,7 @@ export class UsersService {
       relations: ['items'],
     });
 
-    // Agregar el contador al objeto user (será usado por el DTO)
+    // Add wishlist count to the user object (used by the DTO)
     const userWithWishlist = Object.assign(user, { wishlistCount: wishlist?.items?.length ?? 0 });
 
     return userWithWishlist;
@@ -140,7 +140,7 @@ export class UsersService {
         throw error;
       }
       this.logger.error('Error creating user:', error);
-      throw new BadRequestException('Error al crear el usuario');
+      throw new BadRequestException('Failed to create user');
     }
   }
 
@@ -171,7 +171,7 @@ export class UsersService {
     const result = await this.usersRepository.update({ id }, dto);
 
     if (result.affected === 0) {
-      throw new NotFoundException(`Usuario con id ${id} no encontrado`);
+      throw new NotFoundException(`User with id ${id} not found`);
     }
 
     const updatedUser = await this.usersRepository.findOne({
@@ -180,13 +180,11 @@ export class UsersService {
     });
 
     if (!updatedUser) {
-      throw new InternalServerErrorException(
-        `Error inesperado: Usuario con id ${id} no encontrado tras la actualización final`,
-      );
+      throw new InternalServerErrorException(`Unexpected error: User with id ${id} not found after final update`);
     }
 
     this.mailQueueService.queueDataChangedNotification(updatedUser.email, updatedUser.name).catch((err: unknown) => {
-      const message = err instanceof Error ? err.message : 'Error desconocido al encolar email de modificación de datos';
+      const message = err instanceof Error ? err.message : 'Unknown error while enqueuing data change email';
       const stack = err instanceof Error ? err.stack : undefined;
       this.logger.error(message, stack);
     });
@@ -198,13 +196,13 @@ export class UsersService {
     const user = await this.usersRepository.findOne({ where: { id: userId } });
 
     if (!user) {
-      throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+      throw new NotFoundException(`User with id ${userId} not found`);
     }
 
     const isSamePassword = await bcrypt.compare(dto.newPassword, user.password);
 
     if (isSamePassword) {
-      throw new BadRequestException('La nueva contraseña no puede ser igual a la actual');
+      throw new BadRequestException('New password cannot be the same as the current one');
     }
 
     await AuthValidations.validateNewPasswordIsDifferent(dto.newPassword, user.password);
@@ -217,7 +215,7 @@ export class UsersService {
     await this.usersRepository.save(user);
 
     this.mailQueueService.queuePasswordChangedConfirmation(user.email, user.name).catch((err: unknown) => {
-      const message = err instanceof Error ? err.message : 'Error al encolar email';
+      const message = err instanceof Error ? err.message : 'Error enqueuing email';
       const stack = err instanceof Error ? err.stack : undefined;
       this.logger.error(message, stack);
     });
@@ -231,7 +229,7 @@ export class UsersService {
       });
 
       if (!user) {
-        throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+        throw new NotFoundException(`User with id ${userId} not found`);
       }
 
       const role = await this.rolesService.findRoleById(dto.roleId);
@@ -239,13 +237,13 @@ export class UsersService {
       user.role = role;
       await this.usersRepository.save(user);
 
-      this.logger.log(`Rol actualizado para usuario ${userId}: ${role.name}`);
+      this.logger.log(`Role updated for user ${userId}: ${role.name}`);
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
       }
       this.logger.error('Error changing user role:', error);
-      throw new InternalServerErrorException('Error al cambiar el rol del usuario');
+      throw new InternalServerErrorException('Error changing user role');
     }
   }
 
@@ -267,7 +265,7 @@ export class UsersService {
 
       return { message: `User ${id} successfully removed.` };
     } catch (error) {
-      this.logger.error('Error: Al eliminar la cuenta intente mas tarde', error);
+      this.logger.error('Error: Failed to delete account, please try again later', error);
       throw new InternalServerErrorException(`Error deleting User ${id}`);
     }
   }
@@ -301,10 +299,7 @@ export class UsersService {
         throw error;
       }
 
-      this.logger.error(
-        `Error interno al restaurar usuario ${id}:`,
-        error instanceof Error ? error.message : String(error),
-      );
+      this.logger.error(`Internal error restoring user ${id}:`, error instanceof Error ? error.message : String(error));
       throw new InternalServerErrorException(`Error restoring User ${id}`);
     }
   }
@@ -312,7 +307,7 @@ export class UsersService {
   async sendResetPasswordEmail(email: string): Promise<void> {
     const user = await this.usersRepository.findOne({ where: { email } });
     if (!user) {
-      throw new BadRequestException('Credenciales inválidas');
+      throw new BadRequestException('Invalid credentials');
     }
 
     const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
@@ -325,7 +320,7 @@ export class UsersService {
     const { token, newPassword, confirmPassword } = dto;
 
     if (newPassword !== confirmPassword) {
-      throw new BadRequestException('Las contraseñas no coinciden');
+      throw new BadRequestException('Passwords do not match');
     }
 
     const user = await this.usersRepository.findOne({
@@ -333,7 +328,7 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundException('Usuario no encontrado');
+      throw new NotFoundException('User not found');
     }
 
     const hashedPassword = await AuthValidations.hashPassword(newPassword);
@@ -348,7 +343,7 @@ export class UsersService {
     const address = await this.addressRepository.find();
 
     if (!address) {
-      throw new NotFoundException('No se encontraron direcciones');
+      throw new NotFoundException('No addresses found');
     }
 
     return address;
@@ -382,7 +377,7 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+      throw new NotFoundException(`User with id ${userId} not found`);
     }
 
     const newAddressData: INewCreateAddress = {
@@ -406,7 +401,7 @@ export class UsersService {
 
     const savedAddress = await this.addressRepository.save(this.addressRepository.create(newAddressData));
 
-    this.logger.log(`Dirección agregada para usuario ${userId}: ${savedAddress.id}`);
+    this.logger.log(`Address added for user ${userId}: ${savedAddress.id}`);
 
     return {
       id: savedAddress.id,
@@ -429,7 +424,7 @@ export class UsersService {
     });
 
     if (!address) {
-      throw new NotFoundException(`Dirección con id ${addressId} no encontrada para el usuario ${userId}`);
+      throw new NotFoundException(`Address with id ${addressId} not found for user ${userId}`);
     }
 
     if (dto.isDefault === true) {
@@ -440,7 +435,7 @@ export class UsersService {
 
     const updatedAddress = await this.addressRepository.save(address);
 
-    this.logger.log(`Dirección actualizada para usuario ${userId}: ${addressId}`);
+    this.logger.log(`Address updated for user ${userId}: ${addressId}`);
 
     return {
       id: updatedAddress.id,
@@ -457,12 +452,12 @@ export class UsersService {
   async deleteAddress(addressId: string): Promise<{ message: string }> {
     const address = await this.addressRepository.findOne({ where: { id: addressId } });
     if (!address) {
-      throw new NotFoundException(`La direccion con id ${addressId} no encontrado`);
+      throw new NotFoundException(`Address with id ${addressId} not found`);
     }
 
     await this.addressRepository.delete(address.id);
 
-    return { message: 'Dirección eliminada exitosamente' };
+    return { message: 'Address deleted successfully' };
   }
 
   async setDefaultAddress(userId: string, addressId: string): Promise<IAddress> {
@@ -474,7 +469,7 @@ export class UsersService {
     });
 
     if (!address) {
-      throw new NotFoundException(`Dirección con id ${addressId} no encontrada para el usuario ${userId}`);
+      throw new NotFoundException(`Address with id ${addressId} not found for user ${userId}`);
     }
 
     await this.addressRepository.update({ user_id: userId }, { isDefault: false });
@@ -482,7 +477,7 @@ export class UsersService {
     address.isDefault = true;
     const updatedAddress = await this.addressRepository.save(address);
 
-    this.logger.log(`Dirección predeterminada actualizada para usuario ${userId}: ${addressId}`);
+    this.logger.log(`Default address updated for user ${userId}: ${addressId}`);
 
     return {
       id: updatedAddress.id,
@@ -507,10 +502,10 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+      throw new NotFoundException(`User with id ${userId} not found`);
     }
 
-    // Contar órdenes y calcular total gastado
+    // Count orders and calculate total spent
     const orders = await this.orderRepository
       .createQueryBuilder('order')
       .leftJoinAndSelect('order.orderDetail', 'orderDetail')
@@ -536,7 +531,7 @@ export class UsersService {
       where: { user: { id: userId } },
     });
 
-    this.logger.log(`Estadísticas obtenidas para usuario ${userId}`);
+    this.logger.log(`Stats retrieved for user ${userId}`);
 
     return {
       totalOrders,

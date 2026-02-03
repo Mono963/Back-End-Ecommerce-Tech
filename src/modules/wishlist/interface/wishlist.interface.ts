@@ -1,26 +1,26 @@
 import { IProducts } from 'src/modules/products/interface/products.interface';
 import { IUserResponse } from '../../users/interfaces/user.interface';
 
-// IWishlistItem representa la estructura de un ítem individual en la lista
+// IWishlistItem represents the structure of a single list item
 export interface IWishlistItem {
   id: string;
   wishlist_id: string;
   product_id: string;
   addedAt: Date;
 
-  // Relaciones (opcionales para evitar profundidad infinita)
+  // Relations (optional to avoid infinite depth)
   wishlist?: IWishlist;
-  product?: IProducts; // Aquí deberías usar la interfaz de Product si la tienes
+  product?: IProducts; // Use the Product interface here if you have it
 }
 
-// IWishlist representa la lista de deseos principal
+// IWishlist represents the main wishlist
 export interface IWishlist {
   id: string;
   user_id: string;
   createdAt: Date;
   updatedAt: Date;
 
-  // Relaciones
+  // Relations
   user?: IUserResponse;
   items: IWishlistItem[];
 }

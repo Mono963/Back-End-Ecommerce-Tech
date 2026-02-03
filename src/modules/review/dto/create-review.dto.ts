@@ -27,10 +27,10 @@ export class PaginatedReviewsDto {
   @ApiProperty({ type: [Object] })
   items: ReviewResponsePublicDto[];
 
-  @ApiProperty({ example: 100, description: 'Total de reviews' })
+  @ApiProperty({ example: 100, description: 'Total reviews' })
   total: number;
 
-  @ApiProperty({ example: 10, description: 'Total de páginas' })
+  @ApiProperty({ example: 10, description: 'Total pages' })
   pages: number;
 }
 
@@ -38,10 +38,10 @@ export class PaginatedReviewsAdminDto {
   @ApiProperty({ type: [Object] })
   items: ReviewResponseAdminDto[];
 
-  @ApiProperty({ example: 100, description: 'Total de reviews' })
+  @ApiProperty({ example: 100, description: 'Total reviews' })
   total: number;
 
-  @ApiProperty({ example: 10, description: 'Total de páginas' })
+  @ApiProperty({ example: 10, description: 'Total pages' })
   pages: number;
 }
 

@@ -7,7 +7,7 @@ export class ProductsSearchQueryDto extends PaginationQueryDto {
   @ApiProperty({
     example: 'Dell Inspiron',
     required: false,
-    description: 'Buscar por nombre del producto',
+    description: 'Search by product name',
     minLength: 3,
     maxLength: 80,
   })
@@ -19,7 +19,7 @@ export class ProductsSearchQueryDto extends PaginationQueryDto {
   @ApiProperty({
     example: 1000,
     required: false,
-    description: 'Buscar productos en rango de precio (±10%)',
+    description: 'Search products by price range (±10%)',
     minimum: 0.01,
   })
   @IsOptional()
@@ -31,7 +31,7 @@ export class ProductsSearchQueryDto extends PaginationQueryDto {
   @ApiProperty({
     example: 100,
     required: false,
-    description: 'Precio mínimo para filtrar productos',
+    description: 'Minimum price to filter products',
     minimum: 0,
   })
   @IsOptional()
@@ -43,7 +43,7 @@ export class ProductsSearchQueryDto extends PaginationQueryDto {
   @ApiProperty({
     example: 2000,
     required: false,
-    description: 'Precio máximo para filtrar productos',
+    description: 'Maximum price to filter products',
     minimum: 0,
   })
   @IsOptional()
@@ -55,7 +55,7 @@ export class ProductsSearchQueryDto extends PaginationQueryDto {
   @ApiProperty({
     example: 'Dell',
     required: false,
-    description: 'Filtrar por marca del producto',
+    description: 'Filter by product brand',
     minLength: 2,
     maxLength: 50,
   })
@@ -67,16 +67,16 @@ export class ProductsSearchQueryDto extends PaginationQueryDto {
   @ApiProperty({
     example: '123e4567-e89b-12d3-a456-426614174000',
     required: false,
-    description: 'Filtrar por ID de categoría (UUID)',
+    description: 'Filter by category ID (UUID)',
   })
   @IsOptional()
   @IsString()
   categoryId?: string;
 
   @ApiProperty({
-    example: 'Negro',
+    example: 'Black',
     required: false,
-    description: 'Filtrar por color de variante del producto',
+    description: 'Filter by product variant color',
     minLength: 2,
     maxLength: 50,
   })
@@ -88,7 +88,7 @@ export class ProductsSearchQueryDto extends PaginationQueryDto {
   @ApiProperty({
     example: true,
     required: false,
-    description: 'Filtrar solo productos destacados',
+    description: 'Filter only featured products',
     type: Boolean,
   })
   @IsOptional()

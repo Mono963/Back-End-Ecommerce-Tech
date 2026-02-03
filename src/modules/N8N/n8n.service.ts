@@ -23,7 +23,7 @@ export class N8nService {
 
   async callWebhook<T>(endpoint: string, data: Record<string, unknown>): Promise<T> {
     if (!this.isEnabled) {
-      throw new Error('n8n no está habilitado');
+      throw new Error('n8n is not enabled');
     }
 
     const url = `${this.config.webhookUrl}/${endpoint}`;

@@ -15,20 +15,20 @@ export class SeedsService implements OnModuleInit {
 
   async runAllSeeds(): Promise<void> {
     try {
-      this.logger.log('🌱 Iniciando ejecución de seeds...');
+      this.logger.log('Starting seed execution...');
 
-      // 1. Primero crear los roles
-      this.logger.log('📝 Ejecutando seeds de roles...');
+      // 1. Create roles first
+      this.logger.log('Running role seeds...');
       await seedRoles(this.dataSource);
 
-      // 2. Luego crear el usuario Super Admin
-      this.logger.log('👤 Ejecutando seeds de usuario Super Admin...');
+      // 2. Then create the super admin user
+      this.logger.log('Running super admin user seed...');
       await seedSuperAdmin(this.dataSource);
 
-      this.logger.log('✅ Todos los seeds se ejecutaron correctamente');
+      this.logger.log('All seeds ran successfully');
     } catch (error) {
-      this.logger.error('❌ Error al ejecutar seeds:', error);
-      // No lanzamos el error para que la aplicación pueda continuar
+      this.logger.error('Error running seeds:', error);
+      // Do not throw so the application can continue
     }
   }
 }

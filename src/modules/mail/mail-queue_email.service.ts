@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
+import { ConfigService } from '@nestjs/config';
 
 export type MailJobType =
   | 'welcome'
@@ -12,18 +13,16 @@ export type MailJobType =
   | 'password-reset'
   | 'password-changed'
   | 'account-deleted'
-  | 'appointment-pending'
-  | 'appointment-pending-admin'
-  | 'appointment-cancelled'
-  | 'appointment-cancelled-admin'
-  | 'appointment-rejected'
-  | 'appointment-approved'
   | 'contact-confirmation'
   | 'contact-admin'
-  | 'donation-thanks'
-  | 'donation-admin'
   | 'payment-pending'
-  | 'payment-rejected';
+  | 'payment-rejected'
+  | 'order-shipped'
+  | 'order-delivered'
+  | 'order-cancelled'
+  | 'refund-processed'
+  | 'abandoned-cart'
+  | 'review-request';
 
 export interface MailJobData {
   type: MailJobType;
@@ -34,12 +33,18 @@ export interface MailJobData {
 @Injectable()
 export class MailQueueService {
   private readonly logger = new Logger(MailQueueService.name);
+  private readonly adminEmail: string;
 
-  constructor(@InjectQueue('mail') private readonly mailQueue: Queue<MailJobData>) {}
+  constructor(
+    @InjectQueue('mail') private readonly mailQueue: Queue<MailJobData>,
+    private readonly configService: ConfigService,
+  ) {
+    this.adminEmail = this.configService.get<string>('ADMIN_EMAIL') || 'worldassemblytechnolog@gmail.com';
+  }
 
   private async addToQueue(type: MailJobType, to: string, data: Record<string, unknown>): Promise<void> {
     await this.mailQueue.add('send', { type, to, data });
-    this.logger.log(`Email "${type}" encolado para: ${to}`);
+    this.logger.log(`Email "${type}" enqueued for: ${to}`);
   }
 
   // ==================== AUTH / USUARIOS ====================
@@ -98,7 +103,7 @@ export class MailQueueService {
     orderTotal: number,
     orderDate: Date,
   ): Promise<void> {
-    await this.addToQueue('purchase-alert-admin', 'rootscooperativadev@gmail.com', {
+    await this.addToQueue('purchase-alert-admin', this.adminEmail, {
       userName,
       userEmail,
       orderId,
@@ -115,116 +120,6 @@ export class MailQueueService {
     await this.addToQueue('payment-rejected', email, { userName });
   }
 
-  // ==================== CITAS ====================
-
-  async queueAppointmentPendingNotification(
-    email: string,
-    userName: string,
-    appointmentId: string,
-    visitTitle: string,
-    slotDate: string,
-    slotTime: string,
-  ): Promise<void> {
-    await this.addToQueue('appointment-pending', email, {
-      userName,
-      appointmentId,
-      visitTitle,
-      slotDate,
-      slotTime,
-    });
-  }
-
-  async queueAppointmentPendingToAdmin(
-    userName: string,
-    userEmail: string,
-    appointmentId: string,
-    visitTitle: string,
-    slotDate: string,
-    slotTime: string,
-  ): Promise<void> {
-    await this.addToQueue('appointment-pending-admin', 'rootscooperativadev@gmail.com', {
-      userName,
-      userEmail,
-      appointmentId,
-      visitTitle,
-      slotDate,
-      slotTime,
-    });
-  }
-
-  async queueAppointmentCancelledNotification(
-    email: string,
-    userName: string,
-    appointmentId: string,
-    visitTitle: string,
-    slotDate: string,
-    slotTime: string,
-    reason?: string,
-  ): Promise<void> {
-    await this.addToQueue('appointment-cancelled', email, {
-      userName,
-      appointmentId,
-      visitTitle,
-      slotDate,
-      slotTime,
-      reason,
-    });
-  }
-
-  async queueAppointmentCancelledToAdmin(
-    userName: string,
-    userEmail: string,
-    appointmentId: string,
-    visitTitle: string,
-    slotDate: string,
-    slotTime: string,
-    reason?: string,
-  ): Promise<void> {
-    await this.addToQueue('appointment-cancelled-admin', 'rootscooperativadev@gmail.com', {
-      userName,
-      userEmail,
-      appointmentId,
-      visitTitle,
-      slotDate,
-      slotTime,
-      reason,
-    });
-  }
-
-  async queueAppointmentRejectedToUser(
-    email: string,
-    userName: string,
-    appointmentId: string,
-    visitTitle: string,
-    slotDate: string,
-    slotTime: string,
-  ): Promise<void> {
-    await this.addToQueue('appointment-rejected', email, {
-      userName,
-      appointmentId,
-      visitTitle,
-      slotDate,
-      slotTime,
-    });
-  }
-
-  async queueAppointmentApprovedEmail(
-    email: string,
-    userName: string,
-    visitTitle: string,
-    slotDate: string,
-    slotTime: string,
-    appointmentId: string,
-  ): Promise<void> {
-    await this.addToQueue('appointment-approved', email, {
-      userName,
-      visitTitle,
-      slotDate,
-      slotTime,
-      appointmentId,
-    });
-  }
-
   // ==================== CONTACTO ====================
 
   async queueContactConfirmation(email: string, name: string, reason: string): Promise<void> {
@@ -232,7 +127,7 @@ export class MailQueueService {
   }
 
   async queueContactNotificationToAdmin(name: string, email: string, phone: string, reason: string): Promise<void> {
-    await this.addToQueue('contact-admin', 'rootscooperativadev@gmail.com', {
+    await this.addToQueue('contact-admin', this.adminEmail, {
       name,
       email,
       phone,
@@ -240,18 +135,131 @@ export class MailQueueService {
     });
   }
 
-  // ==================== DONACIONES ====================
+  // ==================== NUEVOS TEMPLATES DE ORDEN ====================
 
-  async queueDonationThanks(email: string): Promise<void> {
-    await this.addToQueue('donation-thanks', email, {});
+  async queueOrderShippedEmail(
+    email: string,
+    userName: string,
+    orderNumber: string,
+    trackingNumber: string,
+    trackingUrl: string,
+    carrier: string,
+    estimatedDelivery: string,
+    shippingAddress: {
+      street: string;
+      city: string;
+      province: string;
+      postalCode: string;
+    },
+    products: { name: string; quantity: number; price: number }[],
+    orderTotal: number,
+  ): Promise<void> {
+    await this.addToQueue('order-shipped', email, {
+      userName,
+      orderNumber,
+      trackingNumber,
+      trackingUrl,
+      carrier,
+      estimatedDelivery,
+      shippingAddress,
+      products,
+      orderTotal,
+    });
   }
 
-  async queueDonationAlertToAdmin(name: string, amount: number, email: string, phone: number): Promise<void> {
-    await this.addToQueue('donation-admin', 'rootscooperativadev@gmail.com', {
-      name,
-      amount,
-      email,
-      phone,
+  async queueOrderDeliveredEmail(
+    email: string,
+    userName: string,
+    orderNumber: string,
+    deliveryDate: string,
+    products: { name: string; quantity: number; price: number }[],
+    reviewUrl: string,
+  ): Promise<void> {
+    await this.addToQueue('order-delivered', email, {
+      userName,
+      orderNumber,
+      deliveryDate,
+      products,
+      reviewUrl,
+    });
+  }
+
+  async queueOrderCancelledEmail(
+    email: string,
+    userName: string,
+    orderNumber: string,
+    cancellationReason: string | null,
+    products: { name: string; quantity: number; price: number }[],
+    orderTotal: number,
+    refundStatus: string | null,
+  ): Promise<void> {
+    await this.addToQueue('order-cancelled', email, {
+      userName,
+      orderNumber,
+      cancellationReason,
+      products,
+      orderTotal,
+      refundStatus,
+    });
+  }
+
+  async queueRefundProcessedEmail(
+    email: string,
+    userName: string,
+    orderNumber: string,
+    refundAmount: number,
+    refundMethod: string,
+    estimatedDays: number | null,
+    refundId: string | null,
+  ): Promise<void> {
+    await this.addToQueue('refund-processed', email, {
+      userName,
+      orderNumber,
+      refundAmount,
+      refundMethod,
+      estimatedDays,
+      refundId,
+    });
+  }
+
+  async queueAbandonedCartEmail(
+    email: string,
+    userName: string,
+    cartItems: {
+      productName: string;
+      productImage: string | null;
+      quantity: number;
+      price: number;
+    }[],
+    cartTotal: number,
+    cartUrl: string,
+    discountCode?: string,
+  ): Promise<void> {
+    await this.addToQueue('abandoned-cart', email, {
+      userName,
+      cartItems,
+      cartTotal,
+      cartUrl,
+      discountCode,
+    });
+  }
+
+  async queueReviewRequestEmail(
+    email: string,
+    userName: string,
+    orderNumber: string,
+    products: {
+      productName: string;
+      productImage: string | null;
+      reviewUrl: string;
+    }[],
+    reviewUrl: string,
+  ): Promise<void> {
+    await this.addToQueue('review-request', email, {
+      userName,
+      orderNumber,
+      products,
+      reviewUrl,
     });
   }
 }

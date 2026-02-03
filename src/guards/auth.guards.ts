@@ -12,7 +12,7 @@ export class AuthGuard implements CanActivate {
     const authHeader = request.headers['authorization'];
 
     if (!authHeader?.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Token de autenticación requerido');
+      throw new UnauthorizedException('Authentication token required');
     }
 
     const token = authHeader.split(' ')[1];

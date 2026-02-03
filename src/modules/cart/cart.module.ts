@@ -11,6 +11,8 @@ import { CartItem } from './entities/cart.item.entity';
 import { ProductsModule } from '../products/products.module';
 import { OrdersModule } from '../orders/orders.module';
 import { UsersModule } from '../users/users.module';
+import { MailModule } from '../mail/mail.module';
+import { AbandonedCartService } from './abandoned-cart.service';
 
 @Module({
   imports: [
@@ -19,9 +21,10 @@ import { UsersModule } from '../users/users.module';
     forwardRef(() => ProductsModule),
     forwardRef(() => OrdersModule),
     forwardRef(() => UsersModule),
+    forwardRef(() => MailModule),
   ],
   controllers: [CartController],
-  providers: [CartService],
-  exports: [CartService, TypeOrmModule],
+  providers: [CartService, AbandonedCartService],
+  exports: [CartService, AbandonedCartService, TypeOrmModule],
 })
 export class CartModule {}

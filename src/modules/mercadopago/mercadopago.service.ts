@@ -48,7 +48,6 @@ export class MercadoPagoService {
       throw new BadRequestException('Order ID is required for payments');
     }
 
-    // Buscar la orden con su detalle para obtener el total
     const order = await this.orderRepository.findOne({
       where: { id: orderId, user: { id: userId } },
       relations: ['orderDetail'],
@@ -67,7 +66,6 @@ export class MercadoPagoService {
     const itemTitle = 'Compra en WAT';
     const itemDescription = dto.message || 'Purchase from cart';
 
-    // Obtener URLs y remover trailing slash si existe
     const frontendUrl = (this.configService.get<string>('FRONTEND_MP_URL') || '').replace(/\/$/, '');
     const backendUrl = (this.configService.get<string>('BACKEND_MP_URL') || '').replace(/\/$/, '');
 
@@ -81,7 +79,6 @@ export class MercadoPagoService {
       throw new BadRequestException('Payment service is not properly configured');
     }
 
-    // Determinar si estamos en localhost (desarrollo)
     const isLocalhost = frontendUrl.includes('localhost') || frontendUrl.includes('127.0.0.1');
 
     const preferenceData = {
@@ -105,7 +102,6 @@ export class MercadoPagoService {
       },
       notification_url: `${backendUrl}/payments/webhook`,
       external_reference: externalReference,
-      // Solo agregar auto_return si NO es localhost (MercadoPago lo rechaza con localhost)
       ...(isLocalhost ? {} : { auto_return: 'approved' as const }),
     };
 
@@ -142,12 +138,10 @@ export class MercadoPagoService {
       const resourceId = notif.data.id;
       this.logger.log(`Processing ${notif.type} notification with ID: ${resourceId}`);
 
-      // Manejar merchant_order - necesitamos obtener el payment_id de la orden
       if (notif.type === 'topic_merchant_order_wh' || notif.type === 'merchant_order') {
         return await this.processMerchantOrderWebhook(resourceId);
       }
 
-      // Manejar payment directamente
       if (notif.type === 'payment') {
         return await this.processPaymentWebhook(resourceId);
       }
@@ -176,7 +170,6 @@ export class MercadoPagoService {
 
       this.logger.log(`Merchant order ${merchantOrderId} status: ${merchantOrderResponse.status}`);
 
-      // Obtener el primer payment aprobado o el más reciente
       const payments = merchantOrderResponse.payments || [];
       const approvedPayment = payments.find((p: { status?: string }) => p.status === 'approved');
       const paymentToProcess = approvedPayment || payments[0];

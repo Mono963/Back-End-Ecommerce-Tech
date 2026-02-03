@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>¿Qué te pareció tu compra?</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <style>
+      body {
+        margin: 0;
+        padding: 30px 10px;
+        background-color: #ffffff;
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        color: #333333;
+        line-height: 1.6;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+      }
+
+      .header {
+        background: #111827;
+        padding: 24px 32px;
+      }
+
+      .header table {
+        width: 100%;
+      }
+
+      .header-text {
+        color: #ffffff;
+        font-family: 'Inter', sans-serif;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+      }
+
+      .header img {
+        max-width: 120px;
+        height: auto;
+        display: block;
+      }
+
+      .content {
+        padding: 40px 32px;
+        background-color: #ffffff;
+      }
+
+      .content h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #ff9800;
+        margin: 0 0 24px 0;
+        text-align: center;
+      }
+
+      .content p {
+        margin: 16px 0;
+        font-size: 16px;
+        font-weight: 400;
+        color: #333333;
+      }
+
+      .content p strong {
+        color: #1a1a2e;
+        font-weight: 600;
+      }
+
+      .stars-display {
+        text-align: center;
+        font-size: 40px;
+        margin: 24px 0;
+        letter-spacing: 8px;
+        color: #ff9800;
+      }
+
+      .order-id {
+        font-family: 'Courier New', monospace;
+        background: #f5f5f5;
+        padding: 4px 8px;
+        border-radius: 4px;
+        color: #0066ff;
+        font-weight: 600;
+      }
+
+      .intro-text {
+        text-align: center;
+        background: #111827;
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin: 24px 0;
+      }
+
+      .intro-text p {
+        margin: 0;
+        color: #e65100;
+        font-weight: 500;
+      }
+
+      /* Product review cards */
+      .product-review-list {
+        margin: 24px 0;
+      }
+
+      .product-review-item {
+        background: #f9f9f9;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .product-review-item img {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 8px;
+        background: #e8e8e8;
+      }
+
+      .product-review-info {
+        flex: 1;
+      }
+
+      .product-review-info h4 {
+        margin: 0 0 8px 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #1a1a2e;
+      }
+
+      .product-review-info .stars {
+        color: #ff9800;
+        font-size: 20px;
+        letter-spacing: 2px;
+        margin-bottom: 8px;
+      }
+
+      .product-review-info .btn-review {
+        display: inline-block;
+        background: #0066ff;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .benefits-card {
+        background: #111827;
+        border-radius: 12px;
+        padding: 24px;
+        margin: 24px 0;
+        color: white;
+      }
+
+      .benefits-card h3 {
+        margin: 0 0 16px 0;
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .benefits-card ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      .benefits-card li {
+        margin-bottom: 8px;
+        font-size: 14px;
+        opacity: 0.9;
+      }
+
+      .btn-main {
+        display: block;
+        width: 100%;
+        margin: 24px 0;
+        background: #ff9800;
+        color: #ffffff !important;
+        padding: 16px 32px;
+        border-radius: 8px;
+        text-decoration: none !important;
+        font-weight: 600;
+        font-size: 18px;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+      }
+
+      @media screen and (max-width: 600px) {
+        .header {
+          padding: 20px 16px;
+        }
+
+        .header-text {
+          font-size: 16px;
+        }
+
+        .header img {
+          max-width: 80px;
+        }
+
+        .content {
+          padding: 32px 20px;
+        }
+
+        .content h1 {
+          font-size: 24px;
+        }
+
+        .stars-display {
+          font-size: 32px;
+          letter-spacing: 4px;
+        }
+
+        .product-review-item {
+          flex-direction: column;
+          text-align: center;
+        }
+
+        .product-review-item img {
+          width: 100px;
+          height: 100px;
+        }
+
+        .btn-main {
+          padding: 14px 24px;
+          font-size: 16px;
+        }
+
+        .footer {
+          background: #07090f;
+          color: #ffffff;
+          text-align: center;
+          padding: 32px;
+          font-size: 14px;
+          border-top: 1px solid #10161d;
+        }
+
+        .footer-social a {
+          display: inline-block;
+          margin: 0 8px;
+          color: #ffffff;
+          text-decoration: none;
+          font-size: 20px;
+        }
+
+        .footer-payments span {
+          display: inline-block;
+          background: #374151;
+          color: #ffffff;
+          padding: 6px 12px;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 600;
+          margin: 4px;
+        }
+      }
+
+      /* Tech theme override */
+      body {
+        background: #111827;
+        color: #e5e7eb;
+      }
+
+      .container {
+        border-radius: 16px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+        background: #0f172a;
+      }
+
+      .header {
+        background: radial-gradient(120% 120% at 100% 0%, #1b2a4a 0%, #0f172a 55%, #0b1020 100%);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .header-text {
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+      }
+
+      .content {
+        background: linear-gradient(180deg, #0f172a 0%, #0b1222 100%);
+      }
+
+      .content h1 {
+        color: #60a5fa;
+      }
+
+      .content p {
+        color: #cbd5f5;
+      }
+
+      .content p strong {
+        color: #f8fafc;
+      }
+
+      .btn {
+        background: linear-gradient(135deg, #2563eb, #3b82f6);
+        border-radius: 10px;
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
+      }
+
+      .btn:hover {
+        background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      } /* Footer (front palette) */
+      .footer {
+        background: #111827;
+        color: #ffffff;
+        text-align: center;
+        padding: 32px;
+        font-size: 14px;
+        border-top: 1px solid #1f2937;
+      }
+
+      .footer-social {
+        margin-bottom: 16px;
+      }
+
+      .footer-social a {
+        display: inline-block;
+        margin: 0 8px;
+        color: #ffffff;
+        text-decoration: none;
+        font-size: 20px;
+      }
+
+      .footer p {
+        margin: 8px 0;
+        color: #9ca3af;
+      }
+
+      .footer a {
+        color: #ffffff;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .footer-payments {
+        margin-top: 16px;
+      }
+
+      .footer-payments span {
+        display: inline-block;
+        background: #374151;
+        color: #ffffff;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        margin: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td align="left" valign="middle" class="header-text">WorldAssemblyTechnology</td>
+            <td align="right" valign="middle">
+              <img
+                src="https://res.cloudinary.com/dub48rf0p/image/upload/v1770006657/WorldAsseblyTechnologyPNGEmail_b6bsll.png"
+                alt="Logo"
+                style="
+                  border-radius: 8px;
+                  filter: drop-shadow(0 0 12px rgba(0, 102, 255, 0.6)) drop-shadow(0 0 25px rgba(0, 102, 255, 0.4))
+                    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+                "
+              />
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="content">
+        <div class="stars-display">… … … … …</div>
+        <h1>¿Qué te pareció tu compra?</h1>
+
+        <p>Hola <strong>{{userName}}</strong>,</p>
+        <p>Esperamos que estés disfrutando tus productos de la orden <span class="order-id">#{{orderNumber}}</span>.</p>
+
+        <div class="intro-text">
+          <p>Tu opinión nos ayuda a mejorar y ayuda a otros compradores a decidir</p>
+        </div>
+
+        <!-- Products to review -->
+        <div class="product-review-list">
+          {{#each products}}
+          <div class="product-review-item">
+            {{#if productImage}}
+            <img src="{{productImage}}" alt="{{productName}}" />
+            {{else}}
+            <img src="https://via.placeholder.com/80x80?text=Producto" alt="{{productName}}" />
+            {{/if}}
+            <div class="product-review-info">
+              <h4>{{productName}}</h4>
+              <div class="stars">† † † † †</div>
+              <a href="{{reviewUrl}}" class="btn-review">Dejar opinión</a>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+
+        <!-- Benefits -->
+        <div class="benefits-card">
+          <h3>¿Por qué dejar una opinión?</h3>
+          <ul>
+            <li>Ayudás a otros compradores a elegir mejor</li>
+            <li>Nos ayudás a mejorar nuestros productos</li>
+            <li>Tu voz es importante para nosotros</li>
+          </ul>
+        </div>
+
+        <a href="{{reviewUrl}}" class="btn-main">Dejar mi opinión</a>
+
+        <p>¡Gracias por confiar en <strong>WorldAssemblyTechnology</strong>!</p>
+      </div>
+
+      <!-- Footer oscuro estilo tech -->
+      <div class="footer">
+        <div class="footer-social">
+          <p style="color: #9ca3af; margin-bottom: 12px">Seguinos en nuestras redes:</p>
+          <a href="https://web.whatsapp.com" target="_blank" rel="noopener noreferrer">
+            <img src="https://cdn-icons-png.flaticon.com/128/3670/3670051.png" alt="WhatsApp" width="28" height="28" />
+          </a>
+          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer">
+            <img
+              src="https://cdn-icons-png.flaticon.com/128/15707/15707749.png"
+              alt="Instagram"
+              width="28"
+              height="28"
+            />
+          </a>
+          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">
+            <img
+              src="https://cdn-icons-png.flaticon.com/128/15047/15047435.png"
+              alt="Facebook"
+              width="28"
+              height="28"
+            />
+          </a>
+        </div>
+        <p style="color: #ffffff; font-size: 13px">
+          Copyright © 2025 <strong>WorldAssemblyTechnology</strong>. Todos los derechos reservados.
+        </p>
+        <p style="margin-top: 12px">
+          <a href="https://frontend-rootscoop.vercel.app">Visitar sitio web</a> ·
+          <a href="https://frontend-rootscoop.vercel.app/contacto">Contacto</a>
+        </p>
+        <div class="footer-payments">
+          <span>VISA</span>
+          <span>MC</span>
+          <span>MP</span>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -3,7 +3,7 @@ import { MailService } from './mail.service';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bull';
 import { MailProcessor } from './mail.processor';
-import { MailQueueService } from './mail-queue.service';
+import { MailQueueService } from './mail-queue_email.service';
 
 @Module({
   imports: [

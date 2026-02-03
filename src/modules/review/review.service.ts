@@ -21,9 +21,6 @@ export class ReviewService {
     private readonly dataSource: DataSource,
   ) {}
 
-  // ============ FUNCIONES DE MAPEO (Punto 3) ============
-
-  // Mapea una Review a respuesta PÚBLICA (sin isVisible)
   private toPublicResponse(review: Review): IReviewResponsePublic {
     return {
       id: review.id,
@@ -45,7 +42,6 @@ export class ReviewService {
     };
   }
 
-  // Mapea una Review a respuesta ADMIN (con isVisible)
   private toAdminResponse(review: Review): IReviewResponseAdmin {
     return {
       id: review.id,
@@ -70,8 +66,6 @@ export class ReviewService {
     };
   }
 
-  // ============ MÉTODOS DEL SERVICIO ============
-
   async create(dto: CreateReviewDto, userId: string): Promise<IReviewResponsePublic> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -80,7 +74,7 @@ export class ReviewService {
     try {
       const user = await this.usersRepo.findOne({ where: { id: userId } });
       if (!user) {
-        throw new NotFoundException(`El usuario con el ID '${userId}' no fue encontrado`);
+        throw new NotFoundException(`User with ID '${userId}' was not found`);
       }
 
       const ProductReview = await queryRunner.manager.findOne(Product, {
@@ -88,7 +82,7 @@ export class ReviewService {
       });
 
       if (!ProductReview) {
-        throw new BadRequestException(`El producto no con el ID '${dto.productId}' no fue encontrado`);
+        throw new BadRequestException(`Product with ID '${dto.productId}' was not found`);
       }
 
       const existingReview = await queryRunner.manager.findOne(Review, {
@@ -96,7 +90,7 @@ export class ReviewService {
       });
 
       if (existingReview) {
-        throw new BadRequestException('Ya dejaste un review para este producto');
+        throw new BadRequestException('You already submitted a review for this product');
       }
 
       const reviewData: Partial<Review> = {
@@ -119,11 +113,9 @@ export class ReviewService {
     }
   }
 
-  // GET /review - Solo ADMIN (devuelve isVisible)
   async findAll(searchQuery: ReviewSearchQueryDto): Promise<IPaginatedResult<Review>> {
     const { rating, productId, userName, ...pagination } = searchQuery;
 
-    // 🟢 Sin filtros → paginate directo
     if (!rating && !productId && !userName) {
       return await paginate(this.reviewRepo, pagination, {
         relations: ['user', 'product'],
@@ -131,7 +123,6 @@ export class ReviewService {
       });
     }
 
-    // 🟡 Con filtros → QueryBuilder
     const queryBuilder = this.reviewRepo.createQueryBuilder('review');
 
     queryBuilder.leftJoinAndSelect('review.user', 'user').leftJoinAndSelect('review.product', 'product').where('1 = 1');
@@ -171,12 +162,11 @@ export class ReviewService {
       relations: ['user', 'product'],
     });
     if (!review) {
-      throw new NotFoundException(`La Reseña con este '${id}' no fue encontrada`);
+      throw new NotFoundException(`Review with id '${id}' was not found`);
     }
     return this.toPublicResponse(review);
   }
 
-  // GET /review/product/:productId - Solo ADMIN (devuelve isVisible)
   async findByProduct(productId: string): Promise<IReviewResponseAdmin[]> {
     const reviews = await this.reviewRepo.find({
       where: { product: { id: productId } },
@@ -193,17 +183,16 @@ export class ReviewService {
     });
 
     if (!review) {
-      throw new NotFoundException(`Review con id ${id} no encontrada`);
+      throw new NotFoundException(`Review with id ${id} not found`);
     }
 
     if (review.user.id !== userId) {
-      throw new BadRequestException('No puedes eliminar reviews de otros usuarios');
+      throw new BadRequestException('You cannot delete reviews from other users');
     }
 
     await this.reviewRepo.delete(id);
   }
 
-  // GET /review/product/:productId/public - PÚBLICO (sin isVisible, solo visibles)
   async findByProductPublic(productId: string): Promise<IReviewResponsePublic[]> {
     const reviews = await this.reviewRepo.find({
       where: {
@@ -232,18 +221,17 @@ export class ReviewService {
       return {
         canReview: false,
         hasReviewed: true,
-        message: 'Ya has dejado una reseña para este producto',
+        message: 'You have already left a review for this product',
       };
     }
 
     return {
       canReview: true,
       hasReviewed: false,
-      message: 'Puedes dejar una reseña para este producto',
+      message: 'You can leave a review for this product',
     };
   }
 
-  // Método para que el admin cambie la visibilidad
   async toggleVisibility(id: string): Promise<IReviewResponseAdmin> {
     const review = await this.reviewRepo.findOne({
       where: { id },
@@ -251,7 +239,7 @@ export class ReviewService {
     });
 
     if (!review) {
-      throw new NotFoundException(`Review con id ${id} no encontrada`);
+      throw new NotFoundException(`Review with id ${id} not found`);
     }
 
     review.isVisible = !review.isVisible;

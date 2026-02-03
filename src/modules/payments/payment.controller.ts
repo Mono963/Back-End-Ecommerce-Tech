@@ -88,12 +88,9 @@ export class PaymentsController {
     @Query('type') queryType?: string,
     @Query('id') queryId?: string,
   ): Promise<{ status: string }> {
-    // MercadoPago puede enviar datos en body o en query params
-    // El ID puede venir en diferentes lugares según el tipo de notificación
     const bodyData = body?.data as { id?: string } | undefined;
     const resourceId = bodyData?.id || (body?.id as string) || queryDataId || queryId || '';
 
-    // Construir notificación unificada
     const notification: IWebhookNotificationInterface = {
       type: (body?.type as string) || queryType || '',
       data: {

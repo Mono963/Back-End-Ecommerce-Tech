@@ -11,6 +11,7 @@ import { UserMapper } from '../users/mappers/user.mapper';
 import { AuthValidations } from './validate/auth.validate';
 import { Role } from '../roles/entities/role.entity';
 import { ICreateUser, IUserResponse } from '../users/interfaces/user.interface';
+import { MailQueueService } from '../mail/mail-queue_email.service';
 
 @Injectable()
 export class AuthsService {
@@ -25,6 +26,7 @@ export class AuthsService {
     @InjectRepository(Role)
     private readonly roleRepository: Repository<Role>,
     private readonly configService: ConfigService,
+    private readonly mailQueue: MailQueueService,
   ) {}
 
   async singin(email: string, password: string): Promise<AuthResponse> {
@@ -36,13 +38,15 @@ export class AuthsService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Credenciales inválidas');
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     AuthValidations.validateUserHasPassword(user);
     await AuthValidations.validatePassword(password, user.password);
 
-    this.logger.log(`Usuario ${email} ha iniciado sesión exitosamente`);
+    this.logger.log(`User ${email} signed in successfully`);
+
+    void this.mailQueue.queueLoginNotification(user.email, user.name);
 
     return this.generateAuthResponse(user);
   }
@@ -72,7 +76,7 @@ export class AuthsService {
       if (!clientRole) {
         clientRole = await this.roleRepository.save({
           name: 'CLIENT',
-          description: 'Cliente que reserva propiedades',
+          description: 'Client who books properties',
           permissions: {
             bookings: ['create', 'read'],
             reviews: ['create', 'read'],
@@ -90,7 +94,11 @@ export class AuthsService {
 
       const savedUser = await this.usersRepository.save(newUser);
 
-      this.logger.log(`Usuario registrado exitosamente: ${savedUser.email}`);
+      this.logger.log(`User registered successfully: ${savedUser.email}`);
+
+      if (savedUser) {
+        void this.mailQueue.queueWelcomeEmail(savedUser.email, savedUser.name);
+      }
 
       return UserMapper.toResponse(savedUser);
     } catch (error) {
@@ -117,9 +125,9 @@ export class AuthsService {
     }
 
     if (isNewUser) {
-      this.logger.log(`Nuevo usuario creado via Google OAuth: ${googleUser.email}`);
+      this.logger.log(`New user created via Google OAuth: ${googleUser.email}`);
     } else {
-      this.logger.log(`Usuario existente autenticado via Google OAuth: ${googleUser.email}`);
+      this.logger.log(`Existing user authenticated via Google OAuth: ${googleUser.email}`);
     }
 
     return this.generateAuthResponse(authenticatedUser);
@@ -136,7 +144,7 @@ export class AuthsService {
     if (!clientRole) {
       clientRole = await this.roleRepository.save({
         name: 'CLIENT',
-        description: 'Cliente que reserva propiedades',
+        description: 'Client who books properties',
         permissions: {
           bookings: ['create', 'read'],
           reviews: ['create', 'read'],
@@ -151,12 +159,12 @@ export class AuthsService {
       username,
       password: randomPassword,
       phone: '+10000000000',
-      role: clientRole, // ✅ Asignar rol
+      role: clientRole,
     });
 
     const savedUser = await this.usersRepository.save(createdUser);
 
-    this.logger.log(`Usuario creado via Google OAuth: ${googleUser.email}`);
+    this.logger.log(`User created via Google OAuth: ${googleUser.email}`);
 
     return savedUser;
   }
@@ -166,7 +174,7 @@ export class AuthsService {
       sub: entity.id,
       email: entity.email,
       name: entity.name,
-      role: entity.role?.name || 'CLIENT', // ✅ ROL desde la entidad
+      role: entity.role?.name || 'CLIENT',
       permissions: entity.role?.permissions || {},
     };
 
@@ -193,52 +201,41 @@ export class AuthsService {
     }
   }
 
-  /**
-   * Genera un código de autorización temporal para el flujo OAuth seguro.
-   * El código expira en 30 segundos y solo puede usarse una vez.
-   */
   generateAuthCode(userId: string, accessToken: string): string {
     const code = randomUUID();
-    const expiresAt = Date.now() + 30000; // 30 segundos
+    const expiresAt = Date.now() + 30000;
 
     this.authCodes.set(code, {
       token: accessToken,
       userId,
       expiresAt,
     });
-
-    // Limpiar código expirado automáticamente
     setTimeout(() => {
       this.authCodes.delete(code);
     }, 30000);
 
-    this.logger.log(`Código de autorización generado para usuario: ${userId}`);
+    this.logger.log(`Authorization code generated for user: ${userId}`);
 
     return code;
   }
 
-  /**
-   * Intercambia un código de autorización por el token de acceso.
-   * El código solo puede usarse una vez y debe estar dentro del tiempo de expiración.
-   */
   exchangeAuthCode(code: string): { accessToken: string; userId: string } {
     const data = this.authCodes.get(code);
 
     if (!data) {
-      this.logger.warn(`Intento de intercambio con código inválido: ${code}`);
-      throw new UnauthorizedException('Código de autorización inválido');
+      this.logger.warn(`Exchange attempt with invalid code: ${code}`);
+      throw new UnauthorizedException('Invalid authorization code');
     }
 
     if (Date.now() > data.expiresAt) {
       this.authCodes.delete(code);
-      this.logger.warn(`Intento de intercambio con código expirado: ${code}`);
-      throw new UnauthorizedException('Código de autorización expirado');
+      this.logger.warn(`Exchange attempt with expired code: ${code}`);
+      throw new UnauthorizedException('Authorization code expired');
     }
 
-    // Eliminar código después de usarlo (un solo uso)
     this.authCodes.delete(code);
 
-    this.logger.log(`Código intercambiado exitosamente para usuario: ${data.userId}`);
+    this.logger.log(`Authorization code exchanged successfully for user: ${data.userId}`);
 
     return {
       accessToken: data.token,

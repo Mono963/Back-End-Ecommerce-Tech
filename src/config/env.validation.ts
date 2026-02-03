@@ -5,7 +5,6 @@ class EnvironmentVariables {
   @IsString() DB_HOST: string;
   @IsString() DB_NAME: string;
   @IsString() SUPABASE_JWT_SECRET: string;
-  // ... más validaciones
 }
 
 export function validate(config: Record<string, unknown>): EnvironmentVariables {

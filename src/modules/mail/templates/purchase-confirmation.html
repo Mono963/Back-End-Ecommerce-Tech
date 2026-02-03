@@ -1,207 +1,526 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>¡Gracias por tu compra!</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>¡Gracias por tu compra!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <!-- Fuentes -->
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: #ffffff;
-      font-family: 'Montserrat', sans-serif;
-      color: #333333;
-    }
+    <style>
+      body {
+        margin: 0;
+        padding: 30px 10px;
+        background-color: #ffffff;
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        color: #333333;
+        line-height: 1.6;
+      }
 
-    .container {
-      max-width: 600px;
-      margin: 30px auto;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+      }
 
+      .header {
+        background: #111827;
+        padding: 24px 32px;
+      }
 
-  .header {
-      background-color: #f5f5f5;
-      padding: 15px 20px;
-    }
-
-   .header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 600px;
-  margin: 0 auto;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.header img {
-  max-width: 160px;
-  height: auto;
-  display: block;
-  margin: 0;
-}
-
-    .content {
-      padding: 30px 20px;
-      background-color: #ffffff;
-    }
-
-    .content h1 {
-      font-family: 'Montserrat', sans-serif;
-      font-size: 26px;
-      color: #017d74;
-      margin-bottom: 15px;
-    }
-
-    .content p {
-      margin: 10px 0;
-      font-weight: 500;
-      line-height: 1.6;
-    }
-
-    .btn {
-      display: inline-block;
-      margin-top: 20px;
-      background-color: #922f4e;
-      color: #fff !important;
-      padding: 12px 24px;
-      border-radius: 6px;
-      text-decoration: none !important;
-      font-weight: 600;
-    }
-
-    .footer {
-      background-color: #f1f1f1;
-      color: #333;
-      text-align: center;
-      padding: 20px;
-      font-size: 14px;
-    }
-
-    .footer a {
-      color: #922f4e;
-      text-decoration: underline;
-      font-weight: 500;
-    }
-
-    .social-container {
-      background-color: #f5f5f5;
-      text-align: center;
-      padding: 30px 20px 40px;
-    }
-
-    .social-container p {
-      margin-bottom: 15px;
-      font-weight: 600;
-      color: #642d91;
-    }
-
-    .social-icons {
-      display: inline-flex;
-      justify-content: center;
-      align-items: center;
-      gap: 50px;
-    }
-
-    .social-icon {
-      background-color: #ffffff;
-      padding: 10px;
-      border-radius: 50%;
-      display: inline-block;
-    }
-
-    .social-icon img {
-      width: 28px;
-      height: 28px;
-      display: block;
-    }
-
-    @media screen and (max-width: 600px) {
       .header table {
-        flex-direction: column;
-        text-align: center;
+        width: 100%;
+      }
+
+      .header-text {
+        color: #ffffff;
+        font-family: 'Inter', sans-serif;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
       }
 
       .header img {
-        max-width: 140px;
-        margin: 10px auto;
+        max-width: 120px;
+        height: auto;
+        display: block;
       }
 
       .content {
-        padding: 20px;
+        padding: 40px 32px;
+        background-color: #ffffff;
       }
 
       .content h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #4caf50;
+        margin: 0 0 24px 0;
+        text-align: center;
+      }
+
+      .content p {
+        margin: 16px 0;
+        font-size: 16px;
+        font-weight: 400;
+        color: #333333;
+      }
+
+      .content p strong {
+        color: #1a1a2e;
+        font-weight: 600;
+      }
+
+      .order-number {
+        text-align: center;
+        background: #f0f9ff;
+        border: 2px solid #0066ff;
+        border-radius: 8px;
+        padding: 16px;
+        margin: 24px 0;
+      }
+
+      .order-number span {
+        display: block;
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 4px;
+      }
+
+      .order-number strong {
+        font-family: 'Courier New', monospace;
         font-size: 24px;
+        color: #0066ff;
       }
 
-      .social-icons {
-        gap: 20px;
+      .alert-success {
+        background: #e8f5e9;
+        border-left: 4px solid #4caf50;
+        padding: 16px 20px;
+        border-radius: 0 8px 8px 0;
+        margin: 24px 0;
       }
 
-      .social-icon img {
-        width: 24px;
-        height: 24px;
+      .alert-success p {
+        margin: 0;
+        color: #2e7d32;
       }
-    }
-  </style>
-</head>
-<body>
- <div class="container">
-    <!-- Encabezado institucional -->
-    <div class="header">
-  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto;">
-  <tr>
-    <!-- Texto a la izquierda -->
-    <td align="left" style="padding: 15px; font-family: 'Unica One', Arial, sans-serif; font-size: 22px; color: #4d206c; letter-spacing: 1px;">
-  ROOTS COOPERATIVA
-</td>
 
+      .product-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 24px 0;
+      }
 
-    <!-- Logo a la derecha -->
-    <td align="right" style="padding: 15px;">
-      <img src="https://res.cloudinary.com/djzcrrbfb/image/upload/v1753703082/sol_sf2bpt.png" alt="Logo ROOTS COOPERATIVA" style="max-width: 160px; height: auto; display: block;" />
-    </td>
-  </tr>
-</table>
+      .product-table th {
+        background: #1a1a2e;
+        color: #ffffff;
+        padding: 12px;
+        text-align: left;
+        font-size: 14px;
+        font-weight: 600;
+      }
 
-    <!-- Contenido -->
-    <div class="content">
-      <h1>¡Gracias por tu compra!</h1>
-      <p>Tu pago ha sido procesado correctamente.</p>
-      <p>En breve recibirás otro correo con los detalles de la compra.</p>
-      <p>Podés ver más información o contactarnos si necesitás asistencia.</p>
-      <p>¡Gracias por apoyar a <strong>{{appName}}</strong>!</p>
-      <a href="https://frontend-rootscoop.vercel.app" class="btn">Volver al sitio</a>
-    </div>
+      .product-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e8e8e8;
+        font-size: 14px;
+      }
 
-    <!-- Redes sociales -->
-    <div class="social-container">
-      <p>Seguinos en nuestras redes:</p>
-      <div class="social-icons">
-        <a href="https://wa.link/b4wyji" target="_blank" class="social-icon">
-          <img src="https://cdn-icons-png.flaticon.com/512/124/124034.png" alt="WhatsApp" />
-        </a>
-        <a href="https://www.instagram.com/roots_cooperativa?igsh=MWx3OTI3NjZidDJ3dg==" target="_blank" class="social-icon">
-          <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" />
-        </a>
-        <a href="http://www.youtube.com/@rootscooperativa561" target="_blank" class="social-icon">
-          <img src="https://cdn-icons-png.flaticon.com/512/1384/1384060.png" alt="YouTube" />
-        </a>
+      .product-table .price {
+        font-family: 'Courier New', monospace;
+        font-weight: 600;
+        color: #0066ff;
+      }
+
+      .summary-table {
+        width: 100%;
+        margin-top: 16px;
+      }
+
+      .summary-table td {
+        padding: 8px 12px;
+        font-size: 14px;
+      }
+
+      .summary-table .label {
+        color: #666;
+      }
+
+      .summary-table .value {
+        text-align: right;
+        font-family: 'Courier New', monospace;
+      }
+
+      .summary-table .total-row td {
+        border-top: 2px solid #1a1a2e;
+        font-weight: 700;
+        font-size: 18px;
+        padding-top: 12px;
+      }
+
+      .summary-table .total-row .value {
+        color: #4caf50;
+      }
+
+      .info-card {
+        background: #f5f5f5;
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin: 24px 0;
+      }
+
+      .info-card h3 {
+        margin: 0 0 12px 0;
+        font-size: 14px;
+        color: #1a1a2e;
+        font-weight: 600;
+      }
+
+      .info-card p {
+        margin: 6px 0;
+        font-size: 14px;
+        color: #555;
+      }
+
+      .two-columns {
+        display: flex;
+        gap: 16px;
+        margin: 24px 0;
+      }
+
+      .two-columns .info-card {
+        flex: 1;
+        margin: 0;
+      }
+
+      .btn {
+        display: inline-block;
+        margin: 24px 0;
+        background: #0066ff;
+        color: #ffffff !important;
+        padding: 14px 32px;
+        border-radius: 8px;
+        text-decoration: none !important;
+        font-weight: 600;
+        font-size: 16px;
+        box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);
+      }
+
+      .text-center {
+        text-align: center;
+      }
+
+      @media screen and (max-width: 600px) {
+        .header {
+          padding: 20px 16px;
+        }
+
+        .header-text {
+          font-size: 16px;
+        }
+
+        .header img {
+          max-width: 80px;
+        }
+
+        .content {
+          padding: 32px 20px;
+        }
+
+        .content h1 {
+          font-size: 24px;
+        }
+
+        .order-number strong {
+          font-size: 20px;
+        }
+
+        .product-table th,
+        .product-table td {
+          padding: 8px;
+          font-size: 13px;
+        }
+
+        .two-columns {
+          flex-direction: column;
+        }
+
+        .btn {
+          padding: 12px 24px;
+          font-size: 15px;
+        }
+
+        .footer {
+          background: #07090f;
+          color: #ffffff;
+          text-align: center;
+          padding: 32px;
+          font-size: 14px;
+          border-top: 1px solid #10161d;
+        }
+
+        .footer-social a {
+          display: inline-block;
+          margin: 0 8px;
+          color: #ffffff;
+          text-decoration: none;
+          font-size: 20px;
+        }
+
+        .footer-payments span {
+          display: inline-block;
+          background: #374151;
+          color: #ffffff;
+          padding: 6px 12px;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 600;
+          margin: 4px;
+        }
+      }
+
+      /* Tech theme override */
+      body {
+        background: #111827;
+        color: #e5e7eb;
+      }
+
+      .container {
+        border-radius: 16px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+        background: #0f172a;
+      }
+
+      .header {
+        background: radial-gradient(120% 120% at 100% 0%, #1b2a4a 0%, #0f172a 55%, #0b1020 100%);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .header-text {
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+      }
+
+      .content {
+        background: linear-gradient(180deg, #0f172a 0%, #0b1222 100%);
+      }
+
+      .content h1 {
+        color: #60a5fa;
+      }
+
+      .content p {
+        color: #cbd5f5;
+      }
+
+      .content p strong {
+        color: #f8fafc;
+      }
+
+      .btn {
+        background: linear-gradient(135deg, #2563eb, #3b82f6);
+        border-radius: 10px;
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
+      }
+
+      .btn:hover {
+        background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      } /* Footer (front palette) */
+      .footer {
+        background: #111827;
+        color: #ffffff;
+        text-align: center;
+        padding: 32px;
+        font-size: 14px;
+        border-top: 1px solid #1f2937;
+      }
+
+      .footer-social {
+        margin-bottom: 16px;
+      }
+
+      .footer-social a {
+        display: inline-block;
+        margin: 0 8px;
+        color: #ffffff;
+        text-decoration: none;
+        font-size: 20px;
+      }
+
+      .footer p {
+        margin: 8px 0;
+        color: #9ca3af;
+      }
+
+      .footer a {
+        color: #ffffff;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .footer-payments {
+        margin-top: 16px;
+      }
+
+      .footer-payments span {
+        display: inline-block;
+        background: #374151;
+        color: #ffffff;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        margin: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td align="left" valign="middle" class="header-text">WorldAssemblyTechnology</td>
+            <td align="right" valign="middle">
+              <img
+                src="https://res.cloudinary.com/dub48rf0p/image/upload/v1770006657/WorldAsseblyTechnologyPNGEmail_b6bsll.png"
+                alt="Logo"
+                style="
+                  border-radius: 8px;
+                  filter: drop-shadow(0 0 12px rgba(0, 102, 255, 0.6)) drop-shadow(0 0 25px rgba(0, 102, 255, 0.4))
+                    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+                "
+              />
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="content">
+        <h1>¡Compra Confirmada!</h1>
+
+        <div class="alert-success">
+          <p>Tu pago ha sido procesado correctamente. ¡Gracias por tu compra!</p>
+        </div>
+
+        <p>Hola <strong>{{userName}}</strong>,</p>
+        <p>Te confirmamos que recibimos tu pedido y ya estamos trabajando para prepararlo.</p>
+
+        <!-- Número de orden destacado -->
+        <div class="order-number">
+          <span>Número de Orden</span>
+          <strong>#{{orderNumber}}</strong>
+        </div>
+
+        <!-- Productos -->
+        <table class="product-table">
+          <thead>
+            <tr>
+              <th>Cant.</th>
+              <th>Producto</th>
+              <th>Precio</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each products}}
+            <tr>
+              <td>{{quantity}}</td>
+              <td>{{name}}</td>
+              <td class="price">${{price}}</td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+
+        <!-- Resumen de costos -->
+        <table class="summary-table">
+          <tr>
+            <td class="label">Subtotal</td>
+            <td class="value">${{subtotal}}</td>
+          </tr>
+          <tr>
+            <td class="label">Envío</td>
+            <td class="value">{{#if shipping}}${{shipping}}{{else}}Gratis{{/if}}</td>
+          </tr>
+          {{#if tax}}
+          <tr>
+            <td class="label">Impuestos</td>
+            <td class="value">${{tax}}</td>
+          </tr>
+          {{/if}}
+          <tr class="total-row">
+            <td class="label">Total Pagado</td>
+            <td class="value">${{total}}</td>
+          </tr>
+        </table>
+
+        <!-- Dos columnas: Dirección y Pago -->
+        <div class="two-columns">
+          <div class="info-card">
+            <h3>Enviamos a</h3>
+            <p><strong>{{shippingAddress.street}}</strong></p>
+            <p>{{shippingAddress.city}}, {{shippingAddress.province}}</p>
+            <p>CP: {{shippingAddress.postalCode}}</p>
+          </div>
+          <div class="info-card">
+            <h3>³ Pagaste con</h3>
+            <p><strong>{{paymentMethod}}</strong></p>
+            <p>Fecha: {{orderDate}}</p>
+          </div>
+        </div>
+
+        <p>Te enviaremos un email cuando tu pedido sea despachado con el número de seguimiento.</p>
+
+        <div class="text-center">
+          <a href="https://frontend-rootscoop.vercel.app/mis-pedidos" class="btn">Ver mis pedidos</a>
+        </div>
+
+        <p>¡Gracias por confiar en <strong>WorldAssemblyTechnology</strong>!</p>
+      </div>
+
+      <!-- Footer oscuro estilo tech -->
+      <div class="footer">
+        <div class="footer-social">
+          <p style="color: #9ca3af; margin-bottom: 12px">Seguinos en nuestras redes:</p>
+          <a href="https://web.whatsapp.com" target="_blank" rel="noopener noreferrer">
+            <img src="https://cdn-icons-png.flaticon.com/128/3670/3670051.png" alt="WhatsApp" width="28" height="28" />
+          </a>
+          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer">
+            <img
+              src="https://cdn-icons-png.flaticon.com/128/15707/15707749.png"
+              alt="Instagram"
+              width="28"
+              height="28"
+            />
+          </a>
+          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">
+            <img
+              src="https://cdn-icons-png.flaticon.com/128/15047/15047435.png"
+              alt="Facebook"
+              width="28"
+              height="28"
+            />
+          </a>
+        </div>
+        <p style="color: #ffffff; font-size: 13px">
+          Copyright © 2025 <strong>WorldAssemblyTechnology</strong>. Todos los derechos reservados.
+        </p>
+        <p style="margin-top: 12px">
+          <a href="https://frontend-rootscoop.vercel.app">Visitar sitio web</a> ·
+          <a href="https://frontend-rootscoop.vercel.app/contacto">Contacto</a>
+        </p>
+        <div class="footer-payments">
+          <span>VISA</span>
+          <span>MC</span>
+          <span>MP</span>
+        </div>
       </div>
     </div>
-
-    <!-- Footer -->
-    <div class="footer">
-      <p>Este correo fue enviado por <strong>{{appName}}</strong>.</p>
-      <p><a href="https://frontend-rootscoop.vercel.app">Visita nuestro sitio web</a></p>
-    </div>
-  </div>
-</body>
+  </body>
 </html>

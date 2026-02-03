@@ -22,7 +22,7 @@ export class WishlistService {
   ) {}
 
   /**
-   * Obtener o crear wishlist del usuario
+   * Get or create user wishlist
    */
   private async getOrCreateWishlist(userId: string): Promise<Wishlist> {
     let wishlist = await this.wishlistRepo.findOne({
@@ -33,14 +33,14 @@ export class WishlistService {
     if (!wishlist) {
       wishlist = this.wishlistRepo.create({ user_id: userId });
       wishlist = await this.wishlistRepo.save(wishlist);
-      this.logger.log(`Wishlist creada para usuario ${userId}`);
+      this.logger.log(`Wishlist created for user ${userId}`);
     }
 
     return wishlist;
   }
 
   /**
-   * Obtener wishlist completa del usuario
+   * Get full user wishlist
    */
   async getWishlist(userId: string): Promise<WishlistResponseDto> {
     const wishlist = await this.getOrCreateWishlist(userId);
@@ -49,7 +49,7 @@ export class WishlistService {
   }
 
   /**
-   * Obtener resumen de wishlist (para navbar)
+   * Get wishlist summary (for navbar)
    */
   async getWishlistSummary(userId: string): Promise<WishlistSummaryDto> {
     const wishlist = await this.wishlistRepo.findOne({
@@ -63,23 +63,23 @@ export class WishlistService {
   }
 
   /**
-   * Agregar producto a wishlist
+   * Add product to wishlist
    */
   async addToWishlist(userId: string, productId: string): Promise<WishlistItemResponseDto> {
-    // Verificar que el producto existe y está activo
+    // Ensure the product exists and is active
     const product = await this.productRepo.findOne({
       where: { id: productId, isActive: true },
       relations: ['category'],
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con id ${productId} no encontrado o no está activo`);
+      throw new NotFoundException(`Product with id ${productId} not found or is inactive`);
     }
 
-    // Obtener o crear wishlist
+    // Get or create wishlist
     const wishlist = await this.getOrCreateWishlist(userId);
 
-    // Verificar si el producto ya está en la wishlist
+    // Check if the product is already in the wishlist
     const existingItem = await this.wishlistItemRepo.findOne({
       where: {
         wishlist_id: wishlist.id,
@@ -88,10 +88,10 @@ export class WishlistService {
     });
 
     if (existingItem) {
-      throw new BadRequestException('Este producto ya está en tu lista de deseados');
+      throw new BadRequestException('This product is already in your wishlist');
     }
 
-    // Crear el item
+    // Create item
     const wishlistItem = this.wishlistItemRepo.create({
       wishlist_id: wishlist.id,
       product_id: productId,
@@ -99,9 +99,9 @@ export class WishlistService {
 
     const savedItem = await this.wishlistItemRepo.save(wishlistItem);
 
-    this.logger.log(`Producto ${productId} agregado a wishlist de usuario ${userId}`);
+    this.logger.log(`Product ${productId} added to user ${userId} wishlist`);
 
-    // Cargar el item completo con relaciones
+    // Load full item with relations
     const itemWithProduct = await this.wishlistItemRepo.findOne({
       where: { id: savedItem.id },
       relations: ['product', 'product.category'],
@@ -111,7 +111,7 @@ export class WishlistService {
   }
 
   /**
-   * Eliminar producto de wishlist
+   * Remove product from wishlist
    */
   async removeFromWishlist(userId: string, productId: string): Promise<void> {
     const wishlist = await this.wishlistRepo.findOne({
@@ -119,7 +119,7 @@ export class WishlistService {
     });
 
     if (!wishlist) {
-      throw new NotFoundException('Wishlist no encontrada');
+      throw new NotFoundException('Wishlist not found');
     }
 
     const item = await this.wishlistItemRepo.findOne({
@@ -130,16 +130,16 @@ export class WishlistService {
     });
 
     if (!item) {
-      throw new NotFoundException('Producto no encontrado en la wishlist');
+      throw new NotFoundException('Product not found in wishlist');
     }
 
     await this.wishlistItemRepo.remove(item);
 
-    this.logger.log(`Producto ${productId} eliminado de wishlist de usuario ${userId}`);
+    this.logger.log(`Product ${productId} removed from user ${userId} wishlist`);
   }
 
   /**
-   * Vaciar wishlist
+   * Clear wishlist
    */
   async clearWishlist(userId: string): Promise<void> {
     const wishlist = await this.wishlistRepo.findOne({
@@ -148,18 +148,18 @@ export class WishlistService {
     });
 
     if (!wishlist) {
-      throw new NotFoundException('Wishlist no encontrada');
+      throw new NotFoundException('Wishlist not found');
     }
 
     if (wishlist.items && wishlist.items.length > 0) {
       await this.wishlistItemRepo.remove(wishlist.items);
     }
 
-    this.logger.log(`Wishlist vaciada para usuario ${userId}`);
+    this.logger.log(`Wishlist cleared for user ${userId}`);
   }
 
   /**
-   * Verificar si un producto está en la wishlist
+   * Check if a product is in the wishlist
    */
   async isInWishlist(userId: string, productId: string): Promise<boolean> {
     const wishlist = await this.wishlistRepo.findOne({
@@ -181,7 +181,7 @@ export class WishlistService {
   }
 
   /**
-   * Mapear Wishlist a DTO
+   * Map wishlist to DTO
    */
   private mapWishlistToDto(wishlist: Wishlist): WishlistResponseDto {
     return {
@@ -194,7 +194,7 @@ export class WishlistService {
   }
 
   /**
-   * Mapear WishlistItem a DTO
+   * Map wishlist item to DTO
    */
   private mapWishlistItemToDto(item: WishlistItem): WishlistItemResponseDto {
     return {
