@@ -29,6 +29,7 @@ import { PaymentsService } from './payment.service';
 import { IWebhookNotificationInterface } from './interface/payment.interface';
 import { isWebhookNotification } from './validate/payment.validate';
 import { AuthRequest } from 'src/common/auths/auth-request.interface';
+import { SkipThrottle } from '@nestjs/throttler';
 
 @ApiTags('Payments')
 @Controller('payments')
@@ -74,6 +75,7 @@ export class PaymentsController {
 
   @Post('webhook')
   @HttpCode(200)
+  @SkipThrottle()
   @ApiOperation({
     summary: 'Unified webhook for all payment types (donations and orders)',
   })

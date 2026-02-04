@@ -380,7 +380,60 @@
 
       .btn:hover {
         background: linear-gradient(135deg, #1d4ed8, #2563eb);
-      } /* Footer (front palette) */
+      }
+
+      /* Adaptar cards al tema dark */
+      .order-id {
+        background: #1e293b;
+      }
+
+      .status-badge {
+        background: rgba(59, 130, 246, 0.2);
+        color: #60a5fa;
+      }
+
+      .info-card {
+        background: #1e293b;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .info-card h3 {
+        color: #f1f5f9;
+      }
+
+      .info-card p {
+        color: #cbd5e1;
+      }
+
+      .timeline-step::after {
+        background: #374151;
+      }
+
+      .timeline-dot {
+        background: #374151;
+      }
+
+      .timeline-label {
+        color: #9ca3af;
+      }
+
+      .delivery-estimate {
+        background: rgba(251, 191, 36, 0.15);
+      }
+
+      .delivery-estimate p {
+        color: #fbbf24;
+      }
+
+      .product-table td {
+        border-bottom-color: #374151;
+      }
+
+      .product-table tr[style] {
+        background: #1e293b !important;
+      }
+
+      /* Footer (front palette) */
       .footer {
         background: #111827;
         color: #ffffff;
@@ -492,7 +545,7 @@
         <!-- Fecha estimada -->
         {{#if estimatedDelivery}}
         <div class="delivery-estimate">
-          <p>… <strong>Entrega estimada:</strong> {{estimatedDelivery}}</p>
+          <p>⏰ <strong>Entrega estimada:</strong> {{estimatedDelivery}}</p>
         </div>
         {{/if}}
 
@@ -521,7 +574,7 @@
               <td class="price">${{price}}</td>
             </tr>
             {{/each}}
-            <tr style="background: #f5f5f5">
+            <tr class="total-row" style="background: #1e293b">
               <td colspan="2"><strong>Total</strong></td>
               <td class="price"><strong>${{orderTotal}}</strong></td>
             </tr>

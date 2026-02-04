@@ -358,7 +358,61 @@
 
       .btn:hover {
         background: linear-gradient(135deg, #1d4ed8, #2563eb);
-      } /* Footer (front palette) */
+      }
+
+      /* Adaptar cards al tema dark */
+      .order-id {
+        background: #1e293b;
+      }
+
+      .alert-success {
+        background: rgba(74, 222, 128, 0.15);
+      }
+
+      .alert-success p {
+        color: #4ade80;
+      }
+
+      .timeline-card {
+        background: #1e293b;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .timeline-card h3 {
+        color: #f1f5f9;
+      }
+
+      .timeline-dot.pending {
+        background: #374151;
+        color: #9ca3af;
+      }
+
+      .timeline-content h4 {
+        color: #f1f5f9;
+      }
+
+      .timeline-content p {
+        color: #9ca3af;
+      }
+
+      .details-table td {
+        border-bottom-color: #374151;
+      }
+
+      .details-table .label {
+        color: #9ca3af;
+      }
+
+      .details-table .value {
+        color: #f1f5f9;
+      }
+
+      .info-card h3,
+      .info-card p {
+        color: #fbbf24;
+      }
+
+      /* Footer (front palette) */
       .footer {
         background: #111827;
         color: #ffffff;
@@ -443,7 +497,7 @@
 
         <!-- Refund amount card -->
         <div class="refund-card">
-          <div class="icon">°</div>
+          <div class="icon">✅</div>
           <h3>Monto Reembolsado</h3>
           <div class="amount">${{refundAmount}}</div>
           {{#if refundId}}

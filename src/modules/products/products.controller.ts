@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  UseInterceptors,
   Param,
   ParseUUIDPipe,
   Post,
@@ -18,6 +19,7 @@ import {
   Sse,
   MessageEvent,
 } from '@nestjs/common';
+import { CacheInterceptor } from '@nestjs/cache-manager';
 import { ProductsService } from './products.service';
 import { AuthGuard } from '../../guards/auth.guards';
 import { RoleGuard } from '../../guards/auth.guards.role';
@@ -34,7 +36,7 @@ import {
   UpdateProductDto,
 } from './dto/products.Dto';
 import { Observable } from 'rxjs';
-import { SkipThrottle } from '@nestjs/throttler';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 
 @ApiTags('Products')
 @Controller('products')
@@ -42,6 +44,8 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Get()
+  @Throttle({ default: { limit: 300, ttl: 60000 } })
+  @UseInterceptors(CacheInterceptor)
   @ApiOperation({
     summary: 'Get paginated products with catalog filters',
     description: 'Returns a paginated list of active products with multiple combinable filters for the catalog',
@@ -121,6 +125,7 @@ export class ProductsController {
   }
 
   @Get('featured')
+  @UseInterceptors(CacheInterceptor)
   @ApiOperation({
     summary: 'Get featured products',
     description: 'Returns a list of products marked as featured',
@@ -144,6 +149,7 @@ export class ProductsController {
   }
 
   @Get('brand/:brand')
+  @UseInterceptors(CacheInterceptor)
   @ApiOperation({
     summary: 'Get products by brand',
     description: 'Returns all products from a specific brand',
@@ -164,6 +170,7 @@ export class ProductsController {
   }
 
   @Get('category/:categoryId')
+  @UseInterceptors(CacheInterceptor)
   @ApiOperation({
     summary: 'Get products by category',
     description: 'Returns all active products from a specific category',
@@ -187,8 +194,8 @@ export class ProductsController {
     return await this.productsService.getProductsByCategory(categoryId);
   }
 
-  @SkipThrottle()
   @Get('search')
+  @Throttle({ default: { limit: 600, ttl: 60000 } })
   @ApiOperation({
     summary: 'Hybrid product search',
     description: 'Instant search from 1 character. With ai=true also includes AI results.',
@@ -255,13 +262,14 @@ export class ProductsController {
     return await this.productsService.hybridSearch(query, useAi, limit);
   }
 
-  @SkipThrottle()
   @Sse('search/hybrid')
+  @Throttle({ default: { limit: 240, ttl: 60000 } })
   hybridSearch(@Query('q') query: string): Observable<MessageEvent> {
     return this.productsService.hybridSearchStream(query);
   }
 
   @Get(':id/related')
+  @UseInterceptors(CacheInterceptor)
   @ApiOperation({
     summary: 'Get related products',
     description: 'Returns related products based on category and brand',
@@ -296,6 +304,8 @@ export class ProductsController {
   }
 
   @Get(':id')
+  @Throttle({ default: { limit: 300, ttl: 60000 } })
+  @UseInterceptors(CacheInterceptor)
   @ApiOperation({
     summary: 'Get product by ID (Public)',
     description: 'Returns a specific product with all its variants - No authentication required',

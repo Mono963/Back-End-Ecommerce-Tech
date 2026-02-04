@@ -4,6 +4,7 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { RegisterDateMiddleware } from './middlewares/registerDate.middleware';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { validate } from './config/env.validation';
 import typeOrmConfig from './config/typeorm.config';
 import { DataSourceOptions } from 'typeorm';
 import { CategoriesModule } from './modules/category/category.module';
@@ -35,6 +36,7 @@ import { ContactModule } from './modules/contact/contact.module';
       isGlobal: true,
       load: [typeOrmConfig],
       envFilePath: ['.env', '.env.development', '.env.local'],
+      validate,
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
@@ -47,7 +49,11 @@ import { ContactModule } from './modules/contact/contact.module';
       },
     }),
     ThrottlerModule.forRoot(throttlerConfig),
-    CacheModule.register(cacheConfig),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      inject: [ConfigService],
+      useFactory: cacheConfig,
+    }),
     BullModule.forRoot(bullConfig),
     UsersModule,
     ProductsModule,

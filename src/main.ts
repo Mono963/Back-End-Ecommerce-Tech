@@ -58,15 +58,19 @@ async function bootstrap(): Promise<void> {
   const port = process.env.PORT ?? 3001;
   await app.listen(port, '0.0.0.0');
 
+  const redisUrl = process.env.REDIS_URL;
   const redisHost = process.env.REDIS_HOST || 'localhost';
   const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
-  const redis = new Redis({ host: redisHost, port: redisPort, maxRetriesPerRequest: 1 });
+  const redisPassword = process.env.REDIS_PASSWORD;
+  const redis = redisUrl
+    ? new Redis(redisUrl, { maxRetriesPerRequest: 1 })
+    : new Redis({ host: redisHost, port: redisPort, password: redisPassword, maxRetriesPerRequest: 1 });
 
   try {
     await redis.ping();
-    logger.log(`Redis connected on ${redisHost}:${redisPort}`);
+    logger.log(`Redis connected on ${redisUrl ?? `${redisHost}:${redisPort}`}`);
   } catch {
-    logger.warn(`Redis not available on ${redisHost}:${redisPort}`);
+    logger.warn(`Redis not available on ${redisUrl ?? `${redisHost}:${redisPort}`}`);
   } finally {
     await redis.quit();
   }

@@ -11,7 +11,9 @@ import {
   Body,
   Req,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
+import { CacheInterceptor } from '@nestjs/cache-manager';
 import { ReviewService } from './review.service';
 import { Roles, UserRole } from 'src/decorator/role.decorator';
 import { AuthGuard } from 'src/guards/auth.guards';
@@ -114,6 +116,7 @@ export class ReviewController {
   }
 
   @Get('product/:productId/public')
+  @UseInterceptors(CacheInterceptor)
   @ApiOperation({
     summary: 'Get public reviews for a product',
     description: 'Returns all visible reviews for a product (No authentication, without isVisible)',

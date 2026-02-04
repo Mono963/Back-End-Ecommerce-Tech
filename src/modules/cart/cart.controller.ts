@@ -255,10 +255,7 @@ export class CartController {
     status: 400,
     description: 'Bad request - empty cart or stock issues',
   })
-  async createOrder(
-    @Req() req: AuthRequest,
-    @Body() body: CreateOrderFromCartDto,
-  ): Promise<ResponseOrderDto> {
+  async createOrder(@Req() req: AuthRequest, @Body() body: CreateOrderFromCartDto): Promise<ResponseOrderDto> {
     return await this.cartService.createOrderFromCartCheckout(req.user.sub, body.shippingAddress);
   }
 }

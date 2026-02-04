@@ -316,7 +316,31 @@
 
       .btn:hover {
         background: linear-gradient(135deg, #1d4ed8, #2563eb);
-      } /* Footer (front palette) */
+      }
+
+      /* Adaptar cards al tema dark */
+      .order-id {
+        background: #1e293b;
+      }
+
+      .product-review-item {
+        background: #1e293b;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .product-review-item img {
+        background: #374151;
+      }
+
+      .product-review-info h4 {
+        color: #f1f5f9;
+      }
+
+      .intro-text p {
+        color: #fbbf24;
+      }
+
+      /* Footer (front palette) */
       .footer {
         background: #111827;
         color: #ffffff;
@@ -387,7 +411,7 @@
       </div>
 
       <div class="content">
-        <div class="stars-display">… … … … …</div>
+        <div class="stars-display">★ ★ ★ ★ ★</div>
         <h1>¿Qué te pareció tu compra?</h1>
 
         <p>Hola <strong>{{userName}}</strong>,</p>
@@ -408,7 +432,7 @@
             {{/if}}
             <div class="product-review-info">
               <h4>{{productName}}</h4>
-              <div class="stars">† † † † †</div>
+              <div class="stars">☆ ☆ ☆ ☆ ☆</div>
               <a href="{{reviewUrl}}" class="btn-review">Dejar opinión</a>
             </div>
           </div>

@@ -105,7 +105,7 @@ export class AuthsController {
     status: 401,
     description: 'Invalid or expired authorization code',
   })
-  @SkipThrottle()
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('exchange-code')
   exchangeCode(
     @Body('code') code: string,

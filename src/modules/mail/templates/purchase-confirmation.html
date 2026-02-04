@@ -332,7 +332,52 @@
 
       .btn:hover {
         background: linear-gradient(135deg, #1d4ed8, #2563eb);
-      } /* Footer (front palette) */
+      }
+
+      /* Adaptar cards al tema dark */
+      .order-number {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: #3b82f6;
+      }
+
+      .order-number span {
+        color: #9ca3af;
+      }
+
+      .alert-success {
+        background: rgba(74, 222, 128, 0.15);
+      }
+
+      .alert-success p {
+        color: #4ade80;
+      }
+
+      .info-card {
+        background: #1e293b;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .info-card h3 {
+        color: #f1f5f9;
+      }
+
+      .info-card p {
+        color: #cbd5e1;
+      }
+
+      .product-table td {
+        border-bottom-color: #374151;
+      }
+
+      .summary-table .label {
+        color: #9ca3af;
+      }
+
+      .summary-table .total-row td {
+        border-top-color: #374151;
+      }
+
+      /* Footer (front palette) */
       .footer {
         background: #111827;
         color: #ffffff;
@@ -469,7 +514,7 @@
             <p>CP: {{shippingAddress.postalCode}}</p>
           </div>
           <div class="info-card">
-            <h3>³ Pagaste con</h3>
+            <h3>💳 Pagaste con</h3>
             <p><strong>{{paymentMethod}}</strong></p>
             <p>Fecha: {{orderDate}}</p>
           </div>

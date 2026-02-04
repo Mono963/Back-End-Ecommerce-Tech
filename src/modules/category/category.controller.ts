@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Body, UseGuards, Param, Logger, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Param, Logger, Query, UseInterceptors } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { CacheInterceptor } from '@nestjs/cache-manager';
 
 import { CategoriesService } from './category.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -25,6 +26,7 @@ export class CategoriesController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'OK', type: PaginatedCategoryDto })
   @Get()
+  @UseInterceptors(CacheInterceptor)
   async getUsers(@Query() searchQuery: CategorySearchQueryDto): Promise<PaginatedCategoryDto> {
     const { items, ...meta } = await this.categoriesService.getCategories(searchQuery);
     return { ...meta, items: ResponseCategoryDto.toDTOList(items) };
@@ -42,6 +44,7 @@ export class CategoriesController {
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
   @ApiOperation({
     summary: 'search category by its ID',
   })

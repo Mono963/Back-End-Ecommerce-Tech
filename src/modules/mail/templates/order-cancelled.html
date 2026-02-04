@@ -318,7 +318,50 @@
 
       .btn:hover {
         background: linear-gradient(135deg, #1d4ed8, #2563eb);
-      } /* Footer (front palette) */
+      }
+
+      /* Adaptar cards al tema dark */
+      .order-id {
+        background: #1e293b;
+      }
+
+      .status-badge {
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+      }
+
+      .alert-error {
+        background: rgba(239, 68, 68, 0.15);
+      }
+
+      .alert-error p {
+        color: #f87171;
+      }
+
+      .reason-card {
+        background: #1e293b;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .reason-card h3 {
+        color: #f1f5f9;
+      }
+
+      .reason-card p {
+        color: #cbd5e1;
+      }
+
+      .product-table td {
+        border-bottom-color: #374151;
+      }
+
+      .btn-secondary {
+        background: #1e293b;
+        color: #e5e7eb !important;
+        border-color: #374151;
+      }
+
+      /* Footer (front palette) */
       .footer {
         background: #111827;
         color: #ffffff;
@@ -426,7 +469,7 @@
               <td class="price">${{price}}</td>
             </tr>
             {{/each}}
-            <tr style="background: #f5f5f5">
+            <tr style="background: #1e293b">
               <td colspan="2"><strong>Total (cancelado)</strong></td>
               <td class="price"><strong>${{orderTotal}}</strong></td>
             </tr>
