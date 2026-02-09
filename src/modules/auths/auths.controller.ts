@@ -10,7 +10,7 @@ import { AuthExceptionFilter } from './validate/auth.filter';
 import { AuthResponse } from './interface/IAuth.interface';
 import { CreateUserDto, LoginUserDto } from '../users/dtos/CreateUserDto';
 import { UserResponseDto } from '../users/dtos/user-response.dto';
-import { GoogleUserDto } from './dtos/dto.auths';
+import { GoogleUserDto } from './dtos/auth.dto';
 
 interface AuthenticatedRequest extends Request {
   user: GoogleUserDto;
@@ -74,17 +74,8 @@ export class AuthsController {
   @UseGuards(PassportAuthGuard('google'))
   @Get('google/callback')
   async googleAuthRedirect(@Req() req: AuthenticatedRequest, @Res() res: Response): Promise<void> {
-    const googleUser = req.user;
-    const frontendUrl = this.configService.get<string>('GoogleOAuth.frontendUrl');
-
-    const result = await this.authService.googleLogin(googleUser);
-
-    // Generate a temporary code instead of sending the token directly in the URL
-    const authCode = this.authService.generateAuthCode(result.user.id, result.accessToken);
-
-    // Redirect with a temporary code (30s TTL, single-use)
-    // The frontend must exchange this code for the real token via POST /auth/exchange-code
-    res.redirect(`${frontendUrl}/auth/callback?code=${authCode}`);
+    const redirectUrl = await this.authService.processGoogleCallback(req.user);
+    res.redirect(redirectUrl);
   }
 
   @ApiOperation({ summary: 'Exchange authorization code for access token' })
@@ -112,14 +103,7 @@ export class AuthsController {
     @Res({ passthrough: true }) res: Response,
   ): { userId: string; success: boolean } {
     const tokenData = this.authService.exchangeAuthCode(code);
-
-    // Set token in HttpOnly cookie (safer than localStorage)
-    res.cookie('access_token', tokenData.accessToken, {
-      httpOnly: true, // Not accessible from JavaScript
-      secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-      sameSite: 'strict', // CSRF protection
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    res.cookie('access_token', tokenData.accessToken, this.authService.getCookieOptions());
 
     return {
       userId: tokenData.userId,
@@ -135,12 +119,7 @@ export class AuthsController {
   @SkipThrottle()
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response): { success: boolean } {
-    // Clear the access cookie
-    res.clearCookie('access_token', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-    });
+    res.clearCookie('access_token', this.authService.getCookieOptions());
 
     return { success: true };
   }

@@ -22,13 +22,14 @@ import { ReviewModule } from './modules/review/review.module';
 import { WishlistModule } from './modules/wishlist/wishlist.module';
 import { N8nModule } from './modules/N8N/n8n.module';
 import { CacheModule } from '@nestjs/cache-manager';
-import { BullModule } from '@nestjs/bull';
 import { cacheConfig } from './config/cache.config';
-import { bullConfig } from './config/bull.config';
 import { PaymentsModule } from './modules/payments/payment.module';
 import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
 import { MailModule } from './modules/mail/mail.module';
 import { ContactModule } from './modules/contact/contact.module';
+import { getBullImports } from './infra/bull.bootstrap';
+import { ScheduleModule } from '@nestjs/schedule';
+import { NewsletterModule } from './modules/newsLetters/newsletter.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ContactModule } from './modules/contact/contact.module';
       envFilePath: ['.env', '.env.development', '.env.local'],
       validate,
     }),
+
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
@@ -48,13 +50,19 @@ import { ContactModule } from './modules/contact/contact.module';
         return config;
       },
     }),
+
     ThrottlerModule.forRoot(throttlerConfig),
+
     CacheModule.registerAsync({
       isGlobal: true,
       inject: [ConfigService],
       useFactory: cacheConfig,
     }),
-    BullModule.forRoot(bullConfig),
+
+    ...getBullImports(),
+
+    ScheduleModule.forRoot(),
+
     UsersModule,
     ProductsModule,
     OrdersModule,
@@ -71,6 +79,7 @@ import { ContactModule } from './modules/contact/contact.module';
     MercadoPagoModule,
     MailModule,
     ContactModule,
+    NewsletterModule,
   ],
   controllers: [AppController],
   providers: [

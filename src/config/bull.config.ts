@@ -1,34 +1,28 @@
 import { BullModuleOptions } from '@nestjs/bull';
+import { ConfigService } from '@nestjs/config';
 
-const redisUrl = process.env.REDIS_URL;
-const redisHost = process.env.REDIS_HOST || 'localhost';
-const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
-const redisPassword = process.env.REDIS_PASSWORD;
+export const getBullConfig = (configService: ConfigService): BullModuleOptions => {
+  const redisUrl = configService.get<string>('REDIS_URL');
+  const host = configService.get<string>('REDIS_HOST');
+  const port = configService.get<number>('REDIS_PORT');
+  const password = configService.get<string>('REDIS_PASSWORD');
 
-const redisConfig = redisUrl
-  ? (() => {
-      const parsed = new URL(redisUrl);
-      return {
-        host: parsed.hostname,
-        port: parsed.port ? parseInt(parsed.port, 10) : 6379,
-        password: parsed.password || undefined,
-      };
-    })()
-  : {
-      host: redisHost,
-      port: redisPort,
-      password: redisPassword,
-    };
+  const parsed = redisUrl ? new URL(redisUrl) : null;
 
-export const bullConfig: BullModuleOptions = {
-  redis: redisConfig,
-  defaultJobOptions: {
-    removeOnComplete: true,
-    removeOnFail: false,
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 1000,
+  return {
+    redis: {
+      host: parsed?.hostname ?? host,
+      port: parsed?.port ? Number(parsed.port) : (port ?? 6379),
+      password: parsed?.password ?? password,
     },
-  },
+    defaultJobOptions: {
+      removeOnComplete: true,
+      removeOnFail: false,
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 1000,
+      },
+    },
+  };
 };

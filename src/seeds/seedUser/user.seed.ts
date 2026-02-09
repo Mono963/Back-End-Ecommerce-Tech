@@ -1,5 +1,6 @@
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 import { Users } from '../../modules/users/entities/users.entity';
 import { Role } from 'src/modules/roles/entities/role.entity';
 import { Logger } from '@nestjs/common';
@@ -40,6 +41,7 @@ export async function seedSuperAdmin(dataSource: DataSource): Promise<void> {
     birthDate: new Date('1990-01-01'),
     phone: '1234567890',
     role: superAdminRole,
+    unsubscribeToken: randomBytes(32).toString('hex'),
   });
 
   await userRepository.save(superAdminUser);

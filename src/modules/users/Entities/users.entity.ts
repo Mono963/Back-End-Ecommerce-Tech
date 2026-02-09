@@ -1,6 +1,4 @@
-import { Cart } from 'src/modules/cart/entities/cart.entity';
 import { Order } from '../../orders/entities/order.entity';
-import { Role } from 'src/modules/roles/entities/role.entity';
 import {
   Column,
   CreateDateColumn,
@@ -14,9 +12,12 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Review } from 'src/modules/review/entities/review.entity';
+
 import { Address } from './address.entity';
 import { Payment } from '../../payments/entities/payment.entity';
+import { Cart } from '../../cart/entities/cart.entity';
+import { Review } from '../../review/entities/review.entity';
+import { Role } from '../../roles/entities/role.entity';
 
 @Entity({
   name: 'users',
@@ -72,4 +73,17 @@ export class Users {
 
   @OneToMany(() => Review, (review) => review.user)
   reviews: Review[];
+
+  @Column({ type: 'boolean', default: true })
+  isNewsletterSubscribed: boolean;
+
+  @Column({ type: 'varchar', length: 64, nullable: true, unique: true })
+  @Index()
+  unsubscribeToken: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  newsletterSubscribedAt: Date | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  newsletterUnsubscribedAt: Date | null;
 }

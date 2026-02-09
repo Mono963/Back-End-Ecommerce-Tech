@@ -27,18 +27,33 @@ export class Order {
   @Column({ unique: true })
   orderNumber: string;
 
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
-
   @Column({
     type: 'enum',
     enum: OrderStatus,
     default: OrderStatus.PENDING,
   })
   status: OrderStatus;
+
+  @Column({ type: 'text', nullable: true })
+  cancellationReason: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  trackingNumber: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  trackingUrl: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  carrier: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  estimatedDelivery: string | null;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 
   @Column({ name: 'user_id' })
   user_id: string;

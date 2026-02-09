@@ -37,10 +37,11 @@ export interface IOrderItem {
   createdAt: Date;
 }
 
-export interface IResponseOrder {
+export interface IOrder {
   id: string;
   orderNumber: string;
   status: OrderStatus;
+  cancellationReason?: string | null;
   createdAt: Date;
   updatedAt: Date;
   user: IUserSummary;
@@ -53,8 +54,8 @@ export interface IOrderFilters {
   endDate?: string;
   orderNumber?: string;
   userEmail?: string;
-  limit?: number;
-  page?: number;
+  limit: number;
+  page: number;
 }
 
 export interface IOrderDetailResponse {
@@ -93,4 +94,12 @@ export enum OrderStatus {
   SHIPPED = 'shipped',
   DELIVERED = 'delivered',
   CANCELLED = 'cancelled',
+}
+
+export enum OrderStatusadmin {
+  PENDING = 'pending',
+  PAID = 'paid',
+  PROCESSING = 'processing',
+  SHIPPED = 'shipped',
+  DELIVERED = 'delivered',
 }

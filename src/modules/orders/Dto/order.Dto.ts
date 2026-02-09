@@ -9,14 +9,15 @@ import {
   Length,
   IsUUID,
   IsDateString,
-  Min,
-  Max,
   IsBoolean,
+  MinLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, ApiExtraModels, getSchemaPath } from '@nestjs/swagger';
 import { OrderStatus } from '../interfaces/orders.interface';
 import { IAddress } from '../../users/interfaces/user.interface';
+import { PaginationQueryDto } from '../../../common/pagination';
+import { PaginatedResponseDto } from '../../../common/pagination/paginated-response.dto';
 
 export class ProductSnapshotDto {
   @ApiProperty({ example: 'Dell Inspiron 15' })
@@ -305,21 +306,46 @@ export class PaginationResponseDto<T> {
   };
 }
 
+export class OrdersByStatusDto {
+  @ApiProperty({ example: 5 })
+  pending: number;
+
+  @ApiProperty({ example: 3 })
+  paid: number;
+
+  @ApiProperty({ example: 10 })
+  processing: number;
+
+  @ApiProperty({ example: 8 })
+  shipped: number;
+
+  @ApiProperty({ example: 120 })
+  delivered: number;
+}
+
+export class RevenueDto {
+  @ApiProperty({ example: 254320.5 })
+  total: number;
+
+  @ApiProperty({ example: 35000.0 })
+  monthly: number;
+}
+
 export class OrderStatsDto {
   @ApiProperty({ example: 150 })
   totalOrders: number;
 
-  @ApiProperty({ example: 10 })
-  pendingOrders: number;
+  @ApiProperty({ type: OrdersByStatusDto })
+  ordersByStatus: OrdersByStatusDto;
 
-  @ApiProperty({ example: 120 })
-  processedOrders: number;
+  @ApiProperty({ type: RevenueDto })
+  revenue: RevenueDto;
 
-  @ApiProperty({ example: 254320.5 })
-  totalRevenue: number;
+  @ApiProperty({ example: '80.00%' })
+  completionRate: string;
 }
 
-export class OrderFiltersDto {
+export class OrderFiltersDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     enum: OrderStatus,
     description: 'Filter by status',
@@ -359,40 +385,15 @@ export class OrderFiltersDto {
   @IsOptional()
   @IsString()
   userEmail?: string;
-
-  @ApiPropertyOptional({
-    example: 10,
-    description: 'Result limit',
-    default: 10,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Type(() => Number)
-  @Min(1)
-  @Max(100)
-  limit?: number;
-
-  @ApiPropertyOptional({
-    example: 1,
-    description: 'Page',
-    default: 1,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Type(() => Number)
-  @Min(1)
-  page?: number;
 }
 
-export class PaginatedOrdersDto {
-  @ApiProperty({ type: [ResponseOrderDto] })
-  items: ResponseOrderDto[];
-
-  @ApiProperty({ example: 100, description: 'Total orders' })
-  total: number;
-
-  @ApiProperty({ example: 10, description: 'Total pages' })
-  pages: number;
+@ApiExtraModels(ResponseOrderDto)
+export class PaginatedOrdersDto extends PaginatedResponseDto<ResponseOrderDto> {
+  @ApiProperty({
+    type: 'array',
+    items: { $ref: getSchemaPath(ResponseOrderDto) },
+  })
+  declare items: ResponseOrderDto[];
 }
 
 export class CreateOrderFromCartDto {
@@ -406,11 +407,45 @@ export class CreateOrderFromCartDto {
   shippingAddress: ShippingAddressDto;
 }
 export class UpdateOrderStatusDto {
-  @ApiProperty({
-    enum: OrderStatus,
-    example: OrderStatus.PAID,
-    description: 'New order status',
+  @ApiPropertyOptional({
+    example: 'MP-123456789',
+    description: 'Tracking number (required when status is SHIPPED)',
   })
-  @IsEnum(OrderStatus)
-  status: OrderStatus;
+  @IsOptional()
+  @IsString()
+  trackingNumber?: string;
+
+  @ApiPropertyOptional({
+    example: 'https://tracking.correoargentino.com.ar/...',
+    description: 'URL to track the shipment',
+  })
+  @IsOptional()
+  @IsString()
+  trackingUrl?: string;
+
+  @ApiPropertyOptional({
+    example: 'Correo Argentino',
+    description: 'Shipping carrier name',
+  })
+  @IsOptional()
+  @IsString()
+  carrier?: string;
+
+  @ApiPropertyOptional({
+    example: '15/02/2026',
+    description: 'Estimated delivery date',
+  })
+  @IsOptional()
+  @IsString()
+  estimatedDelivery?: string;
+}
+
+export class CancelOrderDto {
+  @ApiProperty({
+    example: 'I made a mistake in the order',
+    description: 'Reason for order cancellation',
+  })
+  @IsString()
+  @MinLength(5)
+  cancellationReason: string;
 }

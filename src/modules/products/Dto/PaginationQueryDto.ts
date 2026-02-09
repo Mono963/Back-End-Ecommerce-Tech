@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsString, IsBoolean, Length, Min } from 'class-validator';
+import { IsNumber, IsOptional, IsString, IsBoolean, IsUUID, Length, Min } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { PaginationQueryDto } from '../../../common/pagination';
@@ -70,7 +70,7 @@ export class ProductsSearchQueryDto extends PaginationQueryDto {
     description: 'Filter by category ID (UUID)',
   })
   @IsOptional()
-  @IsString()
+  @IsUUID()
   categoryId?: string;
 
   @ApiProperty({

@@ -22,7 +22,10 @@
       "Bash(git -C \"/c/Users/Lucio/Desktop/Back-end-ecommerce\" show b8973f4:src/modules/payments/mercadopago.service.ts)",
       "Bash(git -C \"/c/Users/Lucio/Desktop/Back-end-ecommerce\" show b8973f4:src/modules/payments/listener/payment.listener.ts)",
       "Bash(ls:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(dir \"C:\\\\Users\\\\Lucio\\\\Desktop\\\\Back-end-ecommerce\\\\src\\\\modules\\\\mail\\\\templates\"\")",
+      "Bash(del:*)",
+      "Bash(npx nest build:*)"
     ],
     "deny": [],
     "ask": []

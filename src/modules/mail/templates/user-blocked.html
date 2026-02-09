@@ -187,7 +187,15 @@
 
       .btn:hover {
         background: linear-gradient(135deg, #1d4ed8, #2563eb);
-      } /* Footer (front palette) */
+      }
+
+      /* Adaptar alert-error al tema dark */
+      .alert-error {
+        background: rgba(248, 113, 113, 0.15);
+        border-left-color: #f87171;
+      }
+
+      /* Footer (front palette) */
       .footer {
         background: #111827;
         color: #ffffff;
@@ -263,7 +271,7 @@
         <p>Hola <strong>{{userName}}</strong>,</p>
 
         <div class="alert-error">
-          <p style="margin: 0; color: #c62828">
+          <p style="margin: 0; color: #f87171">
             Tu cuenta en <strong>{{appName}}</strong> ha sido suspendida debido a incumplimientos de nuestras políticas
             de uso.
           </p>
@@ -271,7 +279,7 @@
 
         <p>
           Si creés que esta suspensión es un error o deseas obtener más información, por favor
-          <a href="https://frontend-rootscoop.vercel.app/contacto">contactá a nuestro equipo de soporte</a>.
+          <a href="{{frontendUrl}}/contacto">contactá a nuestro equipo de soporte</a>.
         </p>
 
         <p>Gracias por tu comprensión.<br />El equipo de <strong>{{appName}}</strong>.</p>
@@ -305,8 +313,8 @@
           Copyright © 2025 <strong>WorldAssemblyTechnology</strong>. Todos los derechos reservados.
         </p>
         <p style="margin-top: 12px">
-          <a href="https://frontend-rootscoop.vercel.app">Visitar sitio web</a> ·
-          <a href="https://frontend-rootscoop.vercel.app/contacto">Contacto</a>
+          <a href="{{frontendUrl}}">Visitar sitio web</a> ·
+          <a href="{{frontendUrl}}/contacto">Contacto</a>
         </p>
         <div class="footer-payments">
           <span>VISA</span>

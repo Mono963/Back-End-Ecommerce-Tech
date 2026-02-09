@@ -11,7 +11,6 @@ import { Repository } from 'typeorm';
 import { UserSearchQueryDto } from './dtos/PaginationQueryDto';
 import { paginate } from 'src/common/pagination/paginate';
 import { AuthValidations } from '../auths/validate/auth.validate';
-import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
 import { MailQueueService } from '../mail/mail-queue_email.service';
 import { IPaginatedResult } from '../../common/pagination/IPaginatedResult';
@@ -70,7 +69,7 @@ export class UsersService {
       'user.id',
       'user.name',
       'user.email',
-      'user.birthdate',
+      'user.birthDate',
       'user.phone',
       'user.username',
       'user.createdAt',
@@ -78,8 +77,7 @@ export class UsersService {
     ]);
 
     queryBuilder.leftJoinAndSelect('user.role', 'role');
-    queryBuilder.leftJoinAndSelect('user.orders', 'orders');
-    queryBuilder.leftJoinAndSelect('user.cart', 'cart');
+    queryBuilder.leftJoinAndSelect('user.addresses', 'addresses');
     queryBuilder.where('1 = 1');
 
     if (username) {
@@ -119,13 +117,11 @@ export class UsersService {
       throw new NotFoundException(`User with id ${id} not found.`);
     }
 
-    // Obtener el contador de wishlist
     const wishlist = await this.wishlistRepository.findOne({
       where: { user_id: id },
       relations: ['items'],
     });
 
-    // Add wishlist count to the user object (used by the DTO)
     const userWithWishlist = Object.assign(user, { wishlistCount: wishlist?.items?.length ?? 0 });
 
     return userWithWishlist;
@@ -199,15 +195,9 @@ export class UsersService {
       throw new NotFoundException(`User with id ${userId} not found`);
     }
 
-    const isSamePassword = await bcrypt.compare(dto.newPassword, user.password);
-
-    if (isSamePassword) {
-      throw new BadRequestException('New password cannot be the same as the current one');
-    }
+    await AuthValidations.validatePassword(dto.currentPassword, user.password);
 
     await AuthValidations.validateNewPasswordIsDifferent(dto.newPassword, user.password);
-
-    await AuthValidations.validatePassword(dto.currentPassword, user.password);
 
     const hashedPassword = await AuthValidations.hashPassword(dto.newPassword);
 
@@ -265,6 +255,9 @@ export class UsersService {
 
       return { message: `User ${id} successfully removed.` };
     } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
       this.logger.error('Error: Failed to delete account, please try again later', error);
       throw new InternalServerErrorException(`Error deleting User ${id}`);
     }
@@ -339,6 +332,20 @@ export class UsersService {
   }
 
   // ==================== ADDRESS MANAGEMENT ==================================================================================
+
+  private mapAddressToDto(addr: Address): IAddress {
+    return {
+      id: addr.id,
+      label: addr.label,
+      street: addr.street,
+      city: addr.city,
+      province: addr.province,
+      postalCode: addr.postalCode,
+      country: addr.country,
+      isDefault: addr.isDefault,
+    };
+  }
+
   async getAddresses(): Promise<IAddress[]> {
     const address = await this.addressRepository.find();
 
@@ -358,16 +365,7 @@ export class UsersService {
       throw new NotFoundException(`El usuario con id ${userId} no tiene direcciones`);
     }
 
-    return addresses.map((addr) => ({
-      id: addr.id,
-      label: addr.label,
-      street: addr.street,
-      city: addr.city,
-      province: addr.province,
-      postalCode: addr.postalCode,
-      country: addr.country,
-      isDefault: addr.isDefault,
-    }));
+    return addresses.map((addr) => this.mapAddressToDto(addr));
   }
 
   async addAddress(userId: string, dto: ICreateAddress): Promise<IAddress> {
@@ -403,16 +401,7 @@ export class UsersService {
 
     this.logger.log(`Address added for user ${userId}: ${savedAddress.id}`);
 
-    return {
-      id: savedAddress.id,
-      label: savedAddress.label,
-      street: savedAddress.street,
-      city: savedAddress.city,
-      province: savedAddress.province,
-      postalCode: savedAddress.postalCode,
-      country: savedAddress.country,
-      isDefault: savedAddress.isDefault,
-    };
+    return this.mapAddressToDto(savedAddress);
   }
 
   async updateAddress(userId: string, addressId: string, dto: IUpdateAddress): Promise<IAddress> {
@@ -437,22 +426,15 @@ export class UsersService {
 
     this.logger.log(`Address updated for user ${userId}: ${addressId}`);
 
-    return {
-      id: updatedAddress.id,
-      label: updatedAddress.label,
-      street: updatedAddress.street,
-      city: updatedAddress.city,
-      province: updatedAddress.province,
-      postalCode: updatedAddress.postalCode,
-      country: updatedAddress.country,
-      isDefault: updatedAddress.isDefault,
-    };
+    return this.mapAddressToDto(updatedAddress);
   }
 
-  async deleteAddress(addressId: string): Promise<{ message: string }> {
-    const address = await this.addressRepository.findOne({ where: { id: addressId } });
+  async deleteAddress(userId: string, addressId: string): Promise<{ message: string }> {
+    const address = await this.addressRepository.findOne({
+      where: { id: addressId, user_id: userId },
+    });
     if (!address) {
-      throw new NotFoundException(`Address with id ${addressId} not found`);
+      throw new NotFoundException(`Address with id ${addressId} not found for user ${userId}`);
     }
 
     await this.addressRepository.delete(address.id);
@@ -479,16 +461,7 @@ export class UsersService {
 
     this.logger.log(`Default address updated for user ${userId}: ${addressId}`);
 
-    return {
-      id: updatedAddress.id,
-      label: updatedAddress.label,
-      street: updatedAddress.street,
-      city: updatedAddress.city,
-      province: updatedAddress.province,
-      postalCode: updatedAddress.postalCode,
-      country: updatedAddress.country,
-      isDefault: updatedAddress.isDefault,
-    };
+    return this.mapAddressToDto(updatedAddress);
   }
 
   async getUserStats(userId: string): Promise<{
@@ -505,7 +478,6 @@ export class UsersService {
       throw new NotFoundException(`User with id ${userId} not found`);
     }
 
-    // Count orders and calculate total spent
     const orders = await this.orderRepository
       .createQueryBuilder('order')
       .leftJoinAndSelect('order.orderDetail', 'orderDetail')
@@ -518,7 +490,6 @@ export class UsersService {
       return sum + (order.orderDetail?.total || 0);
     }, 0);
 
-    // Contar items en wishlist
     const wishlist = await this.wishlistRepository.findOne({
       where: { user_id: userId },
       relations: ['items'],
@@ -526,7 +497,6 @@ export class UsersService {
 
     const wishlistItemsCount = wishlist?.items?.length || 0;
 
-    // Contar reviews
     const reviewsCount = await this.reviewRepository.count({
       where: { user: { id: userId } },
     });

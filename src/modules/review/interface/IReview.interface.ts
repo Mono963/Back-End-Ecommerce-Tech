@@ -45,3 +45,9 @@ export interface IReviewResponseAdmin {
     name: string;
   };
 }
+
+export interface ICreateReview {
+  productId: string;
+  rating: Rating;
+  message: string;
+}

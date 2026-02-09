@@ -48,15 +48,42 @@ export class MailProcessor {
           await this.mailService.sendOrderProcessingNotification(
             to,
             data.userName as string,
-            data.orderId as string,
+            data.orderNumber as string,
             data.products as { name: string; quantity: number; price: number }[],
-            data.orderTotal as number,
+            data.subtotal as number,
+            data.shipping as number,
+            data.tax as number,
+            data.total as number,
+            data.shippingAddress as {
+              street: string;
+              city: string;
+              province: string;
+              postalCode: string;
+            } | null,
+            data.paymentMethod as string,
             new Date(data.orderDate as string),
           );
           break;
 
         case 'purchase-confirmation':
-          await this.mailService.sendPurchaseConfirmation(to);
+          await this.mailService.sendPurchaseConfirmation(
+            to,
+            data.userName as string,
+            data.orderNumber as string,
+            data.products as { name: string; quantity: number; price: number }[],
+            data.subtotal as number,
+            data.shipping as number,
+            data.tax as number,
+            data.total as number,
+            data.shippingAddress as {
+              street: string;
+              city: string;
+              province: string;
+              postalCode: string;
+            } | null,
+            data.paymentMethod as string,
+            new Date(data.orderDate as string),
+          );
           break;
 
         case 'purchase-alert-admin':

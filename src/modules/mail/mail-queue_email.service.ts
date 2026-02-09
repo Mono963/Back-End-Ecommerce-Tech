@@ -78,22 +78,65 @@ export class MailQueueService {
   async queueOrderProcessingNotification(
     email: string,
     userName: string,
-    orderId: string,
+    orderNumber: string,
     products: { name: string; quantity: number; price: number }[],
-    orderTotal: number,
+    subtotal: number,
+    shipping: number,
+    tax: number,
+    total: number,
+    shippingAddress: {
+      street: string;
+      city: string;
+      province: string;
+      postalCode: string;
+    } | null,
+    paymentMethod: string,
     orderDate: Date,
   ): Promise<void> {
     await this.addToQueue('order-processing', email, {
       userName,
-      orderId,
+      orderNumber,
       products,
-      orderTotal,
+      subtotal,
+      shipping,
+      tax,
+      total,
+      shippingAddress,
+      paymentMethod,
       orderDate: orderDate.toISOString(),
     });
   }
 
-  async queuePurchaseConfirmation(email: string): Promise<void> {
-    await this.addToQueue('purchase-confirmation', email, {});
+  async queuePurchaseConfirmation(
+    email: string,
+    userName: string,
+    orderNumber: string,
+    products: { name: string; quantity: number; price: number }[],
+    subtotal: number,
+    shipping: number,
+    tax: number,
+    total: number,
+    shippingAddress: {
+      street: string;
+      city: string;
+      province: string;
+      postalCode: string;
+    } | null,
+    paymentMethod: string,
+    orderDate: Date,
+  ): Promise<void> {
+    await this.addToQueue('purchase-confirmation', email, {
+      userName,
+      orderNumber,
+      products,
+      subtotal,
+      shipping,
+      tax,
+      total,
+      shippingAddress,
+      paymentMethod,
+      orderDate: orderDate.toISOString(),
+    });
   }
 
   async queuePurchaseAlertToAdmin(
@@ -150,7 +193,7 @@ export class MailQueueService {
       city: string;
       province: string;
       postalCode: string;
-    },
+    } | null,
     products: { name: string; quantity: number; price: number }[],
     orderTotal: number,
   ): Promise<void> {
@@ -161,7 +204,12 @@ export class MailQueueService {
       trackingUrl,
       carrier,
       estimatedDelivery,
-      shippingAddress,
+      shippingAddress: shippingAddress || {
+        street: 'No especificada',
+        city: '',
+        province: '',
+        postalCode: '',
+      },
       products,
       orderTotal,
     });

@@ -118,7 +118,7 @@ export class UsersController {
   })
   @UseGuards(AuthGuard)
   @Delete(':id')
-  async remove(@Param('id') id: string): Promise<{ message: string }> {
+  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<{ message: string }> {
     return await this.usersService.deleteUser(id);
   }
 
@@ -205,19 +205,7 @@ export class UsersController {
     description: 'List of user addresses',
   })
   @UseGuards(AuthGuard, RoleGuard)
-  @Roles(UserRole.ADMIN)
-  async getAddresses(@Req() req: AuthRequest): Promise<UserAddressDto[]> {
-    return await this.usersService.getByUserAddresses(req.user.sub);
-  }
-
-  @Get('addresses/my-addresses')
-  @ApiOperation({ summary: 'Get all addresses for the authenticated user' })
-  @ApiResponse({
-    status: 200,
-    description: 'List of user addresses',
-  })
-  @UseGuards(AuthGuard, RoleGuard)
-  @Roles(UserRole.CLIENT)
+  @Roles(UserRole.CLIENT, UserRole.ADMIN)
   async getMyAddresses(@Req() req: AuthRequest): Promise<UserAddressDto[]> {
     return await this.usersService.getByUserAddresses(req.user.sub);
   }
@@ -295,8 +283,11 @@ export class UsersController {
     description: 'Address deleted successfully',
   })
   @UseGuards(AuthGuard)
-  async deleteAddress(@Param('addressId', ParseUUIDPipe) addressId: string): Promise<{ message: string }> {
-    return await this.usersService.deleteAddress(addressId);
+  async deleteAddress(
+    @Req() req: AuthRequest,
+    @Param('addressId', ParseUUIDPipe) addressId: string,
+  ): Promise<{ message: string }> {
+    return await this.usersService.deleteAddress(req.user.sub, addressId);
   }
 
   @Patch('addresses/:addressId/set-default')

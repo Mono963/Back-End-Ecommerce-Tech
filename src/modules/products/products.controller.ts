@@ -28,15 +28,9 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiQuery, ApiResponse, ApiTags, A
 import { ProductsSearchQueryDto } from './dto/PaginationQueryDto';
 import { PaginatedProductsDto } from './dto/paginated-products.dto';
 import { ProductVariant } from './entities/products_variant.entity';
-import {
-  CreateProductDto,
-  CreateVariantDto,
-  HybridSearchResponseDto,
-  ResponseProductDto,
-  UpdateProductDto,
-} from './dto/products.Dto';
+import { CreateProductDto, CreateVariantDto, ResponseProductDto, UpdateProductDto } from './dto/products.Dto';
 import { Observable } from 'rxjs';
-import { SkipThrottle, Throttle } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Products')
 @Controller('products')
@@ -101,7 +95,7 @@ export class ProductsController {
     example: 2000,
   })
   @ApiQuery({
-    name: 'price',
+    name: 'basePrice',
     required: false,
     type: Number,
     description: 'Search products in price range (±10%) - Use minPrice/maxPrice for exact ranges',
@@ -192,74 +186,6 @@ export class ProductsController {
   })
   async getProductsByCategory(@Param('categoryId', ParseUUIDPipe) categoryId: string): Promise<ResponseProductDto[]> {
     return await this.productsService.getProductsByCategory(categoryId);
-  }
-
-  @Get('search')
-  @Throttle({ default: { limit: 600, ttl: 60000 } })
-  @ApiOperation({
-    summary: 'Hybrid product search',
-    description: 'Instant search from 1 character. With ai=true also includes AI results.',
-  })
-  @ApiQuery({
-    name: 'q',
-    required: true,
-    type: String,
-    description: 'Search text (minimum 1 character)',
-    example: 'laptop',
-  })
-  @ApiQuery({
-    name: 'ai',
-    required: false,
-    type: Boolean,
-    description: 'Include AI search results (default: false)',
-    example: false,
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    type: Number,
-    description: 'Number of results (default: 8)',
-    example: 8,
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Search results',
-    schema: {
-      type: 'object',
-      properties: {
-        results: {
-          type: 'array',
-          description: 'Instant local results',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              name: { type: 'string' },
-              brand: { type: 'string' },
-              price: { type: 'number' },
-              image: { type: 'string', nullable: true },
-              category: { type: 'string', nullable: true },
-            },
-          },
-        },
-        aiResults: {
-          type: 'array',
-          description: 'AI results (only if ai=true)',
-          nullable: true,
-        },
-        aiMessage: { type: 'string', nullable: true },
-        source: { type: 'string', enum: ['local', 'hybrid'] },
-      },
-    },
-  })
-  @SkipThrottle()
-  async search(
-    @Query('q') query: string,
-    @Query('ai') ai?: string,
-    @Query('limit', new DefaultValuePipe(8), ParseIntPipe) limit?: number,
-  ): Promise<HybridSearchResponseDto> {
-    const useAi = ai === 'true';
-    return await this.productsService.hybridSearch(query, useAi, limit);
   }
 
   @Sse('search/hybrid')

@@ -79,6 +79,10 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   FRONTEND_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  BACKEND_URL?: string;
 }
 
 export function validate(config: Record<string, unknown>): EnvironmentVariables {

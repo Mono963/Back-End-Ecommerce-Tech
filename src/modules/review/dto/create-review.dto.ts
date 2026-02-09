@@ -4,6 +4,10 @@ import { IsEnum, IsNotEmpty, IsString, IsUUID } from 'class-validator';
 
 export class CreateReviewDto {
   @IsUUID()
+  @ApiProperty({
+    description: 'ID of the product being reviewed',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
   productId: string;
 
   @ApiProperty({

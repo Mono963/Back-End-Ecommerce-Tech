@@ -1,5 +1,6 @@
 import { ICartResponse } from '../../cart/interfaces/interface.cart';
 import { OrderStatus } from '../../orders/interfaces/orders.interface';
+import { Users } from '../entities/users.entity';
 
 export interface IUserResponse {
   id: string;
@@ -120,3 +121,5 @@ export interface IAddress {
 export interface INewCreateAddress extends ICreateAddress {
   user_id: string;
 }
+
+export type UserWithDetails = Users & { wishlistCount?: number };

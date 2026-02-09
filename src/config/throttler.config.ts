@@ -3,6 +3,6 @@ import { ThrottlerModuleOptions } from '@nestjs/throttler';
 export const throttlerConfig: ThrottlerModuleOptions = [
   {
     ttl: 60000,
-    limit: 10,
+    limit: 60,
   },
 ];

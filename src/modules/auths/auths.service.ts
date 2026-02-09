@@ -133,6 +133,13 @@ export class AuthsService {
     return this.generateAuthResponse(authenticatedUser);
   }
 
+  async processGoogleCallback(googleUser: GoogleUser): Promise<string> {
+    const result = await this.googleLogin(googleUser);
+    const authCode = this.generateAuthCode(result.user.id, result.accessToken);
+    const frontendUrl = this.configService.get<string>('GoogleOAuth.frontendUrl');
+    return `${frontendUrl}/auth/callback?code=${authCode}`;
+  }
+
   private async createUserFromGoogleProfile(googleUser: GoogleUser): Promise<Users> {
     const randomPassword = await AuthValidations.generateRandomPassword();
     const username = AuthValidations.generateUsernameFromEmail(googleUser.email);
@@ -240,6 +247,15 @@ export class AuthsService {
     return {
       accessToken: data.token,
       userId: data.userId,
+    };
+  }
+
+  getCookieOptions(): { httpOnly: boolean; secure: boolean; sameSite: 'strict'; maxAge: number } {
+    return {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict' as const,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     };
   }
 }

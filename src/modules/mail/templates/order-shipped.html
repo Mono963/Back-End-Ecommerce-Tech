@@ -512,25 +512,58 @@
           <span class="status-badge">En Camino</span>
         </p>
 
-        <!-- Timeline visual -->
-        <div class="timeline">
-          <div class="timeline-step completed">
-            <div class="timeline-dot completed"></div>
-            <div class="timeline-label">Pagado</div>
-          </div>
-          <div class="timeline-step completed">
-            <div class="timeline-dot completed"></div>
-            <div class="timeline-label">Procesado</div>
-          </div>
-          <div class="timeline-step">
-            <div class="timeline-dot active"></div>
-            <div class="timeline-label active">Enviado</div>
-          </div>
-          <div class="timeline-step">
-            <div class="timeline-dot"></div>
-            <div class="timeline-label">Entregado</div>
-          </div>
-        </div>
+        <!-- Timeline visual con líneas conectoras -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 32px 0;">
+          <!-- Fila de círculos y líneas conectoras -->
+          <tr>
+            <!-- Paso 1: Pagado (completado) -->
+            <td align="center" width="60" style="padding: 0;">
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: #4caf50; margin: 0 auto; line-height: 28px; color: white; font-size: 14px; font-weight: bold;">&#10003;</div>
+            </td>
+            <!-- Línea conectora 1-2 (verde - completada) -->
+            <td style="padding: 0; vertical-align: middle;">
+              <div style="height: 4px; background: #4caf50; width: 100%;"></div>
+            </td>
+            <!-- Paso 2: Procesado (completado) -->
+            <td align="center" width="60" style="padding: 0;">
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: #4caf50; margin: 0 auto; line-height: 28px; color: white; font-size: 14px; font-weight: bold;">&#10003;</div>
+            </td>
+            <!-- Línea conectora 2-3 (verde - completada) -->
+            <td style="padding: 0; vertical-align: middle;">
+              <div style="height: 4px; background: #4caf50; width: 100%;"></div>
+            </td>
+            <!-- Paso 3: Enviado (activo) -->
+            <td align="center" width="60" style="padding: 0;">
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: #0066ff; margin: 0 auto; box-shadow: 0 0 0 4px rgba(0, 102, 255, 0.25);"></div>
+            </td>
+            <!-- Línea conectora 3-4 (gris - pendiente) -->
+            <td style="padding: 0; vertical-align: middle;">
+              <div style="height: 4px; background: #374151; width: 100%;"></div>
+            </td>
+            <!-- Paso 4: Entregado (pendiente) -->
+            <td align="center" width="60" style="padding: 0;">
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: #374151; margin: 0 auto;"></div>
+            </td>
+          </tr>
+          <!-- Fila de labels -->
+          <tr>
+            <td align="center" style="padding-top: 8px;">
+              <div style="font-size: 11px; color: #4caf50; font-weight: 600;">Pagado</div>
+            </td>
+            <td></td>
+            <td align="center" style="padding-top: 8px;">
+              <div style="font-size: 11px; color: #4caf50; font-weight: 600;">Procesado</div>
+            </td>
+            <td></td>
+            <td align="center" style="padding-top: 8px;">
+              <div style="font-size: 11px; color: #0066ff; font-weight: 600;">Enviado</div>
+            </td>
+            <td></td>
+            <td align="center" style="padding-top: 8px;">
+              <div style="font-size: 11px; color: #9ca3af; font-weight: 500;">Entregado</div>
+            </td>
+          </tr>
+        </table>
 
         <!-- Tracking card -->
         <div class="tracking-card">
@@ -552,9 +585,13 @@
         <!-- Dirección de envío -->
         <div class="info-card">
           <h3>📍 Enviamos a</h3>
+          {{#if shippingAddress.street}}
           <p><strong>{{shippingAddress.street}}</strong></p>
-          <p>{{shippingAddress.city}}, {{shippingAddress.province}}</p>
-          <p>CP: {{shippingAddress.postalCode}}</p>
+          {{#if shippingAddress.city}}<p>{{shippingAddress.city}}{{#if shippingAddress.province}}, {{shippingAddress.province}}{{/if}}</p>{{/if}}
+          {{#if shippingAddress.postalCode}}<p>CP: {{shippingAddress.postalCode}}</p>{{/if}}
+          {{else}}
+          <p>Dirección no disponible</p>
+          {{/if}}
         </div>
 
         <!-- Productos -->
@@ -613,8 +650,8 @@
           Copyright © 2025 <strong>WorldAssemblyTechnology</strong>. Todos los derechos reservados.
         </p>
         <p style="margin-top: 12px">
-          <a href="https://frontend-rootscoop.vercel.app">Visitar sitio web</a> ·
-          <a href="https://frontend-rootscoop.vercel.app/contacto">Contacto</a>
+          <a href="{{frontendUrl}}">Visitar sitio web</a> ·
+          <a href="{{frontendUrl}}/contacto">Contacto</a>
         </p>
         <div class="footer-payments">
           <span>VISA</span>

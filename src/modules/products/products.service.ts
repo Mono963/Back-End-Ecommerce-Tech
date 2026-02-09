@@ -11,12 +11,7 @@ import { mapToProductDto } from './validate/products.validate';
 import { PRODUCTS_SEED } from 'src/seeds/products.data';
 import { N8nService } from '../N8N/n8n.service';
 import { AiSearchResponse } from '../N8N/interface/n8n.interface';
-import {
-  IAiProduct,
-  IAutocompleteResult,
-  IHybridSearchResponse,
-  IHybridSearchStreamPayload,
-} from './interface/products.interface';
+import { IAiProduct, IAutocompleteResult, IHybridSearchStreamPayload } from './interface/products.interface';
 import { EMPTY, Observable } from 'rxjs';
 import { IPaginatedResult } from '../../common/pagination';
 
@@ -102,6 +97,10 @@ export class ProductsService {
       );
     }
 
+    if (basePrice && (minPrice !== undefined || maxPrice !== undefined)) {
+      throw new BadRequestException('Cannot use basePrice with minPrice/maxPrice. Use one or the other.');
+    }
+
     if (minPrice !== undefined && maxPrice !== undefined) {
       queryBuilder.andWhere('product.basePrice BETWEEN :minPriceRange AND :maxPriceRange', {
         minPriceRange: Number(minPrice),
@@ -113,12 +112,12 @@ export class ProductsService {
       queryBuilder.andWhere('product.basePrice <= :maxPriceRange', { maxPriceRange: Number(maxPrice) });
     } else if (basePrice) {
       queryBuilder.andWhere(
-        '(product.basePrice BETWEEN :minPrice AND :maxPrice OR ' +
+        '(product.basePrice BETWEEN :basePriceMin AND :basePriceMax OR ' +
           'EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = product.id AND ' +
-          '(product.basePrice + pv.priceModifier) BETWEEN :minPrice AND :maxPrice))',
+          '(product.basePrice + pv.priceModifier) BETWEEN :basePriceMin AND :basePriceMax))',
         {
-          minPrice: basePrice * 0.9,
-          maxPrice: basePrice * 1.1,
+          basePriceMin: basePrice * 0.9,
+          basePriceMax: basePrice * 1.1,
         },
       );
     }
@@ -476,9 +475,7 @@ export class ProductsService {
 
       const namesForType = variantMap.get(variant.type);
       if (namesForType?.has(variant.name)) {
-        throw new BadRequestException(
-          `Duplicate variant: type '${variant.type}' with name '${variant.name}'`,
-        );
+        throw new BadRequestException(`Duplicate variant: type '${variant.type}' with name '${variant.name}'`);
       } else {
         variantMap.set(variant.type, variantMap.get(variant.type)?.add(variant.name) || new Set([variant.name]));
       }
@@ -699,42 +696,6 @@ export class ProductsService {
       const message = error instanceof Error ? error.message : 'Unknown error';
       this.logger.warn(`AI search failed: ${message}`);
       return { products: await this.searchProducts(query, 10), fallback: true };
-    }
-  }
-
-  async hybridSearch(query: string, useAi: boolean = false, limit: number = 8): Promise<IHybridSearchResponse> {
-    if (!query || query.trim().length < 2) {
-      return { results: [], source: 'local' };
-    }
-
-    const localResults = await this.autocomplete(query, limit);
-
-    if (!useAi || !this.n8nService.isEnabled || query.trim().length < 3) {
-      return { results: localResults, source: 'local' };
-    }
-
-    try {
-      const aiResponse = await this.n8nService.productSearch(query.trim());
-
-      const aiResults: IAutocompleteResult[] = (aiResponse.products as IAiProduct[]).map((p) => ({
-        id: p.id,
-        name: p.name,
-        brand: p.brand,
-        basePrice: Number(p.basePrice),
-        image: p.imgUrls?.[0] || null,
-        category: p.category_name || null,
-      }));
-
-      return {
-        results: localResults,
-        aiResults,
-        aiMessage: aiResponse.message,
-        source: 'hybrid',
-      };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.warn(`Hybrid AI search failed: ${message}`);
-      return { results: localResults, source: 'local' };
     }
   }
 

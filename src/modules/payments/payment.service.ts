@@ -101,7 +101,7 @@ export class PaymentsService implements IPaymentService {
 
       const order = await this.orderRepository.findOne({
         where: { id: orderId },
-        relations: ['user', 'orderDetail'],
+        relations: ['user', 'orderDetail', 'orderDetail.items'],
       });
 
       if (!order) {
@@ -118,7 +118,6 @@ export class PaymentsService implements IPaymentService {
       if (existingPayment) {
         this.logger.log(`Payment already exists for order ${orderId} (paymentId: ${paymentId}), skipping insert`);
 
-        // Ensure order state is up to date on duplicated webhooks
         if (existingPayment.order) {
           if (paymentInfo.status === 'approved' && existingPayment.order.status !== OrderStatus.PAID) {
             existingPayment.order.status = OrderStatus.PAID;
@@ -152,7 +151,7 @@ export class PaymentsService implements IPaymentService {
           await this.orderDetailRepository.save(order.orderDetail);
         }
 
-        await this.sendOrderPaymentNotificationAsync(order.user.id);
+        await this.sendOrderPaymentNotificationAsync(order, order.user.id);
         await this.sendOrderPaymentNotificationAsyncToAdmin(order.user.id, order);
 
         this.logger.log(
@@ -215,16 +214,43 @@ export class PaymentsService implements IPaymentService {
     }));
   }
 
-  private async sendOrderPaymentNotificationAsync(id: string): Promise<void> {
-    const user = await this.userRepository.findOne({ where: { id } });
+  private async sendOrderPaymentNotificationAsync(order: Order, user_id: string): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { id: user_id } });
 
     if (!user) {
-      this.logger.warn(`User with ID ${id} not found for order notification`);
+      this.logger.warn(`User not found in order for purchase notification`);
       return;
     }
 
+    const products = (order.orderDetail?.items || []).map((item) => ({
+      name: item.productSnapshot?.name || 'Producto',
+      quantity: item.quantity,
+      price: Number(item.unitPrice),
+    }));
+
+    const shippingAddress = order.orderDetail?.shippingAddressSnapshot
+      ? {
+          street: order.orderDetail.shippingAddressSnapshot.street || '',
+          city: order.orderDetail.shippingAddressSnapshot.city || '',
+          province: order.orderDetail.shippingAddressSnapshot.province || '',
+          postalCode: order.orderDetail.shippingAddressSnapshot.postalCode || '',
+        }
+      : null;
+
     this.mailQueueService
-      .queuePurchaseConfirmation(user.email)
+      .queuePurchaseConfirmation(
+        user.email,
+        user.username || user.name,
+        order.orderNumber,
+        products,
+        Number(order.orderDetail?.subtotal || 0),
+        Number(order.orderDetail?.shipping || 0),
+        Number(order.orderDetail?.tax || 0),
+        Number(order.orderDetail?.total || 0),
+        shippingAddress,
+        order.orderDetail?.paymentMethod || 'Mercado Pago',
+        order.createdAt,
+      )
       .then(() => {
         this.logger.log(`Purchase email enqueued for ${user.email}`);
       })

@@ -62,11 +62,7 @@ export class WishlistService {
     };
   }
 
-  /**
-   * Add product to wishlist
-   */
   async addToWishlist(userId: string, productId: string): Promise<WishlistItemResponseDto> {
-    // Ensure the product exists and is active
     const product = await this.productRepo.findOne({
       where: { id: productId, isActive: true },
       relations: ['category'],
@@ -76,10 +72,8 @@ export class WishlistService {
       throw new NotFoundException(`Product with id ${productId} not found or is inactive`);
     }
 
-    // Get or create wishlist
     const wishlist = await this.getOrCreateWishlist(userId);
 
-    // Check if the product is already in the wishlist
     const existingItem = await this.wishlistItemRepo.findOne({
       where: {
         wishlist_id: wishlist.id,
@@ -91,7 +85,6 @@ export class WishlistService {
       throw new BadRequestException('This product is already in your wishlist');
     }
 
-    // Create item
     const wishlistItem = this.wishlistItemRepo.create({
       wishlist_id: wishlist.id,
       product_id: productId,
@@ -101,7 +94,6 @@ export class WishlistService {
 
     this.logger.log(`Product ${productId} added to user ${userId} wishlist`);
 
-    // Load full item with relations
     const itemWithProduct = await this.wishlistItemRepo.findOne({
       where: { id: savedItem.id },
       relations: ['product', 'product.category'],

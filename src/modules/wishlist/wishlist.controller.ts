@@ -52,10 +52,7 @@ export class WishlistController {
     status: 400,
     description: 'Product is already in the wishlist',
   })
-  async addToWishlist(
-    @Req() req: AuthRequest,
-    @Body() dto: AddToWishlistDto,
-  ): Promise<WishlistItemResponseDto> {
+  async addToWishlist(@Req() req: AuthRequest, @Body() dto: AddToWishlistDto): Promise<WishlistItemResponseDto> {
     return await this.wishlistService.addToWishlist(req.user.sub, dto.productId);
   }
 

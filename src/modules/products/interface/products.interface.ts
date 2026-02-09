@@ -92,13 +92,6 @@ export interface IAutocompleteResult {
   category: string | null;
 }
 
-export interface IHybridSearchResponse {
-  results: IAutocompleteResult[];
-  aiResults?: IAutocompleteResult[];
-  aiMessage?: string;
-  source: 'local' | 'hybrid';
-}
-
 export interface IAiProduct {
   id: string;
   name: string;

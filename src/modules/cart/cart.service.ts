@@ -29,7 +29,7 @@ import {
 import { ICreateAddress, IAddress } from '../users/interfaces/user.interface';
 import { ICategory } from '../category/interface/category.interface';
 import { UsersService } from '../users/users.service';
-import { IResponseOrder } from '../orders/interfaces/orders.interface';
+import { IOrder } from '../orders/interfaces/orders.interface';
 
 @Injectable()
 export class CartService {
@@ -206,9 +206,7 @@ export class CartService {
         const availableStock = await this.productsService.getAvailableStock(cartItem.product.id, variantIds);
 
         if (availableStock < dto.quantity) {
-          throw new BadRequestException(
-            `Insufficient stock. Available: ${availableStock}, Requested: ${dto.quantity}`,
-          );
+          throw new BadRequestException(`Insufficient stock. Available: ${availableStock}, Requested: ${dto.quantity}`);
         }
 
         cartItem.quantity = dto.quantity;
@@ -333,9 +331,7 @@ export class CartService {
     }
 
     if (!user.addresses) {
-      throw new BadRequestException(
-        `Address with id ${addressId} does not exist in the user's saved addresses`,
-      );
+      throw new BadRequestException(`Address with id ${addressId} does not exist in the user's saved addresses`);
     }
     cart.selectedAddressId = addressId;
     await this.cartRepository.save(cart);
@@ -416,7 +412,7 @@ export class CartService {
     };
   }
 
-  async createOrderFromCartCheckout(userId: string, shippingAddress: ICreateAddress): Promise<IResponseOrder> {
+  async createOrderFromCartCheckout(userId: string, shippingAddress: ICreateAddress): Promise<IOrder> {
     const stockValidation = await this.validateCartStock(userId);
 
     if (!stockValidation.valid) {

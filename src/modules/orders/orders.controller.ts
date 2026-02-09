@@ -1,31 +1,27 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Param,
-  Query,
-  BadRequestException,
-  ParseUUIDPipe,
-  UseGuards,
-  Req,
-} from '@nestjs/common';
+import { Controller, Get, Post, Put, Param, Query, ParseUUIDPipe, UseGuards, Req, Body } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { AuthGuard } from '../../guards/auth.guards';
 import { RoleGuard } from '../../guards/auth.guards.role';
 import { Roles, UserRole } from '../../decorator/role.decorator';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
-import { OrderFiltersDto, OrderStatsDto, PaginatedOrdersDto, ResponseOrderDto } from './dto/order.Dto';
+import {
+  CancelOrderDto,
+  OrderFiltersDto,
+  OrderStatsDto,
+  PaginatedOrdersDto,
+  ResponseOrderDto,
+  UpdateOrderStatusDto,
+} from './dto/order.Dto';
 import { AuthRequest } from 'src/common/auths/auth-request.interface';
-import { OrderStatus } from './interfaces/orders.interface';
+import { OrderStatus, OrderStatusadmin } from './interfaces/orders.interface';
 
 @ApiTags('Orders')
+@ApiBearerAuth()
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Get()
-  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get all orders with pagination and filters',
     description:
@@ -89,7 +85,6 @@ export class OrdersController {
   }
 
   @Get('my-orders')
-  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get all orders for authenticated user',
     description: 'Returns a list of user orders sorted by date',
@@ -107,7 +102,6 @@ export class OrdersController {
   }
 
   @Get('stats')
-  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get order statistics',
     description: 'Returns general order statistics (Admin only)',
@@ -119,12 +113,11 @@ export class OrdersController {
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
-  async getOrderStats(): Promise<Record<string, unknown>> {
+  async getOrderStats(): Promise<OrderStatsDto> {
     return await this.ordersService.getOrderStats();
   }
 
   @Get(':id')
-  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get order by ID',
     description: 'Returns complete details of a specific order',
@@ -148,11 +141,10 @@ export class OrdersController {
   @Roles(UserRole.CLIENT)
   async getOrderById(@Param('id', ParseUUIDPipe) id: string, @Req() req: AuthRequest): Promise<ResponseOrderDto> {
     const userId = req.user.sub;
-    return await this.ordersService.getOrder(id, userId);
+    return await this.ordersService.getOrderById(id, userId);
   }
 
   @Put(':id/status')
-  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Update order status',
     description: 'Allows changing the status of an order (Admin only)',
@@ -165,7 +157,7 @@ export class OrdersController {
   @ApiQuery({
     name: 'status',
     required: true,
-    enum: OrderStatus,
+    enum: OrderStatusadmin,
     description: 'New order status',
   })
   @ApiResponse({
@@ -186,47 +178,24 @@ export class OrdersController {
   async updateOrderStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Query('status') status: OrderStatus,
+    @Body() dto: UpdateOrderStatusDto,
   ): Promise<ResponseOrderDto> {
-    return await this.ordersService.updateOrderStatus(id, status);
+    return await this.ordersService.updateOrderStatus(id, status, dto);
   }
 
-  @Post(':OrderId/:UserId/cancel')
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Cancel an order',
-    description: 'Allows canceling a pending or paid order',
-  })
-  @ApiParam({
-    name: 'OrderId',
-    type: 'string',
-    description: 'Order ID',
-  })
-  @ApiParam({
-    name: 'UserId',
-    type: 'string',
-    description: 'User ID',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Order cancelled successfully',
-    type: ResponseOrderDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Cannot cancel order in its current status',
-  })
+  @Post(':id/cancel')
   @UseGuards(AuthGuard, RoleGuard)
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.CLIENT)
   async cancelOrder(
-    @Param('OrderId', ParseUUIDPipe) orderId: string,
-    @Param('UserId', ParseUUIDPipe) userId: string,
+    @Param('id', ParseUUIDPipe) orderId: string,
+    @Req() req: AuthRequest,
+    @Body() dto: CancelOrderDto,
   ): Promise<ResponseOrderDto> {
-    const order = await this.ordersService.getOrder(orderId, userId);
-
-    if (![OrderStatus.PENDING, OrderStatus.PAID].includes(order.status)) {
-      throw new BadRequestException('Only pending or paid orders can be cancelled');
-    }
-
-    return await this.ordersService.updateOrderStatus(orderId, OrderStatus.CANCELLED);
+    return await this.ordersService.cancelOrder(
+      orderId,
+      req.user.sub,
+      req.user.role as UserRole,
+      dto.cancellationReason,
+    );
   }
 }

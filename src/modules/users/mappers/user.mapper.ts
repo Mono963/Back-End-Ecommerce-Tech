@@ -1,8 +1,7 @@
-import { Users } from '../entities/users.entity';
-import { IUserResponse, IUserResponseWithAdmin } from '../interfaces/user.interface';
+import { IUserResponse, IUserResponseWithAdmin, UserWithDetails } from '../interfaces/user.interface';
 
 export class UserMapper {
-  static toResponse(user: Users): IUserResponse {
+  static toResponse(user: UserWithDetails): IUserResponse {
     return {
       id: user.id,
       name: user.name,
@@ -30,8 +29,7 @@ export class UserMapper {
           orderNumber: order.orderNumber,
           status: order.status,
         })) ?? [],
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-      wishlistCount: (user as any).wishlistCount ?? 0,
+      wishlistCount: user.wishlistCount ?? 0,
       cart: user.cart
         ? {
             id: user.cart.id,
@@ -45,11 +43,11 @@ export class UserMapper {
     };
   }
 
-  static toResponseList(users: Users[]): IUserResponse[] {
+  static toResponseList(users: UserWithDetails[]): IUserResponse[] {
     return users.map((user) => this.toResponse(user));
   }
 
-  static toAdminResponse(user: Users): IUserResponseWithAdmin {
+  static toAdminResponse(user: UserWithDetails): IUserResponseWithAdmin {
     return {
       ...this.toResponse(user),
       role: user.role?.name ?? '',
@@ -57,7 +55,7 @@ export class UserMapper {
     };
   }
 
-  static toAdminResponseList(users: Users[]): IUserResponseWithAdmin[] {
+  static toAdminResponseList(users: UserWithDetails[]): IUserResponseWithAdmin[] {
     return users.map((user) => this.toAdminResponse(user));
   }
 }

@@ -1,9 +1,8 @@
 import juice from 'juice';
 
 // Logo WAT
-const WAT_LOGO_URL = 'https://res.cloudinary.com/dub48rf0p/image/upload/v1770006657/WorldAsseblyTechnologyPNGEmail_b6bsll.png';
-const FRONTEND_URL = 'https://frontend-rootscoop.vercel.app';
-
+const WAT_LOGO_URL =
+  'https://res.cloudinary.com/dub48rf0p/image/upload/v1770006657/WorldAsseblyTechnologyPNGEmail_b6bsll.png';
 /**
  * Genera el HTML de la cabecera dark tech estilo WAT
  */
@@ -35,7 +34,7 @@ function buildDarkTechHeader(): string {
 /**
  * Genera el HTML del footer dark tech estilo WAT
  */
-function buildDarkTechFooter(unsubscribeUrl?: string): string {
+function buildDarkTechFooter(frontendUrl: string, unsubscribeUrl?: string): string {
   return `
     <div class="footer">
       <div class="footer-social">
@@ -54,8 +53,8 @@ function buildDarkTechFooter(unsubscribeUrl?: string): string {
         Copyright &copy; 2025 <strong>WorldAssemblyTechnology</strong>. Todos los derechos reservados.
       </p>
       <p style="margin-top: 12px;">
-        <a href="${FRONTEND_URL}">Visitar sitio web</a> &middot;
-        <a href="${FRONTEND_URL}/contacto">Contacto</a>
+        <a href="${frontendUrl}">Visitar sitio web</a> &middot;
+        <a href="${frontendUrl}/contacto">Contacto</a>
       </p>
       ${unsubscribeUrl ? `<p style="margin-top: 16px; font-size: 12px;"><a href="${unsubscribeUrl}" style="color: #9ca3af;">Darse de baja del newsletter</a></p>` : ''}
       <div class="footer-payments">
@@ -76,27 +75,29 @@ function buildDarkTechStyles(): string {
       body {
         margin: 0;
         padding: 30px 10px;
-        background-color: #ffffff;
+        background: #111827;
         font-family:
           'Inter',
           -apple-system,
           BlinkMacSystemFont,
           'Segoe UI',
           sans-serif;
-        color: #333333;
+        color: #cbd5f5;
         line-height: 1.6;
       }
 
       .container {
         max-width: 600px;
         margin: 0 auto;
-        border-radius: 12px;
+        background: #0f172a;
+        border-radius: 16px;
         overflow: hidden;
-        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
       }
 
       .header {
-        background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%);
+        background: radial-gradient(120% 120% at 100% 0%, #1b2a4a 0%, #0f172a 55%, #0b1020 100%);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         padding: 24px 32px;
       }
 
@@ -105,11 +106,12 @@ function buildDarkTechStyles(): string {
       }
 
       .header-text {
-        color: #ffffff;
+        color: #f8fafc;
         font-family: 'Inter', sans-serif;
         font-size: 20px;
         font-weight: 700;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
       }
 
       .header img {
@@ -120,13 +122,13 @@ function buildDarkTechStyles(): string {
 
       .content {
         padding: 40px 32px;
-        background-color: #ffffff;
+        background: linear-gradient(180deg, #0f172a 0%, #0b1222 100%);
       }
 
       .content h1 {
         font-size: 28px;
         font-weight: 700;
-        color: #0066ff;
+        color: #60a5fa;
         margin: 0 0 24px 0;
         text-align: center;
       }
@@ -135,20 +137,21 @@ function buildDarkTechStyles(): string {
         margin: 16px 0;
         font-size: 16px;
         font-weight: 400;
-        color: #333333;
+        color: #cbd5f5;
       }
 
       .content p strong {
-        color: #1a1a2e;
+        color: #f8fafc;
         font-weight: 600;
       }
 
       .highlight-card {
-        background: linear-gradient(135deg, #0066ff 0%, #0052cc 100%);
+        background: #1e293b;
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 12px;
         padding: 24px;
         margin: 24px 0;
-        color: white;
+        color: #f8fafc;
         text-align: center;
       }
 
@@ -156,16 +159,18 @@ function buildDarkTechStyles(): string {
         margin: 0 0 12px 0;
         font-size: 20px;
         font-weight: 700;
+        color: #60a5fa;
       }
 
       .highlight-card p {
         margin: 0;
         font-size: 14px;
-        color: rgba(255, 255, 255, 0.9);
+        color: #cbd5e1;
       }
 
       .benefits-list {
-        background: #f5f5f5;
+        background: #1e293b;
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 12px;
         padding: 24px;
         margin: 24px 0;
@@ -175,7 +180,7 @@ function buildDarkTechStyles(): string {
         margin: 0 0 16px 0;
         font-size: 16px;
         font-weight: 600;
-        color: #1a1a2e;
+        color: #f8fafc;
       }
 
       .benefits-list ul {
@@ -186,22 +191,21 @@ function buildDarkTechStyles(): string {
       .benefits-list li {
         margin-bottom: 8px;
         font-size: 14px;
-        color: #555;
+        color: #cbd5e1;
       }
 
       .btn-main {
-        display: block;
-        width: 100%;
+        display: inline-block;
         margin: 24px 0;
-        background: #0066ff;
+        background: linear-gradient(135deg, #2563eb, #3b82f6);
         color: #ffffff !important;
-        padding: 16px 32px;
-        border-radius: 8px;
+        padding: 14px 32px;
+        border-radius: 10px;
         text-decoration: none !important;
         font-weight: 600;
-        font-size: 18px;
+        font-size: 16px;
         text-align: center;
-        box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
       }
 
       .product-grid {
@@ -209,7 +213,8 @@ function buildDarkTechStyles(): string {
       }
 
       .product-item {
-        background: #f9f9f9;
+        background: #1e293b;
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 8px;
         padding: 16px;
         margin-bottom: 12px;
@@ -229,38 +234,52 @@ function buildDarkTechStyles(): string {
         margin: 0 0 8px 0;
         font-size: 14px;
         font-weight: 600;
-        color: #1a1a2e;
+        color: #f8fafc;
+      }
+
+      .product-item p {
+        color: #9ca3af;
+        margin: 4px 0;
+        font-size: 12px;
       }
 
       .product-item .price {
         font-family: 'Courier New', monospace;
         font-size: 18px;
         font-weight: 700;
-        color: #0066ff;
+        color: #60a5fa;
+      }
+
+      .product-item a {
+        color: inherit;
+        text-decoration: none;
       }
 
       .tech-card {
-        background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%);
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 12px;
         padding: 24px;
         margin: 24px 0;
-        color: white;
+        color: #cbd5e1;
       }
 
       .tech-card h3 {
         margin: 0 0 12px 0;
         font-size: 16px;
         font-weight: 600;
+        color: #f8fafc;
       }
 
       .tech-card p {
         margin: 0;
         font-size: 14px;
-        color: rgba(255, 255, 255, 0.8);
+        color: #cbd5e1;
       }
 
       .footer {
-        background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%);
+        background: radial-gradient(120% 120% at 100% 0%, #1b2a4a 0%, #0f172a 55%, #0b1020 100%);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
         color: #9ca3af;
         text-align: center;
         padding: 32px;
@@ -281,11 +300,11 @@ function buildDarkTechStyles(): string {
 
       .footer p {
         margin: 8px 0;
-        color: #9ca3af;
+        color: #cbd5e1;
       }
 
       .footer a {
-        color: #0066ff;
+        color: #60a5fa;
         text-decoration: none;
         font-weight: 500;
       }
@@ -352,7 +371,7 @@ function buildDarkTechStyles(): string {
 /**
  * Template base dark tech para newsletters
  */
-function buildDarkTechTemplate(content: string, unsubscribeUrl?: string): string {
+function buildDarkTechTemplate(content: string, frontendUrl: string, unsubscribeUrl?: string): string {
   const html = `
 <!DOCTYPE html>
 <html lang="es">
@@ -369,7 +388,7 @@ function buildDarkTechTemplate(content: string, unsubscribeUrl?: string): string
       <div class="content">
         ${content}
       </div>
-      ${buildDarkTechFooter(unsubscribeUrl)}
+      ${buildDarkTechFooter(frontendUrl, unsubscribeUrl)}
     </div>
   </body>
 </html>
@@ -380,7 +399,7 @@ function buildDarkTechTemplate(content: string, unsubscribeUrl?: string): string
 /**
  * Genera el HTML del newsletter mensual con estilo dark tech
  */
-export function buildMonthlyNewsletterHtml(name: string, unsubscribeUrl?: string): string {
+export function buildMonthlyNewsletterHtml(name: string, frontendUrl: string, unsubscribeUrl?: string): string {
   const content = `
     <h1>Novedades del Mes</h1>
 
@@ -413,19 +432,21 @@ export function buildMonthlyNewsletterHtml(name: string, unsubscribeUrl?: string
       </p>
     </div>
 
-    <a href="${FRONTEND_URL}/productos" class="btn-main">Ver Productos</a>
+    <div style="text-align: center">
+      <a href="${frontendUrl}/productos" class="btn-main">Ver Productos</a>
+    </div>
 
     <p>¡Gracias por ser parte de <strong>WorldAssemblyTechnology</strong>!</p>
     <p>El equipo de WAT.</p>
   `;
 
-  return buildDarkTechTemplate(content, unsubscribeUrl);
+  return buildDarkTechTemplate(content, frontendUrl, unsubscribeUrl);
 }
 
 /**
  * Genera el HTML del newsletter de bienvenida con estilo dark tech
  */
-export function buildWelcomeNewsletterHtml(name: string, unsubscribeUrl?: string): string {
+export function buildWelcomeNewsletterHtml(name: string, frontendUrl: string, unsubscribeUrl?: string): string {
   const content = `
     <h1>¡Bienvenido a WAT!</h1>
 
@@ -458,19 +479,68 @@ export function buildWelcomeNewsletterHtml(name: string, unsubscribeUrl?: string
       </p>
     </div>
 
-    <a href="${FRONTEND_URL}" class="btn-main">Visitar Tienda</a>
+    <div style="text-align: center">
+      <a href="${frontendUrl}" class="btn-main">Visitar Tienda</a>
+    </div>
 
     <p>¡Bienvenido a la comunidad <strong>WorldAssemblyTechnology</strong>!</p>
     <p>El equipo de WAT.</p>
   `;
 
-  return buildDarkTechTemplate(content, unsubscribeUrl);
+  return buildDarkTechTemplate(content, frontendUrl, unsubscribeUrl);
+}
+
+/**
+ * Genera el HTML del newsletter promocional con estilo dark tech
+ */
+export function buildPromoNewsletterHtml(
+  name: string,
+  frontendUrl: string,
+  title: string,
+  description: string,
+  discountCode?: string,
+  unsubscribeUrl?: string,
+): string {
+  const content = `
+    <h1>${title}</h1>
+
+    <p>Hola <strong>${name}</strong>,</p>
+    <p>${description}</p>
+
+    ${
+      discountCode
+        ? `
+    <div class="highlight-card">
+      <h2>Código de Descuento Exclusivo</h2>
+      <p style="font-size: 24px; font-weight: 700; letter-spacing: 2px; margin-top: 12px;">${discountCode}</p>
+    </div>
+    `
+        : ''
+    }
+
+    <div class="tech-card">
+      <h3>Aprovechá esta oportunidad</h3>
+      <p>
+        Visitá nuestra tienda y descubrí todas las ofertas disponibles.
+        ¡No te lo pierdas!
+      </p>
+    </div>
+
+    <div style="text-align: center">
+      <a href="${frontendUrl}/productos" class="btn-main">Ver Ofertas</a>
+    </div>
+
+    <p>¡Gracias por ser parte de <strong>WorldAssemblyTechnology</strong>!</p>
+    <p>El equipo de WAT.</p>
+  `;
+
+  return buildDarkTechTemplate(content, frontendUrl, unsubscribeUrl);
 }
 
 /**
  * Genera el HTML de confirmación de baja del newsletter
  */
-export function buildUnsubscribeConfirmationHtml(email: string, resubscribeUrl?: string): string {
+export function buildUnsubscribeConfirmationHtml(email: string, frontendUrl: string, resubscribeUrl?: string): string {
   const content = `
     <h1>Te has dado de baja</h1>
 
@@ -487,11 +557,91 @@ export function buildUnsubscribeConfirmationHtml(email: string, resubscribeUrl?:
       </p>
     </div>
 
-    ${resubscribeUrl ? `<a href="${resubscribeUrl}" class="btn-main">Volver a Suscribirme</a>` : ''}
+    ${resubscribeUrl ? `<div style="text-align: center"><a href="${resubscribeUrl}" class="btn-main">Volver a Suscribirme</a></div>` : ''}
 
-    <p>Si tenés alguna consulta, no dudes en <a href="${FRONTEND_URL}/contacto">contactarnos</a>.</p>
+    <p>Si tenés alguna consulta, no dudes en <a href="${frontendUrl}/contacto">contactarnos</a>.</p>
     <p>El equipo de WAT.</p>
   `;
 
-  return buildDarkTechTemplate(content);
+  return buildDarkTechTemplate(content, frontendUrl);
+}
+
+/**
+ * Genera el HTML de campaña personalizada con productos destacados
+ */
+export function buildCustomCampaignNewsletterHtml(
+  name: string,
+  frontendUrl: string,
+  campaignData: {
+    title: string;
+    body: string;
+    discountCode?: string;
+    ctaText: string;
+    ctaUrl: string;
+    featuredProducts: Array<{
+      id: string;
+      name: string;
+      basePrice: number;
+      imgUrls: string[];
+      category?: { id: string; category_name: string };
+    }>;
+  },
+  unsubscribeUrl?: string,
+): string {
+  // Construir HTML de productos destacados
+  const productsHtml =
+    campaignData.featuredProducts.length > 0
+      ? `
+      <div class="product-grid">
+        <h3 style="font-size: 18px; font-weight: 600; color: #f8fafc; margin-bottom: 16px;">
+          Productos Destacados
+        </h3>
+        ${campaignData.featuredProducts
+          .map(
+            (product) => `
+          <div class="product-item">
+            <a href="${frontendUrl}/productos/${product.id}" style="text-decoration: none; color: inherit;">
+              <img src="${product.imgUrls[0] || 'https://via.placeholder.com/200'}" alt="${product.name}" />
+              <h4>${product.name}</h4>
+              ${product.category ? `<p style="font-size: 12px; color: #9ca3af; margin: 4px 0;">${product.category.category_name}</p>` : ''}
+              <p class="price">$${product.basePrice.toLocaleString('es-AR')}</p>
+            </a>
+          </div>
+        `,
+          )
+          .join('')}
+      </div>
+    `
+      : '';
+
+  const content = `
+    <h1>${campaignData.title}</h1>
+
+    <p>Hola <strong>${name}</strong>,</p>
+    <p>${campaignData.body}</p>
+
+    ${
+      campaignData.discountCode
+        ? `
+    <div class="highlight-card">
+      <h2>Código de Descuento Exclusivo</h2>
+      <p style="font-size: 24px; font-weight: 700; letter-spacing: 2px; margin-top: 12px;">
+        ${campaignData.discountCode}
+      </p>
+    </div>
+    `
+        : ''
+    }
+
+    ${productsHtml}
+
+    <div style="text-align: center">
+      <a href="${frontendUrl}${campaignData.ctaUrl}" class="btn-main">${campaignData.ctaText}</a>
+    </div>
+
+    <p>¡Gracias por ser parte de <strong>WorldAssemblyTechnology</strong>!</p>
+    <p>El equipo de WAT.</p>
+  `;
+
+  return buildDarkTechTemplate(content, frontendUrl, unsubscribeUrl);
 }

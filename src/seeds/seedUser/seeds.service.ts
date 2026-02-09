@@ -17,18 +17,14 @@ export class SeedsService implements OnModuleInit {
     try {
       this.logger.log('Starting seed execution...');
 
-      // 1. Create roles first
       this.logger.log('Running role seeds...');
       await seedRoles(this.dataSource);
-
-      // 2. Then create the super admin user
       this.logger.log('Running super admin user seed...');
       await seedSuperAdmin(this.dataSource);
 
       this.logger.log('All seeds ran successfully');
     } catch (error) {
       this.logger.error('Error running seeds:', error);
-      // Do not throw so the application can continue
     }
   }
 }

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, MoreThan } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Cart } from './entities/cart.entity';
 import { MailQueueService } from '../mail/mail-queue_email.service';
 
@@ -16,17 +17,19 @@ export interface AbandonedCartItem {
 export class AbandonedCartService {
   private readonly logger = new Logger(AbandonedCartService.name);
 
-  // Tiempo en horas antes de considerar un carrito como abandonado
   private readonly ABANDONED_THRESHOLD_HOURS = 24;
 
   // URL base del frontend para el carrito
-  private readonly FRONTEND_URL = 'https://frontend-rootscoop.vercel.app';
+  private readonly FRONTEND_URL: string;
 
   constructor(
     @InjectRepository(Cart)
     private readonly cartRepository: Repository<Cart>,
     private readonly mailQueueService: MailQueueService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.FRONTEND_URL = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
+  }
 
   /**
    * Cron job que se ejecuta cada hora para detectar carritos abandonados

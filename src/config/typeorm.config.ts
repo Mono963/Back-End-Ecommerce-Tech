@@ -21,4 +21,9 @@ const config = {
 };
 
 export default registerAs('typeorm', () => config);
-export const connectionSource = new DataSource(config as DataSourceOptions);
+
+export const connectionSource = new DataSource({
+  ...config,
+  entities: ['src/**/*.entity.ts'],
+  migrations: ['src/migrations/*.ts'],
+} as DataSourceOptions);

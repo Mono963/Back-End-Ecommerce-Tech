@@ -79,7 +79,7 @@ export class MercadoPagoService {
       throw new BadRequestException('Payment service is not properly configured');
     }
 
-    const isLocalhost = frontendUrl.includes('localhost') || frontendUrl.includes('127.0.0.1');
+    const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
 
     const preferenceData = {
       items: [
@@ -100,9 +100,9 @@ export class MercadoPagoService {
         failure: `${frontendUrl}/orders/failure`,
         pending: `${frontendUrl}/orders/pending`,
       },
+      ...(isProduction && { auto_return: 'approved' }),
       notification_url: `${backendUrl}/payments/webhook`,
       external_reference: externalReference,
-      ...(isLocalhost ? {} : { auto_return: 'approved' as const }),
     };
 
     try {
@@ -287,12 +287,5 @@ export class MercadoPagoService {
       }
     }
     return null;
-  }
-
-  private getPaymentTypeFromReference(externalReference: string): string {
-    if (!externalReference) return 'unknown';
-    if (externalReference.startsWith('donation-')) return 'donation';
-    if (externalReference.startsWith('cart-')) return 'cart';
-    return 'legacy-donation';
   }
 }

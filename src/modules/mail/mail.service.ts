@@ -6,15 +6,25 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as Handlebars from 'handlebars';
 import juice from 'juice';
+import {
+  buildWelcomeNewsletterHtml,
+  buildMonthlyNewsletterHtml,
+  buildPromoNewsletterHtml,
+  buildCustomCampaignNewsletterHtml,
+} from '../newsLetters/templates/newsletter-templates';
 
 @Injectable()
 export class MailService {
   private transporter: Transporter;
   private readonly logger = new Logger(MailService.name);
   private readonly adminEmail: string;
+  private readonly frontendUrl: string;
+  private readonly backendUrl: string;
 
   constructor(private configService: ConfigService) {
     this.adminEmail = this.configService.get<string>('ADMIN_EMAIL') || 'worldassemblytechnolog@gmail.com';
+    this.frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
+    this.backendUrl = this.configService.get<string>('BACKEND_URL') || 'http://localhost:3001';
     this.transporter = nodemailer.createTransport({
       host: this.configService.get<string>('EMAIL_HOST'),
       port: this.configService.get<number>('EMAIL_PORT'),
@@ -29,6 +39,17 @@ export class MailService {
     });
   }
 
+  /**
+   * Inyecta variables comunes (frontendUrl, supportLink) en todos los templates
+   */
+  private enrichContext(context: Record<string, any>): Record<string, any> {
+    return {
+      ...context,
+      frontendUrl: this.frontendUrl,
+      supportLink: `${this.frontendUrl}/contacto`,
+    };
+  }
+
   private async getStripoTemplateHtml(templateName: string, context: Record<string, any>): Promise<string> {
     const templatePath = path.resolve(process.cwd(), 'dist', 'modules', 'mail', 'templates', templateName);
 
@@ -41,7 +62,8 @@ export class MailService {
     }
 
     const template = Handlebars.compile(templateSource);
-    const renderedHtml = template(context);
+    const enrichedContext = this.enrichContext(context);
+    const renderedHtml = template(enrichedContext);
     return renderedHtml;
   }
 
@@ -78,7 +100,7 @@ export class MailService {
     const context = {
       userName,
       appName: 'WAT',
-      appLink: 'https://frontend-rootscoop.vercel.app',
+      appLink: this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001',
     };
 
     await this.sendMail(userEmail, subject, textAlt, 'welcome-email.html', context);
@@ -91,7 +113,7 @@ export class MailService {
     const context = {
       userName,
       appName: 'WAT',
-      supportLink: 'https://frontend-rootscoop.vercel.app/contacto',
+      supportLink: `${this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001'}/contacto`,
     };
 
     await this.sendMail(userEmail, subject, textAlt, 'login-notification.html', context);
@@ -99,21 +121,40 @@ export class MailService {
   async sendOrderProcessingNotification(
     userEmail: string,
     userName: string,
-    orderId: string,
+    orderNumber: string,
     products: { name: string; quantity: number; price: number }[],
-    orderTotal: number,
+    subtotal: number,
+    shipping: number,
+    tax: number,
+    total: number,
+    shippingAddress: {
+      street: string;
+      city: string;
+      province: string;
+      postalCode: string;
+    } | null,
+    paymentMethod: string,
     orderDate: Date,
   ): Promise<void> {
     const subject = 'Tu Orden Está en Proceso';
-    const textAlt = `Hola ${userName},\n\nTu orden #${orderId} está siendo procesada.\n\nSaludos,\nWorldAssemblyTechnology.`;
+    const textAlt =
+      `Hola ${userName},\n\n` +
+      `Tu orden #${orderNumber} está siendo procesada.\n` +
+      `Total: $${total}\n\n` +
+      `Saludos,\nWorldAssemblyTechnology.`;
 
     const context = {
       userName,
-      orderId,
+      orderNumber,
       appName: 'WAT',
       products,
-      orderTotal,
-      orderDate: orderDate.toLocaleDateString(),
+      subtotal,
+      shipping,
+      tax,
+      total,
+      shippingAddress,
+      paymentMethod,
+      orderDate: orderDate.toLocaleDateString('es-AR'),
     };
 
     await this.sendMail(userEmail, subject, textAlt, 'order-processing.html', context);
@@ -125,7 +166,7 @@ export class MailService {
     const context = {
       userName,
       appName: 'WAT',
-      supportLink: 'https://frontend-rootscoop.vercel.app/contacto',
+      supportLink: `${this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001'}/contacto`,
     };
 
     await this.sendMail(userEmail, subject, textAlt, 'data-changed.html', context);
@@ -143,7 +184,7 @@ export class MailService {
       email,
       reason,
       appName: 'WAT',
-      supportLink: 'https://frontend-rootscoop.vercel.app/contacto',
+      supportLink: `${this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001'}/contacto`,
     };
 
     await this.sendMail(email, subject, textAlt, 'contact-info.html', context);
@@ -162,12 +203,43 @@ export class MailService {
 
     await this.sendMail(this.adminEmail, subject, textAlt, 'contact-admin.html', context);
   }
-  async sendPurchaseConfirmation(email: string): Promise<void> {
+  async sendPurchaseConfirmation(
+    email: string,
+    userName: string,
+    orderNumber: string,
+    products: { name: string; quantity: number; price: number }[],
+    subtotal: number,
+    shipping: number,
+    tax: number,
+    total: number,
+    shippingAddress: {
+      street: string;
+      city: string;
+      province: string;
+      postalCode: string;
+    } | null,
+    paymentMethod: string,
+    orderDate: Date,
+  ): Promise<void> {
     const subject = '¡Gracias por tu compra en WorldAssemblyTechnology!';
-    const textAlt = `Gracias por tu compra.\n\n` + `Saludos,\nEl equipo de WorldAssemblyTechnology.`;
+    const textAlt =
+      `Hola ${userName},\n\n` +
+      `Gracias por tu compra. Tu orden #${orderNumber} ha sido confirmada.\n` +
+      `Total: $${total}\n\n` +
+      `Saludos,\nEl equipo de WorldAssemblyTechnology.`;
 
     const context = {
-      appName: 'WAT',
+      userName,
+      orderNumber,
+      products,
+      subtotal,
+      shipping,
+      tax,
+      total,
+      shippingAddress,
+      paymentMethod,
+      orderDate: orderDate.toLocaleDateString('es-AR'),
+      appName: 'WorldAssemblyTechnology',
     };
 
     await this.sendMail(email, subject, textAlt, 'purchase-confirmation.html', context);
@@ -239,7 +311,7 @@ export class MailService {
     const context = {
       userName,
       appName: 'WorldAssemblyTechnology',
-      supportLink: 'https://frontend-rootscoop.vercel.app/contacto',
+      supportLink: `${this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001'}/contacto`,
     };
 
     await this.sendMail(userEmail, subject, textAlt, 'user-blocked.html', context);
@@ -362,10 +434,9 @@ export class MailService {
     const subject = 'Tu orden ha sido cancelada - WorldAssemblyTechnology';
     const textAlt =
       `Hola ${userName},\n\n` +
-      `Lamentamos informarte que tu orden #${orderNumber} ha sido cancelada.\n` +
-      (cancellationReason ? `Motivo: ${cancellationReason}\n` : '') +
-      (refundStatus ? `Estado del reembolso: ${refundStatus}\n` : '') +
-      `\nSi tenés alguna consulta, contactanos.\n\n` +
+      `Lamentamos informarte que tu orden #${orderNumber} ha sido cancelada.\n${
+        cancellationReason ? `Motivo: ${cancellationReason}\n` : ''
+      }${refundStatus ? `Estado del reembolso: ${refundStatus}\n` : ''}\nSi tenés alguna consulta, contactanos.\n\n` +
       `Saludos,\nEl equipo de WorldAssemblyTechnology.`;
 
     const context = {
@@ -395,9 +466,9 @@ export class MailService {
       `Hola ${userName},\n\n` +
       `Te confirmamos que el reembolso de tu orden #${orderNumber} ha sido procesado.\n` +
       `Monto: $${refundAmount}\n` +
-      `Método: ${refundMethod}\n` +
-      (estimatedDays ? `Tiempo estimado: ${estimatedDays} días hábiles\n` : '') +
-      `\nSaludos,\nEl equipo de WorldAssemblyTechnology.`;
+      `Método: ${refundMethod}\n${
+        estimatedDays ? `Tiempo estimado: ${estimatedDays} días hábiles\n` : ''
+      }\nSaludos,\nEl equipo de WorldAssemblyTechnology.`;
 
     const context = {
       userName,
@@ -429,9 +500,9 @@ export class MailService {
     const textAlt =
       `Hola ${userName},\n\n` +
       `Notamos que dejaste algunos productos en tu carrito.\n` +
-      `No te los pierdas, completá tu compra en: ${cartUrl}\n\n` +
-      (discountCode ? `Usá el código ${discountCode} para obtener un descuento.\n\n` : '') +
-      `Saludos,\nEl equipo de WorldAssemblyTechnology.`;
+      `No te los pierdas, completá tu compra en: ${cartUrl}\n\n${
+        discountCode ? `Usá el código ${discountCode} para obtener un descuento.\n\n` : ''
+      }Saludos,\nEl equipo de WorldAssemblyTechnology.`;
 
     const context = {
       userName,
@@ -472,5 +543,152 @@ export class MailService {
     };
 
     await this.sendMail(email, subject, textAlt, 'review-request.html', context);
+  }
+
+  // ==================== NEWSLETTER METHODS ====================
+
+  /**
+   * Embeds a 1x1 tracking pixel into the newsletter HTML before </body>
+   */
+  private embedTrackingPixel(html: string, trackingId?: string): string {
+    if (!trackingId) return html;
+    const pixelUrl = `${this.backendUrl}/newsletter/track/open/${trackingId}`;
+    return html.replace('</body>', `<img src="${pixelUrl}" width="1" height="1" alt="" style="display:none" /></body>`);
+  }
+
+  async sendNewsletterWelcome(
+    email: string,
+    userName: string,
+    unsubscribeUrl?: string,
+    trackingId?: string,
+  ): Promise<void> {
+    const subject = '🤖 ¡Tu newsletter de bienvenida!';
+    const rawHtml = buildWelcomeNewsletterHtml(userName, this.frontendUrl, unsubscribeUrl);
+    const html = this.embedTrackingPixel(rawHtml, trackingId);
+
+    try {
+      const emailFrom = `"${this.configService.get('EMAIL_FROM_NAME')}" <${this.configService.get('EMAIL_FROM')}>`;
+      await this.transporter.sendMail({
+        from: emailFrom,
+        to: email,
+        subject,
+        html,
+      });
+      this.logger.log(`Newsletter welcome sent to: ${email}`);
+    } catch (error) {
+      this.logger.error(`Error sending newsletter welcome to ${email}: ${(error as Error).message}`);
+      throw error;
+    }
+  }
+
+  async sendNewsletterMonthly(
+    email: string,
+    userName: string,
+    unsubscribeUrl?: string,
+    trackingId?: string,
+  ): Promise<void> {
+    const subject = '💻 Tu newsletter mensual - WAT';
+    const rawHtml = buildMonthlyNewsletterHtml(userName, this.frontendUrl, unsubscribeUrl);
+    const html = this.embedTrackingPixel(rawHtml, trackingId);
+
+    try {
+      const emailFrom = `"${this.configService.get('EMAIL_FROM_NAME')}" <${this.configService.get('EMAIL_FROM')}>`;
+      await this.transporter.sendMail({
+        from: emailFrom,
+        to: email,
+        subject,
+        html,
+      });
+      this.logger.log(`Newsletter monthly sent to: ${email}`);
+    } catch (error) {
+      this.logger.error(`Error sending newsletter monthly to ${email}: ${(error as Error).message}`);
+      throw error;
+    }
+  }
+
+  async sendNewsletterPromo(
+    email: string,
+    userName: string,
+    unsubscribeUrl?: string,
+    title?: string,
+    description?: string,
+    discountCode?: string,
+    trackingId?: string,
+  ): Promise<void> {
+    const subject = '🎉 💻 ¡Oferta Especial para vos! - WAT';
+    const rawHtml = buildPromoNewsletterHtml(
+      userName,
+      this.frontendUrl,
+      title || 'Promoción Especial',
+      description || 'Tenemos ofertas exclusivas esperándote.',
+      discountCode,
+      unsubscribeUrl,
+    );
+    const html = this.embedTrackingPixel(rawHtml, trackingId);
+
+    try {
+      const emailFrom = `"${this.configService.get('EMAIL_FROM_NAME')}" <${this.configService.get('EMAIL_FROM')}>`;
+      await this.transporter.sendMail({
+        from: emailFrom,
+        to: email,
+        subject,
+        html,
+      });
+      this.logger.log(`Newsletter promo sent to: ${email}`);
+    } catch (error) {
+      this.logger.error(`Error sending newsletter promo to ${email}: ${(error as Error).message}`);
+      throw error;
+    }
+  }
+
+  async sendCustomCampaignNewsletter(
+    email: string,
+    userName: string,
+    unsubscribeUrl?: string,
+    campaignData?: {
+      subject: string;
+      title: string;
+      body: string;
+      discountCode?: string;
+      ctaText: string;
+      ctaUrl: string;
+      featuredProducts: Array<{
+        id: string;
+        name: string;
+        basePrice: number;
+        imgUrls: string[];
+        category?: { id: string; category_name: string };
+      }>;
+    },
+    trackingId?: string,
+  ): Promise<void> {
+    const subject = campaignData?.subject || '📧 Novedades de WAT';
+    const rawHtml = buildCustomCampaignNewsletterHtml(
+      userName,
+      this.frontendUrl,
+      campaignData || {
+        title: 'Campaña Personalizada',
+        body: 'Contenido de la campaña.',
+        ctaText: 'Ver Más',
+        ctaUrl: '/productos',
+        featuredProducts: [],
+      },
+      unsubscribeUrl,
+    );
+    const html = this.embedTrackingPixel(rawHtml, trackingId);
+
+    try {
+      const emailFrom = `"${this.configService.get('EMAIL_FROM_NAME')}" <${this.configService.get('EMAIL_FROM')}>`;
+      await this.transporter.sendMail({
+        from: emailFrom,
+        to: email,
+        subject,
+        html,
+      });
+      this.logger.log(`Custom campaign newsletter sent to: ${email}`);
+    } catch (error) {
+      this.logger.error(`Error sending custom campaign newsletter to ${email}: ${(error as Error).message}`);
+      throw error;
+    }
   }
 }

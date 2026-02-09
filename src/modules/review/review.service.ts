@@ -4,8 +4,7 @@ import { Product } from '../products/entities/products.entity';
 import { DataSource, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Users } from '../users/entities/users.entity';
-import { CreateReviewDto } from './dto/create-review.dto';
-import { IReviewResponseAdmin, IReviewResponsePublic } from './interface/IReview.interface';
+import { ICreateReview, IReviewResponseAdmin, IReviewResponsePublic } from './interface/IReview.interface';
 import { ReviewSearchQueryDto } from './dto/PaginationQueryDto';
 import { IPaginatedResult, paginate } from '../../common/pagination';
 
@@ -66,7 +65,7 @@ export class ReviewService {
     };
   }
 
-  async create(dto: CreateReviewDto, userId: string): Promise<IReviewResponsePublic> {
+  async create(dto: ICreateReview, userId: string): Promise<IReviewResponsePublic> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();

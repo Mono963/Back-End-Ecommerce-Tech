@@ -15,21 +15,21 @@ async function bootstrap(): Promise<void> {
 
   const logger = new Logger('Bootstrap');
 
-  const helmetMiddleware = helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-        imgSrc: ["'self'", 'data:', 'https:'],
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+        },
       },
-    },
-    crossOriginEmbedderPolicy: false,
-  });
-  app.use(helmetMiddleware);
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
 
-  const compressionMiddleware = compression();
-  app.use(compressionMiddleware);
+  app.use(compression());
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -59,22 +59,33 @@ async function bootstrap(): Promise<void> {
   await app.listen(port, '0.0.0.0');
 
   const redisUrl = process.env.REDIS_URL;
-  const redisHost = process.env.REDIS_HOST || 'localhost';
+  const redisHost = process.env.REDIS_HOST;
   const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
   const redisPassword = process.env.REDIS_PASSWORD;
-  const redis = redisUrl
-    ? new Redis(redisUrl, { maxRetriesPerRequest: 1 })
-    : new Redis({ host: redisHost, port: redisPort, password: redisPassword, maxRetriesPerRequest: 1 });
 
-  try {
-    await redis.ping();
-    logger.log(`Redis connected on ${redisUrl ?? `${redisHost}:${redisPort}`}`);
-  } catch {
-    logger.warn(`Redis not available on ${redisUrl ?? `${redisHost}:${redisPort}`}`);
-  } finally {
-    await redis.quit();
+  if (redisUrl || redisHost) {
+    const redis = redisUrl
+      ? new Redis(redisUrl, { maxRetriesPerRequest: 1 })
+      : new Redis({
+          host: redisHost,
+          port: redisPort,
+          password: redisPassword,
+          maxRetriesPerRequest: 1,
+        });
+
+    try {
+      await redis.ping();
+      logger.log(`Redis connected on ${redisUrl ?? `${redisHost}:${redisPort}`}`);
+    } catch {
+      logger.warn(`Redis not available on ${redisUrl ?? `${redisHost}:${redisPort}`}`);
+    } finally {
+      await redis.quit();
+    }
+  } else {
+    logger.warn('Redis not configured 🔴 running without Redis');
   }
 
+  logger.log(`Application Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3001'}`);
   logger.log(`Application running on: http://localhost:${port}`);
   logger.log(`Swagger documentation: http://localhost:${port}/api/docs`);
 }
