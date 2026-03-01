@@ -9,12 +9,21 @@ services:
       - .env.development
     depends_on:
       - postgresdb
+      - redis
   postgresdb:
     image: postgres
     volumes:
       - pgdata:/var/lib/postgresql/data
     env_file:
       - .env.development
+  redis:
+    image: redis:alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - redisdata:/data
+    command: redis-server --appendonly yes
 
 volumes:
   pgdata:
+  redisdata:

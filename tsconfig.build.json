@@ -1,9 +1,11 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "declaration": false, // No necesario en build
-    "declarationMap": false, // No necesario en build
-    "sourceMap": false // Opcional: desactivar para builds más rápidos en prod
+    "sourceMap": false,
+    "declaration": false,
+    "declarationMap": false,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
   },
-  "exclude": ["node_modules", "dist", "test", "**/*spec.ts", "**/*test.ts", "**/*.e2e-spec.ts", "src/**/*.spec.ts", "src/**/*.test.ts"]
+  "exclude": ["node_modules", "dist", "**/*.spec.ts", "**/*.test.ts", "src/migrations/**/*.ts"]
 }

@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Body, UseGuards, Param, Logger, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Param, Logger, Query, UseInterceptors } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { CacheInterceptor } from '@nestjs/cache-manager';
 
 import { CategoriesService } from './category.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -10,7 +11,7 @@ import { RoleGuard } from '../../guards/auth.guards.role';
 import { Roles, UserRole } from '../../decorator/role.decorator';
 import { PaginatedCategoryDto } from './dto/paginated-users.dto';
 import { CategorySearchQueryDto } from './dto/PaginationQueryDto';
-import { ResponseCategoryDto } from './interface/category.interface';
+import { ResponseCategoryDto } from './mappers/category.mapper';
 
 @ApiTags('Category')
 @Controller('categories')
@@ -25,6 +26,7 @@ export class CategoriesController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'OK', type: PaginatedCategoryDto })
   @Get()
+  @UseInterceptors(CacheInterceptor)
   async getUsers(@Query() searchQuery: CategorySearchQueryDto): Promise<PaginatedCategoryDto> {
     const { items, ...meta } = await this.categoriesService.getCategories(searchQuery);
     return { ...meta, items: ResponseCategoryDto.toDTOList(items) };
@@ -33,12 +35,19 @@ export class CategoriesController {
   @ApiBearerAuth()
   @Post()
   @UseGuards(AuthGuard, RoleGuard)
+  @ApiOperation({
+    summary: 'Create category',
+  })
   @Roles(UserRole.ADMIN)
   create(@Body() dto: CreateCategoryDto): Promise<Category> {
     return this.categoriesService.createCategory(dto);
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @ApiOperation({
+    summary: 'search category by its ID',
+  })
   getById(@Param('id') id: string): Promise<Category> {
     const category = this.categoriesService.getByIdCategory(id);
     return category;
@@ -46,6 +55,9 @@ export class CategoriesController {
 
   @ApiBearerAuth()
   @Post('seeder')
+  @ApiOperation({
+    summary: 'Load the seeds to the database',
+  })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
   async seedCategories(): Promise<{ message: string; data?: Category[] }> {

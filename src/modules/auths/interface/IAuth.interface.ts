@@ -28,3 +28,9 @@ export interface AuthResponse {
     role: string;
   };
 }
+
+export interface AuthCodeData {
+  token: string;
+  userId: string;
+  expiresAt: number;
+}

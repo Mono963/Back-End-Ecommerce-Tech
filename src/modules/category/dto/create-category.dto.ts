@@ -3,9 +3,9 @@ import { IsString, MaxLength } from 'class-validator';
 
 export class CreateCategoryDto {
   @ApiProperty({
-    example: 'Tecnología',
+    example: 'Technology',
   })
   @IsString()
   @MaxLength(50)
-  categoryName: string;
+  category_name: string;
 }

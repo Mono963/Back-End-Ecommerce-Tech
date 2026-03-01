@@ -11,21 +11,20 @@ import {
   Body,
   Req,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
+import { CacheInterceptor } from '@nestjs/cache-manager';
 import { ReviewService } from './review.service';
 import { Roles, UserRole } from 'src/decorator/role.decorator';
 import { AuthGuard } from 'src/guards/auth.guards';
 import { RoleGuard } from 'src/guards/auth.guards.role';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
-import {
-  PaginatedReviewsAdminDto,
-  Rating,
-  ReviewFiltersDto,
-  ReviewResponsePublic,
-  ReviewResponseAdmin,
-} from './interface/IReview.interface';
+import { AuthRequest } from 'src/common/auths/auth-request.interface';
+import { ReviewMapper } from './mappers/review.mapper';
+import { PaginatedReviewsAdminDto, ReviewSearchQueryDto } from './dto/PaginationQueryDto';
 import { CreateReviewDto } from './dto/create-review.dto';
-import { AuthenticatedRequest } from '../users/interface/IUserResponseDto';
+import { ReviewResponseAdminDto, ReviewResponsePublicDto } from './dto/review.response.interface';
+import { Rating } from './enum/review.enum';
 
 @ApiBearerAuth()
 @ApiTags('Reviews')
@@ -35,113 +34,105 @@ export class ReviewController {
 
   @Post()
   @ApiOperation({
-    summary: 'Crear una nueva reseña',
-    description: 'Permite a un cliente crear una reseña para un producto',
+    summary: 'Create a new review',
+    description: 'Allows a customer to create a review for a product',
   })
   @ApiResponse({
     status: 201,
-    description: 'Reseña creada exitosamente',
+    description: 'Review successfully created',
     type: Object,
   })
   @ApiResponse({
     status: 400,
-    description: 'Ya existe una reseña para este producto del usuario',
+    description: 'A review for this product already exists for this user',
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.CLIENT)
-  async create(@Body() dto: CreateReviewDto, @Req() req: AuthenticatedRequest): Promise<ReviewResponsePublic> {
+  async create(@Body() dto: CreateReviewDto, @Req() req: AuthRequest): Promise<ReviewResponsePublicDto> {
     return await this.reviewService.create(dto, req.user.sub);
   }
 
   @Get()
   @ApiOperation({
-    summary: 'Obtener todas las reseñas con paginación y filtros (Admin)',
+    summary: 'Retrieve all reviews (paginated) with optional filters (Admin)',
     description:
-      'Retorna todas las reseñas CON isVisible, metadata de paginación, filtros por rating, productId y nombre de usuario (Solo Admin)',
+      'Returns paginated reviews including isVisible. Allows filtering by rating, productId and username (Admin only)',
   })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    type: 'number',
-    description: 'Página',
-    example: 1,
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    type: 'number',
-    description: 'Límite por página',
-    example: 10,
-  })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({
     name: 'rating',
     required: false,
     enum: Rating,
-    description: 'Filtrar por calificación',
-    example: 5,
+    description: 'Filter by rating',
   })
   @ApiQuery({
     name: 'productId',
     required: false,
-    type: 'string',
-    description: 'Filtrar por ID de producto',
+    type: String,
+    description: 'Filter by product ID',
   })
   @ApiQuery({
     name: 'userName',
     required: false,
-    type: 'string',
-    description: 'Buscar por nombre de usuario',
-    example: 'Juan',
+    type: String,
+    description: 'Search by username',
   })
   @ApiResponse({
     status: 200,
-    description: 'Lista paginada de reseñas con metadata (incluye isVisible)',
+    description: 'OK',
     type: PaginatedReviewsAdminDto,
   })
-  @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
-  async getAll(@Query() filters: ReviewFiltersDto): Promise<PaginatedReviewsAdminDto> {
-    return await this.reviewService.findAll(filters);
+  @HttpCode(HttpStatus.OK)
+  async getAll(@Query() searchQuery: ReviewSearchQueryDto): Promise<PaginatedReviewsAdminDto> {
+    const { items, ...meta } = await this.reviewService.findAll(searchQuery);
+
+    return {
+      ...meta,
+      items: ReviewMapper.toAdminResponseList(items),
+    };
   }
 
   @Get(':id')
   @ApiOperation({
-    summary: 'Obtener una reseña por ID',
-    description: 'Retorna una reseña específica (sin isVisible)',
+    summary: 'Get a review by ID',
+    description: 'Returns a specific review (without isVisible)',
   })
   @ApiResponse({
     status: 200,
-    description: 'Reseña encontrada',
+    description: 'Review found',
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.CLIENT)
-  async findOne(@Param('id') id: string): Promise<ReviewResponsePublic> {
+  async findOne(@Param('id') id: string): Promise<ReviewResponsePublicDto> {
     return await this.reviewService.findOne(id);
   }
 
   @Get('product/:productId/public')
+  @UseInterceptors(CacheInterceptor)
   @ApiOperation({
-    summary: 'Obtener reseñas públicas de un producto',
-    description: 'Retorna todas las reseñas visibles de un producto (Sin autenticación, sin isVisible)',
+    summary: 'Get public reviews for a product',
+    description: 'Returns all visible reviews for a product (No authentication, without isVisible)',
   })
   @ApiResponse({
     status: 200,
-    description: 'Reseñas del producto obtenidas',
+    description: 'Product reviews retrieved',
     type: [Object],
   })
-  async getProductReviewsPublic(@Param('productId') productId: string): Promise<ReviewResponsePublic[]> {
+  async getProductReviewsPublic(@Param('productId') productId: string): Promise<ReviewResponsePublicDto[]> {
     return await this.reviewService.findByProductPublic(productId);
   }
 
   @Get('can-review/:productId')
   @ApiOperation({
-    summary: 'Verificar si el usuario puede dejar una reseña',
-    description: 'Verifica si el usuario ya dejó una reseña para este producto',
+    summary: 'Check if the user can leave a review',
+    description: 'Checks whether the user has already submitted a review for this product',
   })
   @ApiResponse({
     status: 200,
-    description: 'Estado de verificación',
+    description: 'Verification status',
     schema: {
       type: 'object',
       properties: {
@@ -154,53 +145,53 @@ export class ReviewController {
   @UseGuards(AuthGuard)
   async canUserReview(
     @Param('productId') productId: string,
-    @Req() req: AuthenticatedRequest,
+    @Req() req: AuthRequest,
   ): Promise<{ canReview: boolean; hasReviewed: boolean; message: string }> {
     return await this.reviewService.canUserReview(productId, req.user.sub);
   }
 
   @Get('product/:productId')
   @ApiOperation({
-    summary: 'Obtener todas las reseñas de un producto (Admin)',
-    description: 'Retorna todas las reseñas de un producto CON isVisible (Solo Admin)',
+    summary: 'Get all reviews for a product (Admin)',
+    description: 'Returns all reviews for a product INCLUDING isVisible (Admin only)',
   })
   @ApiResponse({
     status: 200,
-    description: 'Reseñas del producto (incluye isVisible)',
+    description: 'Product reviews retrieved (includes isVisible)',
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
-  async getProductReviews(@Param('productId') productId: string): Promise<ReviewResponseAdmin[]> {
+  async getProductReviews(@Param('productId') productId: string): Promise<ReviewResponsePublicDto[]> {
     return await this.reviewService.findByProduct(productId);
   }
 
   @Patch(':id/visibility')
   @ApiOperation({
-    summary: 'Cambiar visibilidad de una reseña (Admin)',
-    description: 'Alterna la visibilidad de una reseña (visible/oculta)',
+    summary: 'Change review visibility (Admin)',
+    description: 'Toggles a review visibility (visible / hidden)',
   })
   @ApiResponse({
     status: 200,
-    description: 'Visibilidad actualizada',
+    description: 'Visibility successfully updated',
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
-  async toggleVisibility(@Param('id') id: string): Promise<ReviewResponseAdmin> {
+  async toggleVisibility(@Param('id') id: string): Promise<ReviewResponseAdminDto> {
     return await this.reviewService.toggleVisibility(id);
   }
 
   @Delete(':id')
   @ApiOperation({
-    summary: 'Eliminar una reseña',
-    description: 'Un cliente solo puede eliminar sus propias reseñas',
+    summary: 'Delete a review',
+    description: 'A customer can only delete their own reviews',
   })
   @ApiResponse({
     status: 200,
-    description: 'Reseña eliminada',
+    description: 'Review successfully deleted',
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.CLIENT)
-  async remove(@Param('id') id: string, @Req() req: AuthenticatedRequest): Promise<void> {
+  async remove(@Param('id') id: string, @Req() req: AuthRequest): Promise<void> {
     return await this.reviewService.remove(id, req.user.sub);
   }
 }

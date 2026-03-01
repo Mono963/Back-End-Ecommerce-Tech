@@ -1,6 +1,6 @@
-import { ProductVariant } from 'src/modules/products/Entities/products_variant.entity';
+import { ProductVariant } from '../../products/entities/products_variant.entity';
 
-export class ICartItemVariantDTO {
+export interface ICartItemVariant {
   id: string;
   type: string;
   name: string;
@@ -9,7 +9,7 @@ export class ICartItemVariantDTO {
   isAvailable: boolean;
 }
 
-export class ICartItemResponseDTO {
+export interface ICartItemResponse {
   id: string;
   quantity: number;
   priceAtAddition: number;
@@ -23,7 +23,7 @@ export class ICartItemResponseDTO {
         priceModifier: number;
       }[]
     | null;
-  variants: ICartItemVariantDTO[];
+  variants: ICartItemVariant[];
   product: {
     id: string;
     name: string;
@@ -37,17 +37,17 @@ export class ICartItemResponseDTO {
     isActive: boolean;
     category: {
       id: string;
-      name: string;
+      category_name: string;
     } | null;
   };
 }
 
-export class ICartResponseDTO {
+export interface ICartResponse {
   id: string;
   total: number;
   createdAt: Date;
   updatedAt: Date;
-  items: ICartItemResponseDTO[];
+  items: ICartItemResponse[];
   itemCount: number;
 }
 
@@ -75,8 +75,41 @@ export interface IVariantValidationResult {
   }>;
 }
 
-export interface IResponseCartSummaryDTO {
+export interface IResponseCartSummary {
   itemCount: number;
   total: number;
   hasItems: boolean;
+}
+
+export interface ICartDiscountPreviewItem {
+  productId: string;
+  quantity: number;
+  originalUnitPrice: number;
+  discountAmount: number;
+  discountSource: string | null;
+  discountCode: string | null;
+  finalUnitPrice: number;
+  subtotal: number;
+}
+
+export interface ICartDiscountPreview {
+  subtotalOriginal: number;
+  subtotalWithDiscount: number;
+  totalDiscount: number;
+  tax: number;
+  shipping: number;
+  total: number;
+  promoValid: boolean;
+  promoErrors: string[];
+  items: ICartDiscountPreviewItem[];
+}
+
+export interface IAddToCart {
+  productId: string;
+  quantity: number;
+  variantIds?: string[];
+}
+
+export interface IUpdateCartItem {
+  quantity: number;
 }

@@ -1,6 +1,4 @@
-import { Cart } from 'src/modules/cart/entities/cart.entity';
-import { Order } from 'src/modules/orders/Entities/order.entity';
-import { Role } from 'src/modules/roles/entities/role.entity';
+import { Order } from '../../orders/entities/order.entity';
 import {
   Column,
   CreateDateColumn,
@@ -14,8 +12,12 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { UserAddress } from '../interface/IUserResponseDto';
-import { Review } from 'src/modules/review/entities/review.entity';
+
+import { Address } from './address.entity';
+import { Payment } from '../../payments/entities/payment.entity';
+import { Cart } from '../../cart/entities/cart.entity';
+import { Review } from '../../review/entities/review.entity';
+import { Role } from '../../roles/entities/role.entity';
 
 @Entity({
   name: 'users',
@@ -37,17 +39,11 @@ export class Users {
   @Column({ type: 'varchar', length: 50, unique: true, nullable: false })
   username: string;
 
-  @Column('text', { nullable: true })
-  address: string;
-
   @Column({ type: 'varchar', length: 255, nullable: false })
   password: string;
 
   @Column({ type: 'bigint', nullable: false })
   phone: string;
-
-  @Column({ type: 'jsonb', nullable: true, default: [] })
-  addresses: UserAddress[];
 
   @CreateDateColumn()
   createdAt?: Date;
@@ -58,8 +54,14 @@ export class Users {
   @DeleteDateColumn({ name: 'deleted_at', select: false })
   deletedAt: Date | null;
 
+  @OneToMany(() => Address, (address) => address.user)
+  addresses: Address[];
+
   @OneToMany(() => Order, (order) => order.user)
   orders: Order[];
+
+  @OneToMany(() => Payment, (payment) => payment.user)
+  payments: Payment[];
 
   @OneToOne(() => Cart, (cart) => cart.user)
   cart: Cart;
@@ -71,4 +73,23 @@ export class Users {
 
   @OneToMany(() => Review, (review) => review.user)
   reviews: Review[];
+
+  @Column({ type: 'boolean', default: true })
+  isNewsletterSubscribed: boolean;
+
+  @Column({ type: 'varchar', length: 64, nullable: true, unique: true })
+  @Index()
+  unsubscribeToken: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  newsletterSubscribedAt: Date | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  newsletterUnsubscribedAt: Date | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  passwordResetToken: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  passwordResetExpiresAt: Date | null;
 }

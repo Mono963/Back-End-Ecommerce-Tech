@@ -1,17 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Review } from './entities/review.entity';
-import { Product } from '../products/Entities/products.entity';
+import { Product } from '../products/entities/products.entity';
 import { DataSource, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Users } from '../users/Entities/users.entity';
-import {
-  PaginatedReviewsDto,
-  PaginatedReviewsAdminDto,
-  ReviewFiltersDto,
-  ReviewResponsePublic,
-  ReviewResponseAdmin,
-} from './interface/IReview.interface';
-import { CreateReviewDto } from './dto/create-review.dto';
+import { Users } from '../users/entities/users.entity';
+import { ICreateReview, IReviewResponseAdmin, IReviewResponsePublic } from './interface/IReview.interface';
+import { ReviewSearchQueryDto } from './dto/PaginationQueryDto';
+import { IPaginatedResult, paginate } from '../../common/pagination';
 
 @Injectable()
 export class ReviewService {
@@ -25,10 +20,7 @@ export class ReviewService {
     private readonly dataSource: DataSource,
   ) {}
 
-  // ============ FUNCIONES DE MAPEO (Punto 3) ============
-
-  // Mapea una Review a respuesta PÚBLICA (sin isVisible)
-  private toPublicResponse(review: Review): ReviewResponsePublic {
+  private toPublicResponse(review: Review): IReviewResponsePublic {
     return {
       id: review.id,
       rating: review.rating,
@@ -49,8 +41,7 @@ export class ReviewService {
     };
   }
 
-  // Mapea una Review a respuesta ADMIN (con isVisible)
-  private toAdminResponse(review: Review): ReviewResponseAdmin {
+  private toAdminResponse(review: Review): IReviewResponseAdmin {
     return {
       id: review.id,
       rating: review.rating,
@@ -74,9 +65,7 @@ export class ReviewService {
     };
   }
 
-  // ============ MÉTODOS DEL SERVICIO ============
-
-  async create(dto: CreateReviewDto, userId: string): Promise<ReviewResponsePublic> {
+  async create(dto: ICreateReview, userId: string): Promise<IReviewResponsePublic> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -84,7 +73,7 @@ export class ReviewService {
     try {
       const user = await this.usersRepo.findOne({ where: { id: userId } });
       if (!user) {
-        throw new NotFoundException(`El usuario con el ID '${userId}' no fue encontrado`);
+        throw new NotFoundException(`User with ID '${userId}' was not found`);
       }
 
       const ProductReview = await queryRunner.manager.findOne(Product, {
@@ -92,7 +81,7 @@ export class ReviewService {
       });
 
       if (!ProductReview) {
-        throw new BadRequestException(`El producto no con el ID '${dto.productId}' no fue encontrado`);
+        throw new BadRequestException(`Product with ID '${dto.productId}' was not found`);
       }
 
       const existingReview = await queryRunner.manager.findOne(Review, {
@@ -100,7 +89,7 @@ export class ReviewService {
       });
 
       if (existingReview) {
-        throw new BadRequestException('Ya dejaste un review para este producto');
+        throw new BadRequestException('You already submitted a review for this product');
       }
 
       const reviewData: Partial<Review> = {
@@ -123,44 +112,28 @@ export class ReviewService {
     }
   }
 
-  // GET /review - Solo ADMIN (devuelve isVisible)
-  async findAll(filters?: ReviewFiltersDto): Promise<PaginatedReviewsAdminDto> {
-    const { rating, productId, userName, page = 1, limit = 10 } = filters || {};
+  async findAll(searchQuery: ReviewSearchQueryDto): Promise<IPaginatedResult<Review>> {
+    const { rating, productId, userName, ...pagination } = searchQuery;
 
-    // Si no hay filtros, usar findAndCount directo
     if (!rating && !productId && !userName) {
-      const [reviews, total] = await this.reviewRepo.findAndCount({
+      return await paginate(this.reviewRepo, pagination, {
         relations: ['user', 'product'],
         order: { createdAt: 'DESC' },
-        skip: (page - 1) * limit,
-        take: limit,
       });
-
-      const pages = Math.ceil(total / limit);
-
-      return {
-        items: reviews.map((r) => this.toAdminResponse(r)),
-        total,
-        pages,
-      };
     }
 
-    // Si hay filtros, usar QueryBuilder
     const queryBuilder = this.reviewRepo.createQueryBuilder('review');
-    queryBuilder.leftJoinAndSelect('review.user', 'user');
-    queryBuilder.leftJoinAndSelect('review.product', 'product');
 
-    // Filtrar por rating
+    queryBuilder.leftJoinAndSelect('review.user', 'user').leftJoinAndSelect('review.product', 'product').where('1 = 1');
+
     if (rating !== undefined) {
       queryBuilder.andWhere('review.rating = :rating', { rating });
     }
 
-    // Filtrar por productId
     if (productId) {
       queryBuilder.andWhere('product.id = :productId', { productId });
     }
 
-    // Filtrar por nombre de usuario
     if (userName) {
       queryBuilder.andWhere('LOWER(user.name) LIKE LOWER(:userName)', {
         userName: `%${userName}%`,
@@ -169,32 +142,31 @@ export class ReviewService {
 
     queryBuilder.orderBy('review.createdAt', 'DESC');
 
-    const skip = (page - 1) * limit;
-    queryBuilder.skip(skip).take(limit);
+    const skip = (pagination.page - 1) * pagination.limit;
+    queryBuilder.skip(skip).take(pagination.limit);
 
-    const [reviews, total] = await queryBuilder.getManyAndCount();
-    const pages = Math.ceil(total / limit);
+    const [items, total] = await queryBuilder.getManyAndCount();
+    const pages = Math.ceil(total / pagination.limit);
 
     return {
-      items: reviews.map((r) => this.toAdminResponse(r)),
+      items,
       total,
       pages,
     };
   }
 
-  async findOne(id: string): Promise<ReviewResponsePublic> {
+  async findOne(id: string): Promise<IReviewResponsePublic> {
     const review = await this.reviewRepo.findOne({
       where: { id },
       relations: ['user', 'product'],
     });
     if (!review) {
-      throw new NotFoundException(`La Reseña con este '${id}' no fue encontrada`);
+      throw new NotFoundException(`Review with id '${id}' was not found`);
     }
     return this.toPublicResponse(review);
   }
 
-  // GET /review/product/:productId - Solo ADMIN (devuelve isVisible)
-  async findByProduct(productId: string): Promise<ReviewResponseAdmin[]> {
+  async findByProduct(productId: string): Promise<IReviewResponseAdmin[]> {
     const reviews = await this.reviewRepo.find({
       where: { product: { id: productId } },
       relations: ['user', 'product'],
@@ -210,18 +182,17 @@ export class ReviewService {
     });
 
     if (!review) {
-      throw new NotFoundException(`Review con id ${id} no encontrada`);
+      throw new NotFoundException(`Review with id ${id} not found`);
     }
 
     if (review.user.id !== userId) {
-      throw new BadRequestException('No puedes eliminar reviews de otros usuarios');
+      throw new BadRequestException('You cannot delete reviews from other users');
     }
 
     await this.reviewRepo.delete(id);
   }
 
-  // GET /review/product/:productId/public - PÚBLICO (sin isVisible, solo visibles)
-  async findByProductPublic(productId: string): Promise<ReviewResponsePublic[]> {
+  async findByProductPublic(productId: string): Promise<IReviewResponsePublic[]> {
     const reviews = await this.reviewRepo.find({
       where: {
         product: { id: productId },
@@ -249,26 +220,25 @@ export class ReviewService {
       return {
         canReview: false,
         hasReviewed: true,
-        message: 'Ya has dejado una reseña para este producto',
+        message: 'You have already left a review for this product',
       };
     }
 
     return {
       canReview: true,
       hasReviewed: false,
-      message: 'Puedes dejar una reseña para este producto',
+      message: 'You can leave a review for this product',
     };
   }
 
-  // Método para que el admin cambie la visibilidad
-  async toggleVisibility(id: string): Promise<ReviewResponseAdmin> {
+  async toggleVisibility(id: string): Promise<IReviewResponseAdmin> {
     const review = await this.reviewRepo.findOne({
       where: { id },
       relations: ['user', 'product'],
     });
 
     if (!review) {
-      throw new NotFoundException(`Review con id ${id} no encontrada`);
+      throw new NotFoundException(`Review with id ${id} not found`);
     }
 
     review.isVisible = !review.isVisible;

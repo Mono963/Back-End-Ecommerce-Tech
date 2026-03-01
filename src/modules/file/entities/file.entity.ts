@@ -1,5 +1,5 @@
+import { Product } from '../../products/entities/products.entity';
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn } from 'typeorm';
-import { Product } from '../../products/Entities/products.entity';
 
 @Entity('files')
 export class File {

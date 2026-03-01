@@ -36,14 +36,6 @@ export class CreateUserDto {
   phone: string;
 
   @ApiProperty({
-    description: 'Dirección completa',
-    example: 'Calle Falsa 123',
-    required: false,
-  })
-  @IsOptional()
-  address: string;
-
-  @ApiProperty({
     description: 'This field must contain the username',
     example: 'Carli87',
   })

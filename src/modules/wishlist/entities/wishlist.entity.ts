@@ -1,3 +1,5 @@
+import { Users } from '../../users/entities/users.entity';
+import { WishlistItem } from './wishlist-item.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -8,8 +10,6 @@ import {
   UpdateDateColumn,
   JoinColumn,
 } from 'typeorm';
-import { Users } from '../../users/Entities/users.entity';
-import { WishlistItem } from './wishlist-item.entity';
 
 @Entity('wishlists')
 export class Wishlist {

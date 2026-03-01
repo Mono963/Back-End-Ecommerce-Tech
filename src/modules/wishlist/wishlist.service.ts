@@ -3,8 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Wishlist } from './entities/wishlist.entity';
 import { WishlistItem } from './entities/wishlist-item.entity';
-import { Product } from '../products/Entities/products.entity';
-import { WishlistResponseDto, WishlistSummaryDto, WishlistItemResponseDto } from './dto/wishlist.dto';
+import { Product } from '../products/entities/products.entity';
+import { IWishlistItemResponse, IWishlistResponse, IWishlistSummary } from './interface/wishlist.interface';
 
 @Injectable()
 export class WishlistService {
@@ -21,9 +21,6 @@ export class WishlistService {
     private readonly productRepo: Repository<Product>,
   ) {}
 
-  /**
-   * Obtener o crear wishlist del usuario
-   */
   private async getOrCreateWishlist(userId: string): Promise<Wishlist> {
     let wishlist = await this.wishlistRepo.findOne({
       where: { user_id: userId },
@@ -33,25 +30,19 @@ export class WishlistService {
     if (!wishlist) {
       wishlist = this.wishlistRepo.create({ user_id: userId });
       wishlist = await this.wishlistRepo.save(wishlist);
-      this.logger.log(`Wishlist creada para usuario ${userId}`);
+      this.logger.log(`Wishlist created for user ${userId}`);
     }
 
     return wishlist;
   }
 
-  /**
-   * Obtener wishlist completa del usuario
-   */
-  async getWishlist(userId: string): Promise<WishlistResponseDto> {
+  async getWishlist(userId: string): Promise<IWishlistResponse> {
     const wishlist = await this.getOrCreateWishlist(userId);
 
     return this.mapWishlistToDto(wishlist);
   }
 
-  /**
-   * Obtener resumen de wishlist (para navbar)
-   */
-  async getWishlistSummary(userId: string): Promise<WishlistSummaryDto> {
+  async getWishlistSummary(userId: string): Promise<IWishlistSummary> {
     const wishlist = await this.wishlistRepo.findOne({
       where: { user_id: userId },
       relations: ['items'],
@@ -62,24 +53,18 @@ export class WishlistService {
     };
   }
 
-  /**
-   * Agregar producto a wishlist
-   */
-  async addToWishlist(userId: string, productId: string): Promise<WishlistItemResponseDto> {
-    // Verificar que el producto existe y está activo
+  async addToWishlist(userId: string, productId: string): Promise<IWishlistItemResponse> {
     const product = await this.productRepo.findOne({
       where: { id: productId, isActive: true },
       relations: ['category'],
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con id ${productId} no encontrado o no está activo`);
+      throw new NotFoundException(`Product with id ${productId} not found or is inactive`);
     }
 
-    // Obtener o crear wishlist
     const wishlist = await this.getOrCreateWishlist(userId);
 
-    // Verificar si el producto ya está en la wishlist
     const existingItem = await this.wishlistItemRepo.findOne({
       where: {
         wishlist_id: wishlist.id,
@@ -88,10 +73,9 @@ export class WishlistService {
     });
 
     if (existingItem) {
-      throw new BadRequestException('Este producto ya está en tu lista de deseados');
+      throw new BadRequestException('This product is already in your wishlist');
     }
 
-    // Crear el item
     const wishlistItem = this.wishlistItemRepo.create({
       wishlist_id: wishlist.id,
       product_id: productId,
@@ -99,27 +83,23 @@ export class WishlistService {
 
     const savedItem = await this.wishlistItemRepo.save(wishlistItem);
 
-    this.logger.log(`Producto ${productId} agregado a wishlist de usuario ${userId}`);
+    this.logger.log(`Product ${productId} added to user ${userId} wishlist`);
 
-    // Cargar el item completo con relaciones
     const itemWithProduct = await this.wishlistItemRepo.findOne({
       where: { id: savedItem.id },
       relations: ['product', 'product.category'],
     });
 
-    return this.mapWishlistItemToDto(itemWithProduct!);
+    return this.mapWishlistItemToDto(itemWithProduct);
   }
 
-  /**
-   * Eliminar producto de wishlist
-   */
   async removeFromWishlist(userId: string, productId: string): Promise<void> {
     const wishlist = await this.wishlistRepo.findOne({
       where: { user_id: userId },
     });
 
     if (!wishlist) {
-      throw new NotFoundException('Wishlist no encontrada');
+      throw new NotFoundException('Wishlist not found');
     }
 
     const item = await this.wishlistItemRepo.findOne({
@@ -130,16 +110,16 @@ export class WishlistService {
     });
 
     if (!item) {
-      throw new NotFoundException('Producto no encontrado en la wishlist');
+      throw new NotFoundException('Product not found in wishlist');
     }
 
     await this.wishlistItemRepo.remove(item);
 
-    this.logger.log(`Producto ${productId} eliminado de wishlist de usuario ${userId}`);
+    this.logger.log(`Product ${productId} removed from user ${userId} wishlist`);
   }
 
   /**
-   * Vaciar wishlist
+   * Clear wishlist
    */
   async clearWishlist(userId: string): Promise<void> {
     const wishlist = await this.wishlistRepo.findOne({
@@ -148,19 +128,16 @@ export class WishlistService {
     });
 
     if (!wishlist) {
-      throw new NotFoundException('Wishlist no encontrada');
+      throw new NotFoundException('Wishlist not found');
     }
 
     if (wishlist.items && wishlist.items.length > 0) {
       await this.wishlistItemRepo.remove(wishlist.items);
     }
 
-    this.logger.log(`Wishlist vaciada para usuario ${userId}`);
+    this.logger.log(`Wishlist cleared for user ${userId}`);
   }
 
-  /**
-   * Verificar si un producto está en la wishlist
-   */
   async isInWishlist(userId: string, productId: string): Promise<boolean> {
     const wishlist = await this.wishlistRepo.findOne({
       where: { user_id: userId },
@@ -180,10 +157,7 @@ export class WishlistService {
     return !!item;
   }
 
-  /**
-   * Mapear Wishlist a DTO
-   */
-  private mapWishlistToDto(wishlist: Wishlist): WishlistResponseDto {
+  private mapWishlistToDto(wishlist: Wishlist): IWishlistResponse {
     return {
       id: wishlist.id,
       items: wishlist.items?.map((item) => this.mapWishlistItemToDto(item)) || [],
@@ -193,10 +167,7 @@ export class WishlistService {
     };
   }
 
-  /**
-   * Mapear WishlistItem a DTO
-   */
-  private mapWishlistItemToDto(item: WishlistItem): WishlistItemResponseDto {
+  private mapWishlistItemToDto(item: WishlistItem): IWishlistItemResponse {
     return {
       id: item.id,
       addedAt: item.addedAt,
@@ -214,7 +185,7 @@ export class WishlistService {
         category: item.product.category
           ? {
               id: item.product.category.id,
-              name: item.product.category.categoryName,
+              name: item.product.category.category_name,
             }
           : null,
       },

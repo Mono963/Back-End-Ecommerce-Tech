@@ -1,26 +1,63 @@
 import { IProducts } from 'src/modules/products/interface/products.interface';
-import { IUserResponseDto } from 'src/modules/users/interface/IUserResponseDto';
+import { IUserResponse } from '../../users/interfaces/user.interface';
 
-// IWishlistItem representa la estructura de un ítem individual en la lista
 export interface IWishlistItem {
   id: string;
   wishlist_id: string;
   product_id: string;
   addedAt: Date;
 
-  // Relaciones (opcionales para evitar profundidad infinita)
   wishlist?: IWishlist;
-  product?: IProducts; // Aquí deberías usar la interfaz de Product si la tienes
+  product?: IProducts;
 }
 
-// IWishlist representa la lista de deseos principal
 export interface IWishlist {
   id: string;
   user_id: string;
   createdAt: Date;
   updatedAt: Date;
 
-  // Relaciones
-  user?: IUserResponseDto; // Aquí deberías usar la interfaz de User
+  user?: IUserResponse;
   items: IWishlistItem[];
+}
+
+export interface IAddToWishlist {
+  productId: string;
+}
+
+export interface IWishlistProductCategory {
+  id: string;
+  name: string;
+}
+
+export interface IWishlistProduct {
+  id: string;
+  name: string;
+  description: string;
+  brand: string;
+  model: string;
+  basePrice: number;
+  baseStock: number;
+  imgUrls: string[];
+  featured: boolean;
+  isActive: boolean;
+  category: IWishlistProductCategory | null;
+}
+
+export interface IWishlistItemResponse {
+  id: string;
+  addedAt: Date;
+  product: IWishlistProduct;
+}
+
+export interface IWishlistResponse {
+  id: string;
+  items: IWishlistItemResponse[];
+  totalItems: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IWishlistSummary {
+  itemCount: number;
 }

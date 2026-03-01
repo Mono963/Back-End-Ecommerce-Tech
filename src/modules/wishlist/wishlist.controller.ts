@@ -5,7 +5,7 @@ import { AddToWishlistDto, WishlistResponseDto, WishlistSummaryDto, WishlistItem
 import { AuthGuard } from 'src/guards/auth.guards';
 import { RoleGuard } from 'src/guards/auth.guards.role';
 import { Roles, UserRole } from 'src/decorator/role.decorator';
-import { AuthenticatedRequest } from '../users/interface/IUserResponseDto';
+import { AuthRequest } from 'src/common/auths/auth-request.interface';
 
 @ApiTags('Wishlist')
 @ApiBearerAuth()
@@ -16,94 +16,91 @@ export class WishlistController {
   constructor(private readonly wishlistService: WishlistService) {}
 
   @Get('my-wishlist')
-  @ApiOperation({ summary: 'Obtener wishlist del usuario autenticado' })
+  @ApiOperation({ summary: 'Get authenticated user wishlist' })
   @ApiResponse({
     status: 200,
-    description: 'Wishlist obtenida exitosamente',
+    description: 'Wishlist retrieved successfully',
     type: WishlistResponseDto,
   })
-  async getMyWishlist(@Req() req: AuthenticatedRequest): Promise<WishlistResponseDto> {
+  async getMyWishlist(@Req() req: AuthRequest): Promise<WishlistResponseDto> {
     return await this.wishlistService.getWishlist(req.user.sub);
   }
 
   @Get('summary')
-  @ApiOperation({ summary: 'Obtener resumen de wishlist (para navbar)' })
+  @ApiOperation({ summary: 'Get wishlist summary (for navbar)' })
   @ApiResponse({
     status: 200,
-    description: 'Resumen obtenido exitosamente',
+    description: 'Summary retrieved successfully',
     type: WishlistSummaryDto,
   })
-  async getWishlistSummary(@Req() req: AuthenticatedRequest): Promise<WishlistSummaryDto> {
+  async getWishlistSummary(@Req() req: AuthRequest): Promise<WishlistSummaryDto> {
     return await this.wishlistService.getWishlistSummary(req.user.sub);
   }
 
   @Post('add')
-  @ApiOperation({ summary: 'Agregar producto a wishlist' })
+  @ApiOperation({ summary: 'Add product to wishlist' })
   @ApiResponse({
     status: 201,
-    description: 'Producto agregado a wishlist exitosamente',
+    description: 'Product added to wishlist successfully',
     type: WishlistItemResponseDto,
   })
   @ApiResponse({
     status: 404,
-    description: 'Producto no encontrado o no está activo',
+    description: 'Product not found or not active',
   })
   @ApiResponse({
     status: 400,
-    description: 'Producto ya está en la wishlist',
+    description: 'Product is already in the wishlist',
   })
-  async addToWishlist(
-    @Req() req: AuthenticatedRequest,
-    @Body() dto: AddToWishlistDto,
-  ): Promise<WishlistItemResponseDto> {
+  async addToWishlist(@Req() req: AuthRequest, @Body() dto: AddToWishlistDto): Promise<WishlistItemResponseDto> {
     return await this.wishlistService.addToWishlist(req.user.sub, dto.productId);
   }
 
   @Delete('remove/:productId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Eliminar producto de wishlist' })
+  @ApiOperation({ summary: 'Remove product from wishlist' })
   @ApiParam({
     name: 'productId',
-    description: 'ID del producto a eliminar',
+    description: 'ID of the product to remove',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @ApiResponse({
     status: 204,
-    description: 'Producto eliminado de wishlist exitosamente',
+    description: 'Product removed from wishlist successfully',
   })
   @ApiResponse({
     status: 404,
-    description: 'Wishlist o producto no encontrado',
+    description: 'Wishlist or product not found',
   })
-  async removeFromWishlist(@Req() req: AuthenticatedRequest, @Param('productId') productId: string): Promise<void> {
+  async removeFromWishlist(@Req() req: AuthRequest, @Param('productId') productId: string): Promise<void> {
     return await this.wishlistService.removeFromWishlist(req.user.sub, productId);
   }
 
   @Delete('clear')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Vaciar wishlist completa' })
+  @ApiOperation({ summary: 'Clear entire wishlist' })
   @ApiResponse({
     status: 204,
-    description: 'Wishlist vaciada exitosamente',
+    description: 'Wishlist cleared successfully',
   })
   @ApiResponse({
     status: 404,
-    description: 'Wishlist no encontrada',
+    description: 'Wishlist not found',
   })
-  async clearWishlist(@Req() req: AuthenticatedRequest): Promise<void> {
+  async clearWishlist(@Req() req: AuthRequest): Promise<void> {
     return await this.wishlistService.clearWishlist(req.user.sub);
   }
 
   @Get('check/:productId')
-  @ApiOperation({ summary: 'Verificar si un producto está en la wishlist' })
+  @ApiOperation({ summary: 'Check if a product is in the wishlist' })
   @ApiParam({
     name: 'productId',
-    description: 'ID del producto a verificar',
+    description: 'ID of the product to check',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @ApiResponse({
     status: 200,
-    description: 'Verificación exitosa',
+    description: 'Verification successful',
     schema: {
       type: 'object',
       properties: {
@@ -115,7 +112,7 @@ export class WishlistController {
     },
   })
   async checkInWishlist(
-    @Req() req: AuthenticatedRequest,
+    @Req() req: AuthRequest,
     @Param('productId') productId: string,
   ): Promise<{ isInWishlist: boolean }> {
     const isInWishlist = await this.wishlistService.isInWishlist(req.user.sub, productId);
