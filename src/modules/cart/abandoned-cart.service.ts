@@ -5,6 +5,7 @@ import { Repository, LessThan, MoreThan } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Cart } from './entities/cart.entity';
 import { MailQueueService } from '../mail/mail-queue_email.service';
+import { DistributedLockService } from '../../common/services/distributed-lock.service';
 
 export interface AbandonedCartItem {
   productName: string;
@@ -26,12 +27,22 @@ export class AbandonedCartService {
     private readonly cartRepository: Repository<Cart>,
     private readonly mailQueueService: MailQueueService,
     private readonly configService: ConfigService,
+    private readonly distributedLockService: DistributedLockService,
   ) {
     this.FRONTEND_URL = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
   }
 
   @Cron(CronExpression.EVERY_HOUR)
   async checkAbandonedCarts(): Promise<void> {
+    const result = await this.distributedLockService.withLock('cron:abandoned-carts', 55 * 60 * 1000, () =>
+      this.processAbandonedCarts(),
+    );
+    if (result === null) {
+      this.logger.debug('Abandoned cart check skipped — another instance holds the lock');
+    }
+  }
+
+  private async processAbandonedCarts(): Promise<void> {
     this.logger.log('Checking for abandoned carts...');
 
     try {

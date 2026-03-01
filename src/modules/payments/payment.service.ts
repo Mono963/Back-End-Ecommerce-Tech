@@ -2,7 +2,6 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 
-import { MailQueueService } from '../mail/mail-queue_email.service';
 import { Payment } from './entities/payment.entity';
 import { Order } from '../orders/entities/order.entity';
 import { OrderDetail } from '../orders/entities/order.details.entity';
@@ -20,6 +19,7 @@ import {
 } from './interface/payment.interface';
 import { OrderStatus } from '../orders/enum/order.enum';
 import { DiscountsService } from '../discounts/discounts.service';
+import { OrderNotificationService } from '../orders/order-notifications.service';
 
 @Injectable()
 export class PaymentsService implements IPaymentService {
@@ -33,10 +33,10 @@ export class PaymentsService implements IPaymentService {
     private readonly orderRepository: Repository<Order>,
     @InjectRepository(OrderDetail)
     private readonly orderDetailRepository: Repository<OrderDetail>,
-    private readonly mailQueueService: MailQueueService,
     @InjectRepository(Users)
     private readonly userRepository: Repository<Users>,
     private readonly discountsService: DiscountsService,
+    private readonly orderNotificationService: OrderNotificationService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -134,12 +134,19 @@ export class PaymentsService implements IPaymentService {
 
         await queryRunner.commitTransaction();
         if (paymentInfo.status === 'approved' && order.orderDetail?.promoCodeUsed) {
-          await this.discountsService.registerPromoCodeUsageFromPaidOrder({
-            promoCode: order.orderDetail.promoCodeUsed,
-            userId: order.user.id,
-            orderId: order.id,
-            orderItems: order.orderDetail.items || [],
-          });
+          try {
+            await this.discountsService.registerPromoCodeUsageFromPaidOrder({
+              promoCode: order.orderDetail.promoCodeUsed,
+              userId: order.user.id,
+              orderId: order.id,
+              orderItems: order.orderDetail.items || [],
+            });
+          } catch (promoError) {
+            this.logger.error(
+              `Failed to register promo code usage for order ${orderId}`,
+              promoError instanceof Error ? promoError.stack : undefined,
+            );
+          }
         }
         return;
       }
@@ -170,29 +177,44 @@ export class PaymentsService implements IPaymentService {
 
       await queryRunner.commitTransaction();
 
-      if (paymentInfo.status === 'approved') {
-        if (order.orderDetail?.promoCodeUsed) {
+      if (paymentInfo.status === 'approved' && order.orderDetail?.promoCodeUsed) {
+        try {
           await this.discountsService.registerPromoCodeUsageFromPaidOrder({
             promoCode: order.orderDetail.promoCodeUsed,
             userId: order.user.id,
             orderId: order.id,
             orderItems: order.orderDetail.items || [],
           });
+        } catch (promoError) {
+          this.logger.error(
+            `Failed to register promo code usage for order ${orderId}. Code: ${order.orderDetail.promoCodeUsed}`,
+            promoError instanceof Error ? promoError.stack : undefined,
+          );
         }
+      }
 
-        await this.sendOrderPaymentNotificationAsync(order, order.user.id);
-        await this.sendOrderPaymentNotificationAsyncToAdmin(order.user.id, order);
-
+      if (paymentInfo.status === 'approved') {
+        const user = await this.userRepository.findOne({ where: { id: order.user.id } });
+        if (user) {
+          await this.orderNotificationService.notifyPaymentApproved(order, user.username || user.name, user.email);
+          await this.orderNotificationService.notifyPaymentApprovedToAdmin(user.username, user.email, order);
+        }
         this.logger.log(
           `Order payment approved and saved for order: ${orderId}, payment: ${paymentInfo.id}, user: ${order.user.id}`,
         );
       } else if (paymentInfo.status === 'pending' || paymentInfo.status === 'in_process') {
-        await this.sendOrderPaymentPendingNotificationAsync(order.user.id);
+        const user = await this.userRepository.findOne({ where: { id: order.user.id } });
+        if (user) {
+          await this.orderNotificationService.notifyPaymentPending(user.email, user.username);
+        }
         this.logger.log(
           `Order payment pending for order: ${orderId}, payment: ${paymentInfo.id}, status: ${paymentInfo.status}`,
         );
       } else if (paymentInfo.status === 'rejected' || paymentInfo.status === 'cancelled') {
-        await this.sendOrderPaymentFailureNotificationAsync(order.user.id);
+        const user = await this.userRepository.findOne({ where: { id: order.user.id } });
+        if (user) {
+          await this.orderNotificationService.notifyPaymentRejected(user.email, user.username);
+        }
         this.logger.log(
           `Order payment rejected for order: ${orderId}, payment: ${paymentInfo.id}, status: ${paymentInfo.status}`,
         );
@@ -244,116 +266,5 @@ export class PaymentsService implements IPaymentService {
       date_approved: payment.dateApproved,
       createdAt: payment.createdAt,
     }));
-  }
-
-  private async sendOrderPaymentNotificationAsync(order: Order, user_id: string): Promise<void> {
-    const user = await this.userRepository.findOne({ where: { id: user_id } });
-
-    if (!user) {
-      this.logger.warn(`User not found in order for purchase notification`);
-      return;
-    }
-
-    const products = (order.orderDetail?.items || []).map((item) => ({
-      name: item.productSnapshot?.name || 'Producto',
-      quantity: item.quantity,
-      price: Number(item.unitPrice),
-    }));
-
-    const shippingAddress = order.orderDetail?.shippingAddressSnapshot
-      ? {
-          street: order.orderDetail.shippingAddressSnapshot.street || '',
-          city: order.orderDetail.shippingAddressSnapshot.city || '',
-          province: order.orderDetail.shippingAddressSnapshot.province || '',
-          postalCode: order.orderDetail.shippingAddressSnapshot.postalCode || '',
-        }
-      : null;
-
-    this.mailQueueService
-      .queuePurchaseConfirmation(
-        user.email,
-        user.username || user.name,
-        order.orderNumber,
-        products,
-        Number(order.orderDetail?.subtotal || 0),
-        Number(order.orderDetail?.shipping || 0),
-        Number(order.orderDetail?.tax || 0),
-        Number(order.orderDetail?.total || 0),
-        shippingAddress,
-        order.orderDetail?.paymentMethod || 'Mercado Pago',
-        order.createdAt,
-      )
-      .then(() => {
-        this.logger.log(`Purchase email enqueued for ${user.email}`);
-      })
-      .catch((error) => {
-        this.logger.error(
-          `Error enqueuing purchase notification for ${user.email}:`,
-          error instanceof Error ? error.message : String(error),
-        );
-      });
-  }
-
-  private async sendOrderPaymentPendingNotificationAsync(id: string): Promise<void> {
-    const user = await this.userRepository.findOne({ where: { id } });
-
-    if (!user) {
-      this.logger.warn(`User with ID ${id} not found for pending payment notification`);
-      return;
-    }
-
-    this.mailQueueService
-      .queuePaymentPendingEmail(user.email, user.username)
-      .then(() => {
-        this.logger.log(`Pending payment email enqueued for ${user.email}`);
-      })
-      .catch((error) => {
-        this.logger.error(
-          `Error enqueuing pending payment notification for ${user.email}:`,
-          error instanceof Error ? error.message : String(error),
-        );
-      });
-  }
-
-  private async sendOrderPaymentFailureNotificationAsync(id: string): Promise<void> {
-    const user = await this.userRepository.findOne({ where: { id } });
-
-    if (!user) {
-      this.logger.warn(`User with ID ${id} not found for rejected payment notification`);
-      return;
-    }
-
-    this.mailQueueService
-      .queuePaymentRejectedEmail(user.email, user.username)
-      .then(() => {
-        this.logger.log(`Rejected payment email enqueued for ${user.email}`);
-      })
-      .catch((error) => {
-        this.logger.error(
-          `Error enqueuing rejected payment notification for ${user.email}:`,
-          error instanceof Error ? error.message : String(error),
-        );
-      });
-  }
-
-  private async sendOrderPaymentNotificationAsyncToAdmin(id: string, order: Order): Promise<void> {
-    const user = await this.userRepository.findOne({ where: { id } });
-
-    if (!user) {
-      this.logger.warn(`User with ID ${id} not found for order notification`);
-      return;
-    }
-
-    this.mailQueueService
-      .queuePurchaseAlertToAdmin(user.username, user.email, order.id, order.orderDetail.total, order.createdAt)
-      .then(() => {
-        this.logger.log(`Admin purchase alert email enqueued for ${user.username}`);
-      })
-      .catch((error) => {
-        this.logger.error(
-          `Error enqueuing purchase notification for admin (${user.username}):`,
-          error instanceof Error ? error.message : String(error),
-        );
-      });
   }
 }

@@ -47,9 +47,7 @@ export class CategoriesService {
     const queryBuilder = this.categoryRepo
       .createQueryBuilder('category')
       .leftJoinAndSelect('category.products', 'products')
-      .leftJoinAndSelect('products.category', 'productCategory')
-      .leftJoinAndSelect('products.variants', 'variants')
-      .leftJoinAndSelect('products.reviews', 'reviews');
+      .leftJoinAndSelect('products.category', 'productCategory');
 
     if (category) {
       queryBuilder.andWhere('LOWER(category.category_name) LIKE LOWER(:category)', {
@@ -60,8 +58,7 @@ export class CategoriesService {
     queryBuilder
       .orderBy('category.category_name', 'ASC')
       .addOrderBy('products.featured', 'DESC')
-      .addOrderBy('products.createdAt', 'DESC')
-      .addOrderBy('variants.sortOrder', 'ASC');
+      .addOrderBy('products.createdAt', 'DESC');
 
     const [categories, total] = await queryBuilder
       .skip((page - 1) * limit)

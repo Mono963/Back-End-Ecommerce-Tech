@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, OneToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  CreateDateColumn,
+  OneToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { Users } from '../../users/entities/users.entity';
 import { Order } from '../../orders/entities/order.entity';
 
@@ -10,6 +19,7 @@ export class Payment {
   @Column({ unique: true })
   paymentId: string;
 
+  @Index()
   @Column()
   status: string;
 
@@ -31,9 +41,11 @@ export class Payment {
   @Column({ type: 'timestamp', nullable: true })
   dateApproved: Date | null;
 
+  @Index()
   @ManyToOne(() => Users, (user) => user.payments)
   user: Users;
 
+  @Index()
   @OneToOne(() => Order, (order) => order.payment)
   @JoinColumn({ name: 'order_id' })
   order: Order;

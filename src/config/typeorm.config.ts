@@ -15,9 +15,14 @@ const config = {
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   autoLoadEntities: true,
-  synchronize: !isProduction,
+  synchronize: false,
   logging: isProduction ? ['error'] : ['error', 'warn', 'info'],
   ssl: isProduction ? { rejectUnauthorized: true } : { rejectUnauthorized: false },
+  extra: {
+    max: isProduction ? 20 : 10,
+    min: isProduction ? 5 : 2,
+    idleTimeoutMillis: 30000,
+  },
 };
 
 export default registerAs('typeorm', () => config);

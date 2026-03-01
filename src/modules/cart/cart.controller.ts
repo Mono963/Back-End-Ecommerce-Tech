@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { CartService } from './cart.service';
+import { CheckoutService } from '../orders/checkout.service';
 import { AuthGuard } from 'src/guards/auth.guards';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthRequest } from 'src/common/auths/auth-request.interface';
@@ -33,7 +34,10 @@ import { ResponseOrderDto } from '../orders/dto/order.response.dto';
 @UseGuards(AuthGuard, RoleGuard)
 @Roles(UserRole.CLIENT)
 export class CartController {
-  constructor(private readonly cartService: CartService) {}
+  constructor(
+    private readonly cartService: CartService,
+    private readonly checkoutService: CheckoutService,
+  ) {}
 
   @Get('my-cart')
   @ApiOperation({
@@ -84,7 +88,7 @@ export class CartController {
     @Req() req: AuthRequest,
     @Body() body: CartDiscountPreviewRequestDto,
   ): Promise<CartDiscountPreviewResponseDto> {
-    return await this.cartService.getCartDiscountPreview(req.user.sub, body.promoCode);
+    return await this.checkoutService.getCartDiscountPreview(req.user.sub, body.promoCode);
   }
 
   @Post('add')
@@ -274,6 +278,6 @@ export class CartController {
     description: 'Bad request - empty cart or stock issues',
   })
   async createOrder(@Req() req: AuthRequest, @Body() body: CreateOrderFromCartDto): Promise<ResponseOrderDto> {
-    return await this.cartService.createOrderFromCartCheckout(req.user.sub, body.shippingAddress, body.promoCode);
+    return await this.checkoutService.createOrderFromCartCheckout(req.user.sub, body.shippingAddress, body.promoCode);
   }
 }

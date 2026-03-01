@@ -84,11 +84,11 @@ export class UsersController {
   @ApiOperation({ summary: 'Role change by ID' })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.SUPER_ADMIN)
-  async rollChange(
+  async changeRole(
     @Param('id', ParseUUIDPipe) userId: string,
     @Body() dto: UpdateRoleDto,
   ): Promise<{ message: string }> {
-    await this.usersService.rollChange(userId, dto);
+    await this.usersService.changeRole(userId, dto);
     return { message: 'Roles updated successfully' };
   }
 

@@ -23,7 +23,7 @@ export class WishlistItem {
   product_id: string;
 
   @ManyToOne(() => Product, {
-    eager: true,
+    eager: false,
   })
   @JoinColumn({ name: 'product_id' })
   product: Product;

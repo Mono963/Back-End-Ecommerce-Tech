@@ -3,8 +3,6 @@ import {
   NotFoundException,
   BadRequestException,
   InternalServerErrorException,
-  Inject,
-  forwardRef,
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -15,25 +13,17 @@ import { Product } from '../products/entities/products.entity';
 import { ProductVariant } from '../products/entities/products_variant.entity';
 import { CartItem } from './entities/cart.item.entity';
 import { ProductsService } from '../products/products.service';
-import { OrdersService } from '../orders/orders.service';
 import {
   IAddToCart,
   ICartItemResponse,
   ICartResponse,
-  ICartDiscountPreview,
-  ICartDiscountPreviewItem,
   IResponseCartSummary,
   IStockValidationIssue,
   IStockValidationResult,
   IUpdateCartItem,
   IVariantValidationResult,
 } from './interfaces/interface.cart';
-import { ICreateAddress, IAddress } from '../users/interfaces/user.interface';
-import { roundMoney } from '../../common/utils/money.utils';
 import { ICategory } from '../category/interface/category.interface';
-import { UsersService } from '../users/users.service';
-import { IOrder } from '../orders/interfaces/orders.interface';
-import { DiscountsService } from '../discounts/discounts.service';
 
 @Injectable()
 export class CartService {
@@ -56,14 +46,6 @@ export class CartService {
     private readonly variantRepository: Repository<ProductVariant>,
 
     private readonly productsService: ProductsService,
-
-    @Inject(forwardRef(() => UsersService))
-    private readonly usersService: UsersService,
-
-    @Inject(forwardRef(() => OrdersService))
-    private readonly ordersService: OrdersService,
-
-    private readonly discountsService: DiscountsService,
 
     private readonly dataSource: DataSource,
   ) {}
@@ -336,7 +318,7 @@ export class CartService {
       throw new NotFoundException(`User with id ${userId} not found`);
     }
 
-    if (!user.addresses || !user.addresses.find((a) => a.id === addressId)) {
+    if (!user.addresses?.find((a) => a.id === addressId)) {
       throw new BadRequestException(`Address with id ${addressId} does not exist in the user's saved addresses`);
     }
     cart.selectedAddressId = addressId;
@@ -418,123 +400,6 @@ export class CartService {
     };
   }
 
-  async createOrderFromCartCheckout(
-    userId: string,
-    shippingAddress: ICreateAddress,
-    promoCode?: string,
-  ): Promise<IOrder> {
-    const stockValidation = await this.validateCartStock(userId);
-
-    if (!stockValidation.valid) {
-      throw new BadRequestException({
-        message: 'Some products in the cart are not available',
-        issues: stockValidation.issues,
-      });
-    }
-
-    const newAddress = await this.usersService.addAddress(userId, shippingAddress);
-
-    const addressForOrder: IAddress = {
-      id: newAddress.id,
-      label: newAddress.label,
-      street: newAddress.street,
-      city: newAddress.city,
-      province: newAddress.province,
-      postalCode: newAddress.postalCode,
-      country: newAddress.country,
-      isDefault: newAddress.isDefault,
-    };
-
-    return await this.ordersService.createOrderFromCart(userId, addressForOrder, promoCode);
-  }
-
-  async getCartDiscountPreview(userId: string, promoCode?: string): Promise<ICartDiscountPreview> {
-    const cart = await this.getOrCreateCart(userId);
-
-    if (!cart.items || cart.items.length === 0) {
-      return {
-        subtotalOriginal: 0,
-        subtotalWithDiscount: 0,
-        totalDiscount: 0,
-        tax: 0,
-        shipping: 0,
-        total: 0,
-        promoValid: false,
-        promoErrors: ['Tu carrito esta vacio'],
-        items: [],
-      };
-    }
-
-    let promoValid = true;
-    let promoErrors: string[] = [];
-    let validatedPromoCode = undefined;
-    let eligibleProductIds: string[] | undefined;
-
-    if (promoCode) {
-      const validation = await this.discountsService.validatePromoCode(promoCode, userId, cart.items);
-      if (!validation.valid) {
-        promoValid = false;
-        promoErrors = validation.errors ?? [];
-      } else {
-        validatedPromoCode = validation.promoCode;
-        eligibleProductIds = validation.eligibleProductIds;
-      }
-    }
-
-    const itemDiscounts = await this.discountsService.calculateOrderDiscounts(
-      cart.items,
-      validatedPromoCode,
-      eligibleProductIds,
-    );
-
-    let subtotalOriginal = 0;
-    let subtotalWithDiscount = 0;
-    let totalDiscount = 0;
-    const items: ICartDiscountPreviewItem[] = [];
-
-    for (let i = 0; i < cart.items.length; i++) {
-      const item = cart.items[i];
-      const discount = itemDiscounts[i];
-      const originalUnitPrice = discount.originalUnitPrice;
-      const discountAmount = discount.discountAmount;
-      const finalUnitPrice = originalUnitPrice - discountAmount;
-      const subtotal = finalUnitPrice * item.quantity;
-
-      subtotalOriginal += originalUnitPrice * item.quantity;
-      subtotalWithDiscount += subtotal;
-      totalDiscount += discountAmount * item.quantity;
-
-      items.push({
-        productId: item.product?.id || '',
-        quantity: item.quantity,
-        originalUnitPrice,
-        discountAmount,
-        discountSource: discount.discountSource || null,
-        discountCode: discount.discountCode || null,
-        finalUnitPrice,
-        subtotal,
-      });
-    }
-
-    subtotalOriginal = roundMoney(subtotalOriginal);
-    subtotalWithDiscount = roundMoney(subtotalWithDiscount);
-    totalDiscount = roundMoney(totalDiscount);
-
-    const totals = this.ordersService.calculateOrderTotals(subtotalWithDiscount);
-
-    return {
-      subtotalOriginal,
-      subtotalWithDiscount,
-      totalDiscount,
-      tax: roundMoney(totals.tax),
-      shipping: roundMoney(totals.shipping),
-      total: roundMoney(totals.total),
-      promoValid,
-      promoErrors,
-      items,
-    };
-  }
-
   async cleanupAbandonedCarts(daysOld: number = 30): Promise<{
     message: string;
     cleaned: number;
@@ -581,7 +446,7 @@ export class CartService {
     }
   }
 
-  private async getOrCreateCart(userId: string): Promise<Cart> {
+  async getOrCreateCart(userId: string): Promise<Cart> {
     let cart = await this.cartRepository.findOne({
       where: { user: { id: userId } },
       relations: ['user', 'items', 'items.product', 'items.product.category', 'items.variants'],

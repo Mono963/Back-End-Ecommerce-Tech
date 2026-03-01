@@ -1,9 +1,11 @@
-import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 import { Users } from '../users/entities/users.entity';
 import { AuthCodeData, AuthResponse, GoogleUser } from './interface/IAuth.interface';
@@ -17,7 +19,8 @@ import { MailQueueService } from '../mail/mail-queue_email.service';
 export class AuthsService {
   private readonly logger = new Logger(AuthsService.name);
 
-  private authCodes = new Map<string, AuthCodeData>();
+  private static readonly AUTH_CODE_PREFIX = 'auth:code:';
+  private static readonly AUTH_CODE_TTL = 30000;
 
   constructor(
     @InjectRepository(Users)
@@ -27,9 +30,11 @@ export class AuthsService {
     private readonly roleRepository: Repository<Role>,
     private readonly configService: ConfigService,
     private readonly mailQueue: MailQueueService,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
   ) {}
 
-  async singin(email: string, password: string): Promise<AuthResponse> {
+  async signIn(email: string, password: string): Promise<AuthResponse> {
     AuthValidations.validateCredentials(email, password);
 
     const user = await this.usersRepository.findOne({
@@ -135,7 +140,7 @@ export class AuthsService {
 
   async processGoogleCallback(googleUser: GoogleUser): Promise<string> {
     const result = await this.googleLogin(googleUser);
-    const authCode = this.generateAuthCode(result.user.id, result.accessToken);
+    const authCode = await this.generateAuthCode(result.user.id, result.accessToken);
     const frontendUrl = this.configService.get<string>('GoogleOAuth.frontendUrl');
     return `${frontendUrl}/auth/callback?code=${authCode}`;
   }
@@ -208,26 +213,24 @@ export class AuthsService {
     }
   }
 
-  generateAuthCode(userId: string, accessToken: string): string {
+  async generateAuthCode(userId: string, accessToken: string): Promise<string> {
     const code = randomUUID();
-    const expiresAt = Date.now() + 30000;
-
-    this.authCodes.set(code, {
+    const data: AuthCodeData = {
       token: accessToken,
       userId,
-      expiresAt,
-    });
-    setTimeout(() => {
-      this.authCodes.delete(code);
-    }, 30000);
+      expiresAt: Date.now() + AuthsService.AUTH_CODE_TTL,
+    };
+
+    await this.cacheManager.set(`${AuthsService.AUTH_CODE_PREFIX}${code}`, data, AuthsService.AUTH_CODE_TTL);
 
     this.logger.log(`Authorization code generated for user: ${userId}`);
 
     return code;
   }
 
-  exchangeAuthCode(code: string): { accessToken: string; userId: string } {
-    const data = this.authCodes.get(code);
+  async exchangeAuthCode(code: string): Promise<{ accessToken: string; userId: string }> {
+    const cacheKey = `${AuthsService.AUTH_CODE_PREFIX}${code}`;
+    const data = await this.cacheManager.get<AuthCodeData>(cacheKey);
 
     if (!data) {
       this.logger.warn(`Exchange attempt with invalid code: ${code}`);
@@ -235,12 +238,12 @@ export class AuthsService {
     }
 
     if (Date.now() > data.expiresAt) {
-      this.authCodes.delete(code);
+      await this.cacheManager.del(cacheKey);
       this.logger.warn(`Exchange attempt with expired code: ${code}`);
       throw new UnauthorizedException('Authorization code expired');
     }
 
-    this.authCodes.delete(code);
+    await this.cacheManager.del(cacheKey);
 
     this.logger.log(`Authorization code exchanged successfully for user: ${data.userId}`);
 

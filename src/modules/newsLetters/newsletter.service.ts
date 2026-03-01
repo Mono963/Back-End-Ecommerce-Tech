@@ -9,6 +9,7 @@ import { CampaignType } from './interface/newsletter.interface';
 import { NewsletterQueueService } from './newsletter-queue.service';
 import { randomBytes } from 'crypto';
 import { DiscountsService } from '../discounts/discounts.service';
+import { DistributedLockService } from '../../common/services/distributed-lock.service';
 
 @Injectable()
 export class NewsletterService {
@@ -23,6 +24,7 @@ export class NewsletterService {
     private readonly trackingRepository: Repository<NewsletterTracking>,
     private readonly queueService: NewsletterQueueService,
     private readonly discountsService: DiscountsService,
+    private readonly distributedLockService: DistributedLockService,
   ) {
     this.frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
   }
@@ -63,14 +65,20 @@ export class NewsletterService {
     return { message: 'Te has suscrito al newsletter exitosamente.' };
   }
 
-  /**
-   * Cron job that runs on the 1st of each month at 9:00 AM (Argentina time)
-   */
   @Cron('0 9 1 * *', {
     name: 'monthly-newsletter',
     timeZone: 'America/Argentina/Buenos_Aires',
   })
   async handleMonthlyNewsletter(): Promise<void> {
+    const result = await this.distributedLockService.withLock('cron:monthly-newsletter', 50 * 60 * 1000, () =>
+      this.processMonthlyNewsletter(),
+    );
+    if (result === null) {
+      this.logger.debug('Monthly newsletter skipped — another instance holds the lock');
+    }
+  }
+
+  private async processMonthlyNewsletter(): Promise<void> {
     this.logger.log('Starting monthly newsletter enqueue...');
 
     const totalProcessed = await this.processSubscribersInBatches(async (subscriber) => {
@@ -85,9 +93,6 @@ export class NewsletterService {
     this.logger.log(`Monthly newsletter enqueued for ${totalProcessed} subscribers.`);
   }
 
-  /**
-   * Send promotional newsletter to all active subscribers
-   */
   async sendPromoNewsletter(
     title: string,
     description: string,
@@ -115,9 +120,6 @@ export class NewsletterService {
     return { enqueuedCount: totalProcessed };
   }
 
-  /**
-   * Unsubscribe using token
-   */
   async unsubscribe(token: string): Promise<{ email: string }> {
     if (!token || token.length < 32) {
       throw new NotFoundException('Token inválido');
@@ -145,9 +147,6 @@ export class NewsletterService {
     return { email: subscriber.email };
   }
 
-  /**
-   * Get newsletter tracking statistics
-   */
   async getTrackingStats(campaignType?: CampaignType): Promise<{
     total: number;
     sent: number;
@@ -172,9 +171,6 @@ export class NewsletterService {
     return { total, sent, failed, opened, clicked };
   }
 
-  /**
-   * Track email open via tracking pixel
-   */
   async trackOpen(trackingId: string): Promise<void> {
     const tracking = await this.trackingRepository.findOne({
       where: { id: trackingId },
@@ -192,9 +188,6 @@ export class NewsletterService {
     this.logger.log(`Newsletter open tracked: ${trackingId}`);
   }
 
-  /**
-   * Track email link click and redirect to original URL
-   */
   async trackClick(trackingId: string, originalUrl?: string): Promise<{ redirectUrl: string }> {
     const tracking = await this.trackingRepository.findOne({
       where: { id: trackingId },
@@ -215,9 +208,6 @@ export class NewsletterService {
     return { redirectUrl: this.resolveRedirectUrl(originalUrl) };
   }
 
-  /**
-   * Validates and resolves the redirect URL, falling back to frontendUrl if invalid.
-   */
   private resolveRedirectUrl(url?: string): string {
     if (!url) return this.frontendUrl;
     try {

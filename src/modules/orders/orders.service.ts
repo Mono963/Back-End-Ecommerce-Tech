@@ -20,14 +20,14 @@ import { IOrderFilters, IOrder, IUpdateOrderStatus, IOrderStats } from './interf
 import { CartService } from '../cart/cart.service';
 import { OrderItem } from './entities/order.item.entity';
 import { IAddress } from '../users/interfaces/user.interface';
-import { MailQueueService } from '../mail/mail-queue_email.service';
 import { UserRole } from '../../decorator/role.decorator';
 import { ResponseOrderMapper } from './mapper/order.mappers';
 import { OrderValidations } from './validates/order.validates';
-import { ConfigService } from '@nestjs/config';
 import { DiscountsService } from '../discounts/discounts.service';
+import { OrderNotificationService } from './order-notifications.service';
 import { IOrderItemDiscount } from '../discounts/interfaces/discount.interfaces';
 import { OrderStatus } from './enum/order.enum';
+import { SHIPPING, TAX_RATE } from '../../common/constants/business.constants';
 import { roundMoney } from '../../common/utils/money.utils';
 
 @Injectable()
@@ -60,9 +60,8 @@ export class OrdersService {
     private readonly cartService: CartService,
 
     private readonly dataSource: DataSource,
-    private readonly mailQueueService: MailQueueService,
-    private readonly configService: ConfigService,
     private readonly discountsService: DiscountsService,
+    private readonly orderNotificationService: OrderNotificationService,
   ) {}
 
   async getOrderById(id: string, userId?: string): Promise<IOrder> {
@@ -101,6 +100,15 @@ export class OrdersService {
 
       if (!cart?.items || cart.items.length === 0) {
         throw new BadRequestException('Cart is empty');
+      }
+
+      const productIds = cart.items.map((item) => item.product.id);
+      if (productIds.length > 0) {
+        await queryRunner.manager
+          .createQueryBuilder(Product, 'p')
+          .setLock('pessimistic_write')
+          .where('p.id IN (:...ids)', { ids: productIds })
+          .getMany();
       }
 
       let shippingAddressSnapshot: IAddress;
@@ -341,107 +349,7 @@ export class OrdersService {
 
     await this.orderRepo.save(order);
 
-    if (status === OrderStatus.PROCESSING) {
-      const products =
-        order.orderDetail.items?.map((item) => ({
-          name: item.productSnapshot?.name || item.product?.name || 'Producto',
-          quantity: item.quantity,
-          price: Number(item.unitPrice),
-        })) || [];
-
-      const shippingAddress = order.orderDetail.shippingAddressSnapshot
-        ? {
-            street: order.orderDetail.shippingAddressSnapshot.street || '',
-            city: order.orderDetail.shippingAddressSnapshot.city || '',
-            province: order.orderDetail.shippingAddressSnapshot.province || '',
-            postalCode: order.orderDetail.shippingAddressSnapshot.postalCode || '',
-          }
-        : null;
-
-      void this.mailQueueService.queueOrderProcessingNotification(
-        order.user.email,
-        order.user.name,
-        order.orderNumber || order.id,
-        products,
-        Number(order.orderDetail.subtotal),
-        Number(order.orderDetail.shipping),
-        Number(order.orderDetail.tax),
-        Number(order.orderDetail.total),
-        shippingAddress,
-        order.orderDetail.paymentMethod || 'No especificado',
-        order.createdAt,
-      );
-    }
-
-    if (status === OrderStatus.SHIPPED) {
-      const products =
-        order.orderDetail.items?.map((item) => ({
-          name: item.productSnapshot?.name || item.product?.name || 'Producto',
-          quantity: item.quantity,
-          price: Number(item.unitPrice),
-        })) || [];
-
-      const shippingAddress = order.orderDetail.shippingAddressSnapshot
-        ? {
-            street: order.orderDetail.shippingAddressSnapshot.street || '',
-            city: order.orderDetail.shippingAddressSnapshot.city || '',
-            province: order.orderDetail.shippingAddressSnapshot.province || '',
-            postalCode: order.orderDetail.shippingAddressSnapshot.postalCode || '',
-          }
-        : null;
-
-      void this.mailQueueService.queueOrderShippedEmail(
-        order.user.email,
-        order.user.name,
-        order.orderNumber || order.id,
-        order.trackingNumber || 'Pendiente',
-        order.trackingUrl || '',
-        order.carrier || 'A definir',
-        order.estimatedDelivery || 'A definir',
-        shippingAddress,
-        products,
-        Number(order.orderDetail.total),
-      );
-    }
-    if (status === OrderStatus.DELIVERED) {
-      const products =
-        order.orderDetail.items?.map((item) => ({
-          name: item.productSnapshot?.name || item.product?.name || 'Producto',
-          quantity: item.quantity,
-          price: Number(item.unitPrice),
-        })) || [];
-
-      const deliveryDate = new Date().toLocaleDateString('es-AR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      });
-      const reviewUrl = `${this.configService.get<string>('FRONTEND_URL')}/reviews/${order.orderNumber || order.id}`;
-
-      void this.mailQueueService.queueOrderDeliveredEmail(
-        order.user.email,
-        order.user.name,
-        order.orderNumber || order.id,
-        deliveryDate,
-        products,
-        reviewUrl,
-      );
-
-      const productsForReview =
-        order.orderDetail.items?.map((item) => ({
-          productName: item.productSnapshot?.name || item.product?.name || 'Producto',
-          productImage: null as string | null,
-          reviewUrl: `${this.configService.get<string>('FRONTEND_URL')}/products/${item.product_id}/review`,
-        })) || [];
-
-      void this.mailQueueService.queueReviewRequestEmail(
-        order.user.email,
-        order.user.name,
-        order.orderNumber || order.id,
-        productsForReview,
-        reviewUrl,
-      );
-    }
+    await this.orderNotificationService.notifyStatusChange(order, status);
 
     return await this.getOrderById(orderId);
   }
@@ -474,13 +382,13 @@ export class OrdersService {
   }
 
   private calculateShipping(subtotal: number): number {
-    if (subtotal >= 250) return 0;
-    if (subtotal >= 100) return 10;
-    return 20;
+    if (subtotal >= SHIPPING.FREE_THRESHOLD) return 0;
+    if (subtotal >= SHIPPING.REDUCED_THRESHOLD) return SHIPPING.REDUCED_COST;
+    return SHIPPING.STANDARD_COST;
   }
 
   calculateOrderTotals(subtotal: number): { tax: number; shipping: number; total: number } {
-    const tax = roundMoney(subtotal * 0.21);
+    const tax = roundMoney(subtotal * TAX_RATE);
     const shipping = this.calculateShipping(subtotal);
     const total = roundMoney(subtotal + tax + shipping);
 
@@ -488,54 +396,51 @@ export class OrdersService {
   }
 
   async getOrderStats(): Promise<IOrderStats> {
-    const totalOrders = await this.orderRepo.count();
-    const pendingOrders = await this.orderRepo.count({
-      where: { status: OrderStatus.PENDING },
-    });
-    const paidOrders = await this.orderRepo.count({
-      where: { status: OrderStatus.PAID },
-    });
-    const processingOrders = await this.orderRepo.count({
-      where: { status: OrderStatus.PROCESSING },
-    });
-    const shippedOrders = await this.orderRepo.count({
-      where: { status: OrderStatus.SHIPPED },
-    });
-    const deliveredOrders = await this.orderRepo.count({
-      where: { status: OrderStatus.DELIVERED },
-    });
-
-    const revenue: { total?: string } | undefined = await this.orderDetailRepo
-      .createQueryBuilder('detail')
-      .leftJoin('detail.order', 'order')
-      .select('SUM(detail.total)', 'total')
-      .where('order.status != :status', { status: OrderStatus.CANCELLED })
-      .getRawOne();
-
     const currentMonth = new Date();
     currentMonth.setDate(1);
     currentMonth.setHours(0, 0, 0, 0);
 
-    const monthlyRevenue: { total?: string } | undefined = await this.orderDetailRepo
+    const stats = await this.orderRepo
+      .createQueryBuilder('order')
+      .select('COUNT(order.id)', 'totalOrders')
+      .addSelect(`COUNT(order.id) FILTER (WHERE order.status = '${OrderStatus.PENDING}')`, 'pending')
+      .addSelect(`COUNT(order.id) FILTER (WHERE order.status = '${OrderStatus.PAID}')`, 'paid')
+      .addSelect(`COUNT(order.id) FILTER (WHERE order.status = '${OrderStatus.PROCESSING}')`, 'processing')
+      .addSelect(`COUNT(order.id) FILTER (WHERE order.status = '${OrderStatus.SHIPPED}')`, 'shipped')
+      .addSelect(`COUNT(order.id) FILTER (WHERE order.status = '${OrderStatus.DELIVERED}')`, 'delivered')
+      .getRawOne<{
+        totalOrders: string;
+        pending: string;
+        paid: string;
+        processing: string;
+        shipped: string;
+        delivered: string;
+      }>();
+
+    const revenueResult = await this.orderDetailRepo
       .createQueryBuilder('detail')
       .leftJoin('detail.order', 'order')
-      .select('SUM(detail.total)', 'total')
+      .select('COALESCE(SUM(detail.total), 0)', 'total')
+      .addSelect(`COALESCE(SUM(CASE WHEN order."createdAt" >= :date THEN detail.total ELSE 0 END), 0)`, 'monthly')
       .where('order.status != :status', { status: OrderStatus.CANCELLED })
-      .andWhere('order.createdAt >= :date', { date: currentMonth })
-      .getRawOne();
+      .setParameter('date', currentMonth)
+      .getRawOne<{ total: string; monthly: string }>();
+
+    const totalOrders = parseInt(stats?.totalOrders || '0', 10);
+    const deliveredOrders = parseInt(stats?.delivered || '0', 10);
 
     return {
       totalOrders,
       ordersByStatus: {
-        pending: pendingOrders,
-        paid: paidOrders,
-        processing: processingOrders,
-        shipped: shippedOrders,
+        pending: parseInt(stats?.pending || '0', 10),
+        paid: parseInt(stats?.paid || '0', 10),
+        processing: parseInt(stats?.processing || '0', 10),
+        shipped: parseInt(stats?.shipped || '0', 10),
         delivered: deliveredOrders,
       },
       revenue: {
-        total: Number(revenue?.total) || 0,
-        monthly: Number(monthlyRevenue?.total) || 0,
+        total: Number(revenueResult?.total) || 0,
+        monthly: Number(revenueResult?.monthly) || 0,
       },
       completionRate: totalOrders > 0 ? `${((deliveredOrders / totalOrders) * 100).toFixed(2)}%` : '0%',
     };
@@ -572,36 +477,16 @@ export class OrdersService {
 
     await this.restoreStock(orderId);
 
-    const products =
-      order.orderDetail.items?.map((item) => ({
-        name: item.productSnapshot?.name || item.product?.name || 'Producto',
-        quantity: item.quantity,
-        price: Number(item.unitPrice),
-      })) || [];
-
     const refundStatus = previousStatus === OrderStatus.PAID ? 'Reembolso en proceso' : null;
-
-    void this.mailQueueService.queueOrderCancelledEmail(
-      order.user.email,
-      order.user.name,
-      order.orderNumber || order.id,
-      order.cancellationReason,
-      products,
-      Number(order.orderDetail.total),
-      refundStatus,
-    );
+    await this.orderNotificationService.notifyOrderCancelled(order, order.cancellationReason, refundStatus);
 
     if (previousStatus === OrderStatus.PAID) {
       const paymentMethod = order.payment?.paymentMethodId || order.orderDetail?.paymentMethod || 'Mercado Pago';
-
-      void this.mailQueueService.queueRefundProcessedEmail(
-        order.user.email,
-        order.user.name,
-        order.orderNumber || order.id,
+      await this.orderNotificationService.notifyRefundProcessed(
+        order,
         Number(order.orderDetail.total),
         paymentMethod,
         5,
-        null,
       );
     }
 

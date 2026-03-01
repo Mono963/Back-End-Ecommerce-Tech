@@ -4,213 +4,168 @@ import { Logger } from '@nestjs/common';
 import { MailService } from './mail.service';
 import { MailJobData } from './mail-queue_email.service';
 
+type MailHandler = (to: string, data: Record<string, unknown>) => Promise<void>;
+
 @Processor('mail')
 export class MailProcessor {
   private readonly logger = new Logger(MailProcessor.name);
+  private readonly handlers: Record<string, MailHandler>;
 
-  constructor(private readonly mailService: MailService) {}
+  constructor(private readonly mailService: MailService) {
+    this.handlers = {
+      // Auth / Users
+      welcome: (to, d) => this.mailService.sendWelcomeEmail(to, d.userName as string),
+
+      login: (to, d) => this.mailService.sendLoginNotification(to, d.userName as string),
+
+      'data-changed': (to, d) => this.mailService.sendUserDataChangedNotification(to, d.userName as string),
+
+      'password-reset': (to, d) => this.mailService.sendPasswordResetEmail(to, d.name as string, d.resetUrl as string),
+
+      'password-changed': (to, d) => this.mailService.sendPasswordChangedConfirmationEmail(to, d.name as string),
+
+      'account-deleted': (to, d) => this.mailService.sendAccountDeletedNotification(to, d.userName as string),
+
+      // Orders / Payments
+      'order-processing': (to, d) =>
+        this.mailService.sendOrderProcessingNotification(
+          to,
+          d.userName as string,
+          d.orderNumber as string,
+          d.products as { name: string; quantity: number; price: number }[],
+          d.subtotal as number,
+          d.shipping as number,
+          d.tax as number,
+          d.total as number,
+          d.shippingAddress as { street: string; city: string; province: string; postalCode: string } | null,
+          d.paymentMethod as string,
+          new Date(d.orderDate as string),
+        ),
+
+      'purchase-confirmation': (to, d) =>
+        this.mailService.sendPurchaseConfirmation(
+          to,
+          d.userName as string,
+          d.orderNumber as string,
+          d.products as { name: string; quantity: number; price: number }[],
+          d.subtotal as number,
+          d.shipping as number,
+          d.tax as number,
+          d.total as number,
+          d.shippingAddress as { street: string; city: string; province: string; postalCode: string } | null,
+          d.paymentMethod as string,
+          new Date(d.orderDate as string),
+        ),
+
+      'purchase-alert-admin': (_to, d) =>
+        this.mailService.sendPurchaseAlertToAdmin(
+          d.userName as string,
+          d.userEmail as string,
+          d.orderId as string,
+          d.orderTotal as number,
+          new Date(d.orderDate as string),
+        ),
+
+      'payment-pending': (to, d) => this.mailService.sendPaymentPendingEmail(to, d.userName as string),
+
+      'payment-rejected': (to, d) => this.mailService.sendPaymentRejectedEmail(to, d.userName as string),
+
+      // Contact
+      'contact-confirmation': (to, d) =>
+        this.mailService.sendContactConfirmation(to, d.name as string, d.reason as string),
+
+      'contact-admin': (_to, d) =>
+        this.mailService.sendContactNotificationToAdmin(
+          d.name as string,
+          d.email as string,
+          d.phone as string,
+          d.reason as string,
+        ),
+
+      // Order lifecycle
+      'order-shipped': (to, d) =>
+        this.mailService.sendOrderShippedEmail(
+          to,
+          d.userName as string,
+          d.orderNumber as string,
+          d.trackingNumber as string,
+          d.trackingUrl as string,
+          d.carrier as string,
+          d.estimatedDelivery as string,
+          d.shippingAddress as { street: string; city: string; province: string; postalCode: string },
+          d.products as { name: string; quantity: number; price: number }[],
+          d.orderTotal as number,
+        ),
+
+      'order-delivered': (to, d) =>
+        this.mailService.sendOrderDeliveredEmail(
+          to,
+          d.userName as string,
+          d.orderNumber as string,
+          d.deliveryDate as string,
+          d.products as { name: string; quantity: number; price: number }[],
+          d.reviewUrl as string,
+        ),
+
+      'order-cancelled': (to, d) =>
+        this.mailService.sendOrderCancelledEmail(
+          to,
+          d.userName as string,
+          d.orderNumber as string,
+          d.cancellationReason as string | null,
+          d.products as { name: string; quantity: number; price: number }[],
+          d.orderTotal as number,
+          d.refundStatus as string | null,
+        ),
+
+      'refund-processed': (to, d) =>
+        this.mailService.sendRefundProcessedEmail(
+          to,
+          d.userName as string,
+          d.orderNumber as string,
+          d.refundAmount as number,
+          d.refundMethod as string,
+          d.estimatedDays as number | null,
+          d.refundId as string | null,
+        ),
+
+      'abandoned-cart': (to, d) =>
+        this.mailService.sendAbandonedCartEmail(
+          to,
+          d.userName as string,
+          d.cartItems as { productName: string; productImage: string | null; quantity: number; price: number }[],
+          d.cartTotal as number,
+          d.cartUrl as string,
+          d.discountCode as string | undefined,
+        ),
+
+      'review-request': (to, d) =>
+        this.mailService.sendReviewRequestEmail(
+          to,
+          d.userName as string,
+          d.orderNumber as string,
+          d.products as { productName: string; productImage: string | null; reviewUrl: string }[],
+          d.reviewUrl as string,
+        ),
+    };
+  }
 
   @Process('send')
   async handleSend(job: Job<MailJobData>): Promise<void> {
-    this.logger.log(`Processing email type "${job.data.type}" for: ${job.data.to}`);
+    const { type, to, data } = job.data;
+    this.logger.log(`Processing email type "${type}" for: ${to}`);
 
     try {
-      const { type, to, data } = job.data;
-
-      switch (type) {
-        // ==================== AUTH / USUARIOS ====================
-        case 'welcome':
-          await this.mailService.sendWelcomeEmail(to, data.userName as string);
-          break;
-
-        case 'login':
-          await this.mailService.sendLoginNotification(to, data.userName as string);
-          break;
-
-        case 'data-changed':
-          await this.mailService.sendUserDataChangedNotification(to, data.userName as string);
-          break;
-
-        case 'password-reset':
-          await this.mailService.sendPasswordResetEmail(to, data.name as string, data.resetUrl as string);
-          break;
-
-        case 'password-changed':
-          await this.mailService.sendPasswordChangedConfirmationEmail(to, data.name as string);
-          break;
-
-        case 'account-deleted':
-          await this.mailService.sendAccountDeletedNotification(to, data.userName as string);
-          break;
-
-        // ==================== ORDENES / PAGOS ====================
-        case 'order-processing':
-          await this.mailService.sendOrderProcessingNotification(
-            to,
-            data.userName as string,
-            data.orderNumber as string,
-            data.products as { name: string; quantity: number; price: number }[],
-            data.subtotal as number,
-            data.shipping as number,
-            data.tax as number,
-            data.total as number,
-            data.shippingAddress as {
-              street: string;
-              city: string;
-              province: string;
-              postalCode: string;
-            } | null,
-            data.paymentMethod as string,
-            new Date(data.orderDate as string),
-          );
-          break;
-
-        case 'purchase-confirmation':
-          await this.mailService.sendPurchaseConfirmation(
-            to,
-            data.userName as string,
-            data.orderNumber as string,
-            data.products as { name: string; quantity: number; price: number }[],
-            data.subtotal as number,
-            data.shipping as number,
-            data.tax as number,
-            data.total as number,
-            data.shippingAddress as {
-              street: string;
-              city: string;
-              province: string;
-              postalCode: string;
-            } | null,
-            data.paymentMethod as string,
-            new Date(data.orderDate as string),
-          );
-          break;
-
-        case 'purchase-alert-admin':
-          await this.mailService.sendPurchaseAlertToAdmin(
-            data.userName as string,
-            data.userEmail as string,
-            data.orderId as string,
-            data.orderTotal as number,
-            new Date(data.orderDate as string),
-          );
-          break;
-
-        case 'payment-pending':
-          await this.mailService.sendPaymentPendingEmail(to, data.userName as string);
-          break;
-
-        case 'payment-rejected':
-          await this.mailService.sendPaymentRejectedEmail(to, data.userName as string);
-          break;
-
-        // ==================== CONTACTO ====================
-        case 'contact-confirmation':
-          await this.mailService.sendContactConfirmation(to, data.name as string, data.reason as string);
-          break;
-
-        case 'contact-admin':
-          await this.mailService.sendContactNotificationToAdmin(
-            data.name as string,
-            data.email as string,
-            data.phone as string,
-            data.reason as string,
-          );
-          break;
-
-        // ==================== NUEVOS TEMPLATES DE ORDEN ====================
-        case 'order-shipped':
-          await this.mailService.sendOrderShippedEmail(
-            to,
-            data.userName as string,
-            data.orderNumber as string,
-            data.trackingNumber as string,
-            data.trackingUrl as string,
-            data.carrier as string,
-            data.estimatedDelivery as string,
-            data.shippingAddress as {
-              street: string;
-              city: string;
-              province: string;
-              postalCode: string;
-            },
-            data.products as { name: string; quantity: number; price: number }[],
-            data.orderTotal as number,
-          );
-          break;
-
-        case 'order-delivered':
-          await this.mailService.sendOrderDeliveredEmail(
-            to,
-            data.userName as string,
-            data.orderNumber as string,
-            data.deliveryDate as string,
-            data.products as { name: string; quantity: number; price: number }[],
-            data.reviewUrl as string,
-          );
-          break;
-
-        case 'order-cancelled':
-          await this.mailService.sendOrderCancelledEmail(
-            to,
-            data.userName as string,
-            data.orderNumber as string,
-            data.cancellationReason as string | null,
-            data.products as { name: string; quantity: number; price: number }[],
-            data.orderTotal as number,
-            data.refundStatus as string | null,
-          );
-          break;
-
-        case 'refund-processed':
-          await this.mailService.sendRefundProcessedEmail(
-            to,
-            data.userName as string,
-            data.orderNumber as string,
-            data.refundAmount as number,
-            data.refundMethod as string,
-            data.estimatedDays as number | null,
-            data.refundId as string | null,
-          );
-          break;
-
-        case 'abandoned-cart':
-          await this.mailService.sendAbandonedCartEmail(
-            to,
-            data.userName as string,
-            data.cartItems as {
-              productName: string;
-              productImage: string | null;
-              quantity: number;
-              price: number;
-            }[],
-            data.cartTotal as number,
-            data.cartUrl as string,
-            data.discountCode as string | undefined,
-          );
-          break;
-
-        case 'review-request':
-          await this.mailService.sendReviewRequestEmail(
-            to,
-            data.userName as string,
-            data.orderNumber as string,
-            data.products as {
-              productName: string;
-              productImage: string | null;
-              reviewUrl: string;
-            }[],
-            data.reviewUrl as string,
-          );
-          break;
-
-        default:
-          this.logger.warn(`Tipo de email desconocido: ${type as string}`);
+      const handler = this.handlers[type];
+      if (!handler) {
+        this.logger.warn(`Unknown email type: ${type as string}`);
+        return;
       }
 
+      await handler(to, data);
       this.logger.log(`Email "${type}" sent successfully to: ${to}`);
     } catch (error) {
-      this.logger.error(`Error sending email to ${job.data.to}: ${(error as Error).message}`);
+      this.logger.error(`Error sending email to ${to}: ${(error as Error).message}`);
       throw error;
     }
   }

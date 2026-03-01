@@ -1,5 +1,5 @@
 import { plainToClass } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Min, validateSync } from 'class-validator';
+import { IsInt, IsOptional, IsString, Min, ValidateIf, validateSync } from 'class-validator';
 
 class EnvironmentVariables {
   @IsString() NODE_ENV: string;
@@ -44,7 +44,7 @@ class EnvironmentVariables {
   @IsString() FRONTEND_MP_URL: string;
   @IsString() BACKEND_MP_URL: string;
 
-  @IsOptional()
+  @ValidateIf((o: EnvironmentVariables) => o.NODE_ENV === 'production')
   @IsString()
   MP_WEBHOOK_SECRET?: string;
 
@@ -87,6 +87,10 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   BACKEND_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  CORS_ORIGINS?: string;
 }
 
 export function validate(config: Record<string, unknown>): EnvironmentVariables {

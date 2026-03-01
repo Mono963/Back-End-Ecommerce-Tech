@@ -33,9 +33,9 @@ export class AuthsController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('singin/user')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  async singinUser(@Body() credentials: LoginUserDto): Promise<AuthResponse> {
+  async signInUser(@Body() credentials: LoginUserDto): Promise<AuthResponse> {
     const { email, password } = credentials;
-    return await this.authService.singin(email, password);
+    return await this.authService.signIn(email, password);
   }
 
   @ApiOperation({ summary: 'Sign up new user' })
@@ -56,7 +56,7 @@ export class AuthsController {
     }),
   )
   @Post('singup')
-  async singup(@Body() newUser: CreateUserDto): Promise<UserResponseDto> {
+  async signUp(@Body() newUser: CreateUserDto): Promise<UserResponseDto> {
     return await this.authService.signup(newUser);
   }
 
@@ -98,13 +98,12 @@ export class AuthsController {
   })
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('exchange-code')
-  exchangeCode(
+  async exchangeCode(
     @Body('code') code: string,
     @Res({ passthrough: true }) res: Response,
-  ): { userId: string; success: boolean } {
-    const tokenData = this.authService.exchangeAuthCode(code);
+  ): Promise<{ userId: string; success: boolean }> {
+    const tokenData = await this.authService.exchangeAuthCode(code);
     res.cookie('access_token', tokenData.accessToken, this.authService.getCookieOptions());
-
     return {
       userId: tokenData.userId,
       success: true,
@@ -120,7 +119,6 @@ export class AuthsController {
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response): { success: boolean } {
     res.clearCookie('access_token', this.authService.getCookieOptions());
-
     return { success: true };
   }
 }

@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { Users } from './entities/users.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { UserSearchQueryDto } from './dtos/PaginationQueryDto';
 import { paginate } from 'src/common/pagination/paginate';
 import { AuthValidations } from '../auths/validate/auth.validate';
@@ -51,6 +51,7 @@ export class UsersService {
     private readonly configService: ConfigService,
     private readonly mailQueueService: MailQueueService,
     private readonly rolesService: RolesService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async getUsers(searchQuery: UserSearchQueryDto): Promise<IPaginatedResult<Users>> {
@@ -112,19 +113,24 @@ export class UsersService {
   async getUserById(id: string): Promise<Users & { wishlistCount: number }> {
     const user = await this.usersRepository.findOne({
       where: { id },
-      relations: ['orders', 'cart', 'role', 'addresses'],
+      relations: ['cart', 'role', 'addresses'],
     });
 
     if (!user) {
       throw new NotFoundException(`User with id ${id} not found.`);
     }
 
-    const wishlist = await this.wishlistRepository.findOne({
-      where: { user_id: id },
-      relations: ['items'],
-    });
+    const wishlistCount = await this.dataSource
+      .createQueryBuilder()
+      .select('COUNT(wi.id)', 'count')
+      .from('wishlist_items', 'wi')
+      .innerJoin('wishlists', 'w', 'w.id = wi.wishlist_id')
+      .where('w.user_id = :id', { id })
+      .getRawOne<{ count: string }>();
 
-    const userWithWishlist = Object.assign(user, { wishlistCount: wishlist?.items?.length ?? 0 });
+    const userWithWishlist = Object.assign(user, {
+      wishlistCount: parseInt(wishlistCount?.count || '0', 10),
+    });
 
     return userWithWishlist;
   }
@@ -213,7 +219,7 @@ export class UsersService {
     });
   }
 
-  async rollChange(userId: string, dto: IUpdateRole): Promise<void> {
+  async changeRole(userId: string, dto: IUpdateRole): Promise<void> {
     try {
       const user = await this.usersRepository.findOne({
         where: { id: userId },
@@ -462,25 +468,35 @@ export class UsersService {
   }
 
   async setDefaultAddress(userId: string, addressId: string): Promise<IAddress> {
-    const address = await this.addressRepository.findOne({
-      where: {
-        id: addressId,
-        user_id: userId,
-      },
-    });
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    if (!address) {
-      throw new NotFoundException(`Address with id ${addressId} not found for user ${userId}`);
+    try {
+      const address = await queryRunner.manager.findOne(Address, {
+        where: { id: addressId, user_id: userId },
+      });
+
+      if (!address) {
+        throw new NotFoundException(`Address with id ${addressId} not found for user ${userId}`);
+      }
+
+      await queryRunner.manager.update(Address, { user_id: userId }, { isDefault: false });
+
+      address.isDefault = true;
+      const updatedAddress = await queryRunner.manager.save(Address, address);
+
+      await queryRunner.commitTransaction();
+
+      this.logger.log(`Default address updated for user ${userId}: ${addressId}`);
+
+      return this.mapAddressToDto(updatedAddress);
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
-
-    await this.addressRepository.update({ user_id: userId }, { isDefault: false });
-
-    address.isDefault = true;
-    const updatedAddress = await this.addressRepository.save(address);
-
-    this.logger.log(`Default address updated for user ${userId}: ${addressId}`);
-
-    return this.mapAddressToDto(updatedAddress);
   }
 
   async getUserStats(userId: string): Promise<{
@@ -491,30 +507,29 @@ export class UsersService {
   }> {
     const user = await this.usersRepository.findOne({
       where: { id: userId },
+      select: ['id'],
     });
 
     if (!user) {
       throw new NotFoundException(`User with id ${userId} not found`);
     }
 
-    const orders = await this.orderRepository
+    const orderStats = await this.orderRepository
       .createQueryBuilder('order')
-      .leftJoinAndSelect('order.orderDetail', 'orderDetail')
+      .leftJoin('order.orderDetail', 'orderDetail')
+      .select('COUNT(order.id)', 'totalOrders')
+      .addSelect('COALESCE(SUM(orderDetail.total), 0)', 'totalSpent')
       .where('order.user_id = :userId', { userId })
       .andWhere('order.status != :cancelledStatus', { cancelledStatus: 'cancelled' })
-      .getMany();
+      .getRawOne<{ totalOrders: string; totalSpent: string }>();
 
-    const totalOrders = orders.length;
-    const totalSpent = orders.reduce((sum, order) => {
-      return sum + (order.orderDetail?.total || 0);
-    }, 0);
-
-    const wishlist = await this.wishlistRepository.findOne({
-      where: { user_id: userId },
-      relations: ['items'],
-    });
-
-    const wishlistItemsCount = wishlist?.items?.length || 0;
+    const wishlistItemsCount = await this.dataSource
+      .createQueryBuilder()
+      .select('COUNT(wi.id)', 'count')
+      .from('wishlist_items', 'wi')
+      .innerJoin('wishlists', 'w', 'w.id = wi.wishlist_id')
+      .where('w.user_id = :userId', { userId })
+      .getRawOne<{ count: string }>();
 
     const reviewsCount = await this.reviewRepository.count({
       where: { user: { id: userId } },
@@ -523,9 +538,9 @@ export class UsersService {
     this.logger.log(`Stats retrieved for user ${userId}`);
 
     return {
-      totalOrders,
-      totalSpent: Math.round(totalSpent * 100) / 100,
-      wishlistItemsCount,
+      totalOrders: parseInt(orderStats?.totalOrders || '0', 10),
+      totalSpent: Math.round(parseFloat(orderStats?.totalSpent || '0') * 100) / 100,
+      wishlistItemsCount: parseInt(wishlistItemsCount?.count || '0', 10),
       reviewsCount,
     };
   }

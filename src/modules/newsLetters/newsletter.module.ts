@@ -15,6 +15,7 @@ import { AuthsModule } from '../auths/auths.module';
 import { MailModule } from '../mail/mail.module';
 import { ProductsModule } from '../products/products.module';
 import { DiscountsModule } from '../discounts/discounts.module';
+import { DistributedLockService } from '../../common/services/distributed-lock.service';
 
 @Module({
   imports: [
@@ -26,7 +27,7 @@ import { DiscountsModule } from '../discounts/discounts.module';
     DiscountsModule,
   ],
   controllers: [NewsletterController, CampaignController],
-  providers: [NewsletterService, NewsletterQueueService, NewsletterProcessor, CampaignService],
+  providers: [NewsletterService, NewsletterQueueService, NewsletterProcessor, CampaignService, DistributedLockService],
   exports: [NewsletterService],
 })
 export class NewsletterModule {}

@@ -31,6 +31,7 @@ import { getBullImports } from './infra/bull.bootstrap';
 import { ScheduleModule } from '@nestjs/schedule';
 import { NewsletterModule } from './modules/newsLetters/newsletter.module';
 import { DiscountsModule } from './modules/discounts/discounts.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -82,6 +83,7 @@ import { DiscountsModule } from './modules/discounts/discounts.module';
     ContactModule,
     NewsletterModule,
     DiscountsModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [

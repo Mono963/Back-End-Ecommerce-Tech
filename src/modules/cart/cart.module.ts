@@ -10,10 +10,9 @@ import { AuthsModule } from '../auths/auths.module';
 import { CartItem } from './entities/cart.item.entity';
 import { ProductsModule } from '../products/products.module';
 import { OrdersModule } from '../orders/orders.module';
-import { UsersModule } from '../users/users.module';
 import { MailModule } from '../mail/mail.module';
 import { AbandonedCartService } from './abandoned-cart.service';
-import { DiscountsModule } from '../discounts/discounts.module';
+import { DistributedLockService } from '../../common/services/distributed-lock.service';
 
 @Module({
   imports: [
@@ -21,12 +20,10 @@ import { DiscountsModule } from '../discounts/discounts.module';
     forwardRef(() => AuthsModule),
     forwardRef(() => ProductsModule),
     forwardRef(() => OrdersModule),
-    forwardRef(() => UsersModule),
     forwardRef(() => MailModule),
-    DiscountsModule,
   ],
   controllers: [CartController],
-  providers: [CartService, AbandonedCartService],
+  providers: [CartService, AbandonedCartService, DistributedLockService],
   exports: [CartService, AbandonedCartService, TypeOrmModule],
 })
 export class CartModule {}
