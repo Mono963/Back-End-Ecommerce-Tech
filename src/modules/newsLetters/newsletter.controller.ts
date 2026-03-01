@@ -55,7 +55,7 @@ export class NewsletterController {
     status: HttpStatus.NOT_FOUND,
     description: 'Invalid or expired token',
   })
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Get('unsubscribe')
   async unsubscribe(@Query('token') token: string): Promise<{ message: string; email: string }> {
     const result = await this.newsletterService.unsubscribe(token);
@@ -73,17 +73,21 @@ export class NewsletterController {
   @Get('track/open/:trackingId')
   async trackOpen(@Param('trackingId') trackingId: string, @Res() res: Response): Promise<void> {
     await this.newsletterService.trackOpen(trackingId);
-    // 1x1 transparent GIF
     const pixel = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
     res.end(pixel);
   }
 
   @ApiOperation({ summary: 'Track newsletter link click and redirect' })
-  @ApiResponse({ status: HttpStatus.FOUND, description: 'Redirects to frontend' })
+  @ApiResponse({ status: HttpStatus.FOUND, description: 'Redirects to original URL' })
+  @ApiQuery({ name: 'url', required: false, description: 'Original destination URL' })
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @Get('track/click/:trackingId')
-  async trackClick(@Param('trackingId') trackingId: string, @Res() res: Response): Promise<void> {
-    const { redirectUrl } = await this.newsletterService.trackClick(trackingId);
+  async trackClick(
+    @Param('trackingId') trackingId: string,
+    @Query('url') url: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const { redirectUrl } = await this.newsletterService.trackClick(trackingId, url);
     res.redirect(302, redirectUrl);
   }
 

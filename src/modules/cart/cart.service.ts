@@ -20,6 +20,8 @@ import {
   IAddToCart,
   ICartItemResponse,
   ICartResponse,
+  ICartDiscountPreview,
+  ICartDiscountPreviewItem,
   IResponseCartSummary,
   IStockValidationIssue,
   IStockValidationResult,
@@ -27,9 +29,11 @@ import {
   IVariantValidationResult,
 } from './interfaces/interface.cart';
 import { ICreateAddress, IAddress } from '../users/interfaces/user.interface';
+import { roundMoney } from '../../common/utils/money.utils';
 import { ICategory } from '../category/interface/category.interface';
 import { UsersService } from '../users/users.service';
 import { IOrder } from '../orders/interfaces/orders.interface';
+import { DiscountsService } from '../discounts/discounts.service';
 
 @Injectable()
 export class CartService {
@@ -58,6 +62,8 @@ export class CartService {
 
     @Inject(forwardRef(() => OrdersService))
     private readonly ordersService: OrdersService,
+
+    private readonly discountsService: DiscountsService,
 
     private readonly dataSource: DataSource,
   ) {}
@@ -330,7 +336,7 @@ export class CartService {
       throw new NotFoundException(`User with id ${userId} not found`);
     }
 
-    if (!user.addresses) {
+    if (!user.addresses || !user.addresses.find((a) => a.id === addressId)) {
       throw new BadRequestException(`Address with id ${addressId} does not exist in the user's saved addresses`);
     }
     cart.selectedAddressId = addressId;
@@ -391,7 +397,7 @@ export class CartService {
 
       if (variantIds.length > 0 && currentProduct.variants) {
         const matchingVariants = currentProduct.variants.filter((v) => variantIds.includes(v.id));
-        availableStock = matchingVariants.reduce((sum, v) => sum + v.stock, 0);
+        availableStock = matchingVariants.length > 0 ? Math.min(...matchingVariants.map((v) => v.stock)) : 0;
       }
 
       if (availableStock < item.quantity) {
@@ -412,7 +418,11 @@ export class CartService {
     };
   }
 
-  async createOrderFromCartCheckout(userId: string, shippingAddress: ICreateAddress): Promise<IOrder> {
+  async createOrderFromCartCheckout(
+    userId: string,
+    shippingAddress: ICreateAddress,
+    promoCode?: string,
+  ): Promise<IOrder> {
     const stockValidation = await this.validateCartStock(userId);
 
     if (!stockValidation.valid) {
@@ -435,7 +445,94 @@ export class CartService {
       isDefault: newAddress.isDefault,
     };
 
-    return await this.ordersService.createOrderFromCart(userId, addressForOrder);
+    return await this.ordersService.createOrderFromCart(userId, addressForOrder, promoCode);
+  }
+
+  async getCartDiscountPreview(userId: string, promoCode?: string): Promise<ICartDiscountPreview> {
+    const cart = await this.getOrCreateCart(userId);
+
+    if (!cart.items || cart.items.length === 0) {
+      return {
+        subtotalOriginal: 0,
+        subtotalWithDiscount: 0,
+        totalDiscount: 0,
+        tax: 0,
+        shipping: 0,
+        total: 0,
+        promoValid: false,
+        promoErrors: ['Tu carrito esta vacio'],
+        items: [],
+      };
+    }
+
+    let promoValid = true;
+    let promoErrors: string[] = [];
+    let validatedPromoCode = undefined;
+    let eligibleProductIds: string[] | undefined;
+
+    if (promoCode) {
+      const validation = await this.discountsService.validatePromoCode(promoCode, userId, cart.items);
+      if (!validation.valid) {
+        promoValid = false;
+        promoErrors = validation.errors ?? [];
+      } else {
+        validatedPromoCode = validation.promoCode;
+        eligibleProductIds = validation.eligibleProductIds;
+      }
+    }
+
+    const itemDiscounts = await this.discountsService.calculateOrderDiscounts(
+      cart.items,
+      validatedPromoCode,
+      eligibleProductIds,
+    );
+
+    let subtotalOriginal = 0;
+    let subtotalWithDiscount = 0;
+    let totalDiscount = 0;
+    const items: ICartDiscountPreviewItem[] = [];
+
+    for (let i = 0; i < cart.items.length; i++) {
+      const item = cart.items[i];
+      const discount = itemDiscounts[i];
+      const originalUnitPrice = discount.originalUnitPrice;
+      const discountAmount = discount.discountAmount;
+      const finalUnitPrice = originalUnitPrice - discountAmount;
+      const subtotal = finalUnitPrice * item.quantity;
+
+      subtotalOriginal += originalUnitPrice * item.quantity;
+      subtotalWithDiscount += subtotal;
+      totalDiscount += discountAmount * item.quantity;
+
+      items.push({
+        productId: item.product?.id || '',
+        quantity: item.quantity,
+        originalUnitPrice,
+        discountAmount,
+        discountSource: discount.discountSource || null,
+        discountCode: discount.discountCode || null,
+        finalUnitPrice,
+        subtotal,
+      });
+    }
+
+    subtotalOriginal = roundMoney(subtotalOriginal);
+    subtotalWithDiscount = roundMoney(subtotalWithDiscount);
+    totalDiscount = roundMoney(totalDiscount);
+
+    const totals = this.ordersService.calculateOrderTotals(subtotalWithDiscount);
+
+    return {
+      subtotalOriginal,
+      subtotalWithDiscount,
+      totalDiscount,
+      tax: roundMoney(totals.tax),
+      shipping: roundMoney(totals.shipping),
+      total: roundMoney(totals.total),
+      promoValid,
+      promoErrors,
+      items,
+    };
   }
 
   async cleanupAbandonedCarts(daysOld: number = 30): Promise<{

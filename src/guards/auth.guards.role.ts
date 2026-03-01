@@ -1,4 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable, ForbiddenException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { AuthGuard } from './auth.guards';
@@ -16,8 +17,9 @@ export class RoleGuard extends AuthGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     jwtService: JwtService,
+    configService: ConfigService,
   ) {
-    super(jwtService);
+    super(jwtService, configService);
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {

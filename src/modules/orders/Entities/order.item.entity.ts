@@ -12,6 +12,7 @@ import {
 import { OrderDetail } from './order.details.entity';
 import { Product } from '../../products/entities/products.entity';
 import { ProductVariant } from '../../products/entities/products_variant.entity';
+import { DiscountSource } from '../../discounts/enums/discount.enums';
 
 @Index(['order_detail_id'])
 @Index(['product_id'])
@@ -47,6 +48,18 @@ export class OrderItem {
     basePrice: number;
   };
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  originalUnitPrice: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  discountAmount: number;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  discountSource: DiscountSource;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  discountCode: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
@@ -64,7 +77,7 @@ export class OrderItem {
   @JoinColumn({ name: 'product_id' })
   product: Product;
 
-  @ManyToMany(() => ProductVariant)
+  @ManyToMany(() => ProductVariant, (variant) => variant.orderItems)
   @JoinTable({
     name: 'order_item_variants',
     joinColumn: { name: 'order_item_id', referencedColumnName: 'id' },

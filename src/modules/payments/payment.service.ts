@@ -1,8 +1,6 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-
-import { CreatePreferenceDto, PaymentStatusDto, PreferenceResponseDto } from '../payments/dto/create-payment.dto';
+import { DataSource, Repository } from 'typeorm';
 
 import { MailQueueService } from '../mail/mail-queue_email.service';
 import { Payment } from './entities/payment.entity';
@@ -12,12 +10,16 @@ import { Users } from '../users/entities/users.entity';
 import { MercadoPagoService } from '../mercadopago/mercadopago.service';
 import { IPaymentService } from './validate/payment.validate';
 import {
+  ICreatePreference,
   IMercadoPagoPaymentInfo,
   IPaymentCompleted,
   IPaymentResponse,
+  IPaymentStatus,
+  IPreferenceResponse,
   IWebhookNotificationInterface,
 } from './interface/payment.interface';
-import { OrderStatus } from '../orders/interfaces/orders.interface';
+import { OrderStatus } from '../orders/enum/order.enum';
+import { DiscountsService } from '../discounts/discounts.service';
 
 @Injectable()
 export class PaymentsService implements IPaymentService {
@@ -34,6 +36,8 @@ export class PaymentsService implements IPaymentService {
     private readonly mailQueueService: MailQueueService,
     @InjectRepository(Users)
     private readonly userRepository: Repository<Users>,
+    private readonly discountsService: DiscountsService,
+    private readonly dataSource: DataSource,
   ) {}
 
   private mapPaymentToResponse(payment: Payment): IPaymentResponse {
@@ -55,8 +59,8 @@ export class PaymentsService implements IPaymentService {
 
   async createPreferencePayment(
     userId: string,
-    dto: CreatePreferenceDto & { orderId: string },
-  ): Promise<PreferenceResponseDto> {
+    dto: ICreatePreference & { orderId: string },
+  ): Promise<IPreferenceResponse> {
     const order = await this.orderRepository.findOne({
       where: { id: dto.orderId, user: { id: userId } },
       relations: ['user', 'orderDetail'],
@@ -73,7 +77,7 @@ export class PaymentsService implements IPaymentService {
     return await this.mercadoPagoService.createPreference(userId, dto.orderId, dto);
   }
 
-  async getPaymentStatus(paymentId: string): Promise<PaymentStatusDto> {
+  async getPaymentStatus(paymentId: string): Promise<IPaymentStatus> {
     return await this.mercadoPagoService.getPaymentStatus(paymentId);
   }
 
@@ -86,48 +90,60 @@ export class PaymentsService implements IPaymentService {
   }
 
   async processPaymentInfo(paymentInfo: IMercadoPagoPaymentInfo): Promise<void> {
+    if (!paymentInfo.external_reference) {
+      this.logger.error('Payment received but no external_reference found');
+      return;
+    }
+
+    if (!paymentInfo.external_reference.startsWith('order-')) {
+      this.logger.error(`Invalid external_reference format for order payment: ${paymentInfo.external_reference}`);
+      return;
+    }
+
+    const orderId = paymentInfo.external_reference.replace('order-', '');
+    const paymentId = paymentInfo.id.toString();
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     try {
-      if (!paymentInfo.external_reference) {
-        this.logger.error('Payment received but no external_reference found');
-        return;
-      }
-
-      if (!paymentInfo.external_reference.startsWith('order-')) {
-        this.logger.error(`Invalid external_reference format for order payment: ${paymentInfo.external_reference}`);
-        return;
-      }
-
-      const orderId = paymentInfo.external_reference.replace('order-', '');
-
-      const order = await this.orderRepository.findOne({
+      const order = await queryRunner.manager.findOne(Order, {
         where: { id: orderId },
         relations: ['user', 'orderDetail', 'orderDetail.items'],
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!order) {
         this.logger.error(`Order with ID ${orderId} not found`);
+        await queryRunner.commitTransaction();
         return;
       }
 
-      const paymentId = paymentInfo.id.toString();
-      const existingPayment = await this.PaymentsRepository.findOne({
+      const existingPayment = await queryRunner.manager.findOne(Payment, {
         where: [{ paymentId }, { order: { id: orderId } }],
         relations: ['order', 'user'],
       });
 
       if (existingPayment) {
-        this.logger.log(`Payment already exists for order ${orderId} (paymentId: ${paymentId}), skipping insert`);
+        this.logger.log(`Payment already exists for order ${orderId} (paymentId: ${paymentId}), skipping`);
+        if (paymentInfo.status === 'approved' && order.status !== OrderStatus.PAID) {
+          order.status = OrderStatus.PAID;
+          await queryRunner.manager.save(Order, order);
+        }
 
-        if (existingPayment.order) {
-          if (paymentInfo.status === 'approved' && existingPayment.order.status !== OrderStatus.PAID) {
-            existingPayment.order.status = OrderStatus.PAID;
-            await this.orderRepository.save(existingPayment.order);
-          }
+        await queryRunner.commitTransaction();
+        if (paymentInfo.status === 'approved' && order.orderDetail?.promoCodeUsed) {
+          await this.discountsService.registerPromoCodeUsageFromPaidOrder({
+            promoCode: order.orderDetail.promoCodeUsed,
+            userId: order.user.id,
+            orderId: order.id,
+            orderItems: order.orderDetail.items || [],
+          });
         }
         return;
       }
-
-      const orderPayment = this.PaymentsRepository.create({
+      const orderPayment = queryRunner.manager.create(Payment, {
         paymentId,
         status: paymentInfo.status,
         statusDetail: paymentInfo.status_detail,
@@ -140,15 +156,28 @@ export class PaymentsService implements IPaymentService {
         order,
       });
 
-      await this.PaymentsRepository.save(orderPayment);
+      await queryRunner.manager.save(Payment, orderPayment);
 
       if (paymentInfo.status === 'approved') {
         order.status = OrderStatus.PAID;
-        await this.orderRepository.save(order);
+        await queryRunner.manager.save(Order, order);
 
         if (order.orderDetail) {
           order.orderDetail.paymentMethod = paymentInfo.payment_method_id;
-          await this.orderDetailRepository.save(order.orderDetail);
+          await queryRunner.manager.save(OrderDetail, order.orderDetail);
+        }
+      }
+
+      await queryRunner.commitTransaction();
+
+      if (paymentInfo.status === 'approved') {
+        if (order.orderDetail?.promoCodeUsed) {
+          await this.discountsService.registerPromoCodeUsageFromPaidOrder({
+            promoCode: order.orderDetail.promoCodeUsed,
+            userId: order.user.id,
+            orderId: order.id,
+            orderItems: order.orderDetail.items || [],
+          });
         }
 
         await this.sendOrderPaymentNotificationAsync(order, order.user.id);
@@ -159,13 +188,11 @@ export class PaymentsService implements IPaymentService {
         );
       } else if (paymentInfo.status === 'pending' || paymentInfo.status === 'in_process') {
         await this.sendOrderPaymentPendingNotificationAsync(order.user.id);
-
         this.logger.log(
           `Order payment pending for order: ${orderId}, payment: ${paymentInfo.id}, status: ${paymentInfo.status}`,
         );
       } else if (paymentInfo.status === 'rejected' || paymentInfo.status === 'cancelled') {
         await this.sendOrderPaymentFailureNotificationAsync(order.user.id);
-
         this.logger.log(
           `Order payment rejected for order: ${orderId}, payment: ${paymentInfo.id}, status: ${paymentInfo.status}`,
         );
@@ -173,9 +200,12 @@ export class PaymentsService implements IPaymentService {
         this.logger.log(`Order payment received with status: ${paymentInfo.status}, payment: ${paymentInfo.id}`);
       }
     } catch (error) {
+      await queryRunner.rollbackTransaction();
       const message = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Error processing order payment: ${message}`, error instanceof Error ? error.stack : undefined);
       throw error;
+    } finally {
+      await queryRunner.release();
     }
   }
 
@@ -197,7 +227,9 @@ export class PaymentsService implements IPaymentService {
   }
 
   async getAllOrdersPayment(): Promise<IPaymentCompleted[]> {
-    const order_payments = await this.PaymentsRepository.find();
+    const order_payments = await this.PaymentsRepository.find({
+      relations: ['user', 'order'],
+    });
     return order_payments.map((payment) => ({
       id: payment.id,
       payment_id: payment.paymentId,

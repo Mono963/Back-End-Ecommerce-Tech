@@ -13,7 +13,7 @@ import {
 import { Users } from '../../users/entities/users.entity';
 import { OrderDetail } from './order.details.entity';
 import { Payment } from '../../payments/entities/payment.entity';
-import { OrderStatus } from '../interfaces/orders.interface';
+import { OrderStatus } from '../enum/order.enum';
 
 @Index(['status'])
 @Index(['createdAt'])

@@ -14,6 +14,7 @@ import { Product } from '../products/entities/products.entity';
 import { AuthsModule } from '../auths/auths.module';
 import { MailModule } from '../mail/mail.module';
 import { ProductsModule } from '../products/products.module';
+import { DiscountsModule } from '../discounts/discounts.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ProductsModule } from '../products/products.module';
     forwardRef(() => AuthsModule),
     MailModule,
     ProductsModule,
+    DiscountsModule,
   ],
   controllers: [NewsletterController, CampaignController],
   providers: [NewsletterService, NewsletterQueueService, NewsletterProcessor, CampaignService],

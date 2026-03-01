@@ -5,8 +5,8 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MailService } from '../mail/mail.service';
-import { NewsletterJobData } from './newsletter-queue.service';
 import { NewsletterTracking } from './entities/newsletter-tracking.entity';
+import { INewsletterJobData } from './interface/newsletter.interface';
 
 @Processor('newsletter')
 export class NewsletterProcessor {
@@ -23,7 +23,7 @@ export class NewsletterProcessor {
   }
 
   @Process('send')
-  async handleSend(job: Job<NewsletterJobData>): Promise<void> {
+  async handleSend(job: Job<INewsletterJobData>): Promise<void> {
     const { type, email, subscriberName, unsubscribeToken, trackingId, promoData, campaignData } = job.data;
     const userName = subscriberName || 'Suscriptor';
     this.logger.log(`Processing newsletter type "${type}" for: ${email}`);
@@ -83,7 +83,7 @@ export class NewsletterProcessor {
         errorMessage: (error as Error).message,
       });
 
-      throw error; // Re-throw for Bull retry mechanism
+      throw error;
     }
   }
 }

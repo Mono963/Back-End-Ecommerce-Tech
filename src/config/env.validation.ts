@@ -44,6 +44,10 @@ class EnvironmentVariables {
   @IsString() FRONTEND_MP_URL: string;
   @IsString() BACKEND_MP_URL: string;
 
+  @IsOptional()
+  @IsString()
+  MP_WEBHOOK_SECRET?: string;
+
   @IsString()
   @IsOptional()
   REDIS_HOST?: string;

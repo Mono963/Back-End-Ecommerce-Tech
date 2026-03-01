@@ -12,21 +12,20 @@ import {
   HttpStatus,
   HttpCode,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { CartService } from './cart.service';
 import { AuthGuard } from 'src/guards/auth.guards';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthRequest } from 'src/common/auths/auth-request.interface';
-import {
-  AddToCartDTO,
-  CartResponseDto,
-  CartSummaryResponseDto,
-  StockValidationResultDto,
-  UpdateCartItemDTO,
-} from './dto/create-cart.dto';
-import { CreateOrderFromCartDto, ResponseOrderDto } from '../orders/dto/order.Dto';
 import { SelectAddressDto } from './dto/select-address.dto';
 import { RoleGuard } from 'src/guards/auth.guards.role';
 import { Roles, UserRole } from 'src/decorator/role.decorator';
+import { CartResponseDto, CartSummaryResponseDto } from './dto/cart.response.dto';
+import { AddToCartDTO, UpdateCartItemDTO } from './dto/cart.actions.dto';
+import { StockValidationResultDto } from './dto/cart.stock-validation.dto';
+import { CartDiscountPreviewRequestDto, CartDiscountPreviewResponseDto } from './dto/cart.discount-preview.dto';
+import { CreateOrderFromCartDto } from '../orders/dto/order.actions.dto';
+import { ResponseOrderDto } from '../orders/dto/order.response.dto';
 
 @ApiTags('Cart')
 @Controller('cart')
@@ -68,6 +67,24 @@ export class CartController {
   })
   async getCartSummary(@Req() req: AuthRequest): Promise<CartSummaryResponseDto> {
     return await this.cartService.getCartSummary(req.user.sub);
+  }
+
+  @Post('preview-discounts')
+  @ApiOperation({
+    summary: 'Preview discounts for the current cart',
+    description: 'Calculates discounts using the same logic as checkout without creating an order.',
+  })
+  @ApiBody({ type: CartDiscountPreviewRequestDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Discount preview calculated',
+    type: CartDiscountPreviewResponseDto,
+  })
+  async previewDiscounts(
+    @Req() req: AuthRequest,
+    @Body() body: CartDiscountPreviewRequestDto,
+  ): Promise<CartDiscountPreviewResponseDto> {
+    return await this.cartService.getCartDiscountPreview(req.user.sub, body.promoCode);
   }
 
   @Post('add')
@@ -243,6 +260,7 @@ export class CartController {
   }
 
   @Post('checkout')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({
     summary: 'Create order from cart items',
   })
@@ -256,6 +274,6 @@ export class CartController {
     description: 'Bad request - empty cart or stock issues',
   })
   async createOrder(@Req() req: AuthRequest, @Body() body: CreateOrderFromCartDto): Promise<ResponseOrderDto> {
-    return await this.cartService.createOrderFromCartCheckout(req.user.sub, body.shippingAddress);
+    return await this.cartService.createOrderFromCartCheckout(req.user.sub, body.shippingAddress, body.promoCode);
   }
 }

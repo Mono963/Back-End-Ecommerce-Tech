@@ -28,9 +28,11 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiQuery, ApiResponse, ApiTags, A
 import { ProductsSearchQueryDto } from './dto/PaginationQueryDto';
 import { PaginatedProductsDto } from './dto/paginated-products.dto';
 import { ProductVariant } from './entities/products_variant.entity';
-import { CreateProductDto, CreateVariantDto, ResponseProductDto, UpdateProductDto } from './dto/products.Dto';
 import { Observable } from 'rxjs';
 import { Throttle } from '@nestjs/throttler';
+import { ResponseProductDto } from './dto/product.response.dto';
+import { CreateProductDto, UpdateProductDto } from './dto/product.create.dto';
+import { CreateVariantDto } from './dto/product.variant.dto';
 
 @ApiTags('Products')
 @Controller('products')

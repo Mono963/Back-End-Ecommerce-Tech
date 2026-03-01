@@ -4,16 +4,12 @@ import { AuthGuard } from '../../guards/auth.guards';
 import { RoleGuard } from '../../guards/auth.guards.role';
 import { Roles, UserRole } from '../../decorator/role.decorator';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
-import {
-  CancelOrderDto,
-  OrderFiltersDto,
-  OrderStatsDto,
-  PaginatedOrdersDto,
-  ResponseOrderDto,
-  UpdateOrderStatusDto,
-} from './dto/order.Dto';
 import { AuthRequest } from 'src/common/auths/auth-request.interface';
-import { OrderStatus, OrderStatusadmin } from './interfaces/orders.interface';
+import { OrderStatus, OrderStatusadmin } from './enum/order.enum';
+import { PaginatedOrdersDto, ResponseOrderDto } from './dto/order.response.dto';
+import { OrderFiltersDto } from './dto/order.filters.dto';
+import { OrderStatsDto } from './dto/order.stats.dto';
+import { CancelOrderDto, UpdateOrderStatusDto } from './dto/order.actions.dto';
 
 @ApiTags('Orders')
 @ApiBearerAuth()

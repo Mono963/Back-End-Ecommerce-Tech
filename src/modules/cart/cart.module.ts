@@ -13,6 +13,7 @@ import { OrdersModule } from '../orders/orders.module';
 import { UsersModule } from '../users/users.module';
 import { MailModule } from '../mail/mail.module';
 import { AbandonedCartService } from './abandoned-cart.service';
+import { DiscountsModule } from '../discounts/discounts.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AbandonedCartService } from './abandoned-cart.service';
     forwardRef(() => OrdersModule),
     forwardRef(() => UsersModule),
     forwardRef(() => MailModule),
+    DiscountsModule,
   ],
   controllers: [CartController],
   providers: [CartService, AbandonedCartService],

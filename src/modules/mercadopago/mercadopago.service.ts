@@ -5,8 +5,13 @@ import { Repository } from 'typeorm';
 import { MercadoPagoConfig, Preference, Payment, MerchantOrder } from 'mercadopago';
 import { Users } from '../users/entities/users.entity';
 import { Order } from '../orders/entities/order.entity';
-import { CreatePreferenceDto, PaymentStatusDto, PreferenceResponseDto } from '../payments/dto/create-payment.dto';
-import { IMercadoPagoPaymentInfo, IWebhookNotificationInterface } from '../payments/interface/payment.interface';
+import {
+  ICreatePreference,
+  IMercadoPagoPaymentInfo,
+  IPaymentStatus,
+  IPreferenceResponse,
+  IWebhookNotificationInterface,
+} from '../payments/interface/payment.interface';
 import { isMercadoPagoError } from '../payments/validate/payment.validate';
 
 @Injectable()
@@ -37,7 +42,7 @@ export class MercadoPagoService {
     this.merchantOrder = new MerchantOrder(this.client);
   }
 
-  async createPreference(userId: string, orderId: string, dto: CreatePreferenceDto): Promise<PreferenceResponseDto> {
+  async createPreference(userId: string, orderId: string, dto: ICreatePreference): Promise<IPreferenceResponse> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       this.logger.warn(`User with ID ${userId} not found`);
@@ -225,7 +230,7 @@ export class MercadoPagoService {
     return paymentInfo;
   }
 
-  async getPaymentStatus(paymentId: string): Promise<PaymentStatusDto> {
+  async getPaymentStatus(paymentId: string): Promise<IPaymentStatus> {
     try {
       const paymentInfo = await this.getPaymentInfo(paymentId);
       return {

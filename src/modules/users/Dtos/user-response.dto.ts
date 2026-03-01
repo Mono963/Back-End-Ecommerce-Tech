@@ -1,8 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import { IsNotEmpty, IsUUID } from 'class-validator';
-import { OrderStatus } from '../../orders/interfaces/orders.interface';
-import { CartResponseDto } from '../../cart/dto/create-cart.dto';
+import { OrderStatus } from '../../orders/enum/order.enum';
+import { CartResponseDto } from '../../cart/dto/cart.response.dto';
 
 export class OrderResponseDto {
   @ApiProperty({ description: 'Order ID' })
@@ -88,9 +88,6 @@ export class UserResponseDto {
 export class UserResponseWithAdminDto extends UserResponseDto {
   @ApiProperty({ description: 'User role' })
   declare role: string;
-
-  @ApiProperty({ description: 'Hashed password (admin only)' })
-  password: string;
 }
 
 export class UpdateRoleDto {

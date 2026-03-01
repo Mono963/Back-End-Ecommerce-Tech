@@ -16,7 +16,7 @@ export class Payment {
   @Column()
   statusDetail: string;
 
-  @Column('float')
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   amount: number;
 
   @Column()

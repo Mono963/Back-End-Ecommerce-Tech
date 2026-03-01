@@ -9,9 +9,10 @@ import {
   UpdateDateColumn,
   Unique,
 } from 'typeorm';
-import { Rating } from '../interface/IReview.interface';
+
 import { Users } from '../../users/entities/users.entity';
 import { Product } from '../../products/entities/products.entity';
+import { Rating } from '../enum/review.enum';
 
 @Entity('reviews')
 @Unique(['user', 'product'])

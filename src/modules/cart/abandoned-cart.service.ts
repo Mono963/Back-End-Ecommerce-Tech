@@ -19,7 +19,6 @@ export class AbandonedCartService {
 
   private readonly ABANDONED_THRESHOLD_HOURS = 24;
 
-  // URL base del frontend para el carrito
   private readonly FRONTEND_URL: string;
 
   constructor(
@@ -31,10 +30,6 @@ export class AbandonedCartService {
     this.FRONTEND_URL = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
   }
 
-  /**
-   * Cron job que se ejecuta cada hora para detectar carritos abandonados
-   * y enviar emails de recordatorio a los usuarios
-   */
   @Cron(CronExpression.EVERY_HOUR)
   async checkAbandonedCarts(): Promise<void> {
     this.logger.log('Checking for abandoned carts...');
@@ -43,10 +38,6 @@ export class AbandonedCartService {
       const thresholdDate = new Date();
       thresholdDate.setHours(thresholdDate.getHours() - this.ABANDONED_THRESHOLD_HOURS);
 
-      // Buscar carritos abandonados que:
-      // 1. No hayan sido notificados
-      // 2. Tengan al menos 1 item
-      // 3. No hayan sido actualizados en las últimas 24 horas
       const abandonedCarts = await this.cartRepository.find({
         where: {
           abandonedNotificationSent: false,
@@ -68,18 +59,13 @@ export class AbandonedCartService {
     }
   }
 
-  /**
-   * Procesa un carrito abandonado individual
-   */
   private async processAbandonedCart(cart: Cart): Promise<void> {
     try {
-      // Verificar que el usuario tenga email verificado y esté activo
       if (!cart.user?.email || cart.user?.deletedAt !== null) {
         this.logger.debug(`Skipping cart ${cart.id}: user invalid or banned`);
         return;
       }
 
-      // Preparar los items del carrito para el email
       const cartItems: AbandonedCartItem[] = cart.items.map((item) => ({
         productName: item.product?.name || 'Producto',
         productImage: item.product?.imgUrls?.[0] || null,
@@ -87,13 +73,10 @@ export class AbandonedCartService {
         price: Number(item.subtotal),
       }));
 
-      // Calcular total
       const cartTotal = cartItems.reduce((sum, item) => sum + item.price, 0);
 
-      // URL del carrito
       const cartUrl = `${this.FRONTEND_URL}/cart`;
 
-      // Encolar el email de carrito abandonado
       await this.mailQueueService.queueAbandonedCartEmail(
         cart.user.email,
         cart.user.name || 'Cliente',
@@ -102,7 +85,6 @@ export class AbandonedCartService {
         cartUrl,
       );
 
-      // Marcar el carrito como notificado
       await this.cartRepository.update(cart.id, {
         abandonedNotificationSent: true,
       });
@@ -113,10 +95,6 @@ export class AbandonedCartService {
     }
   }
 
-  /**
-   * Resetea el flag de notificación cuando el usuario modifica el carrito
-   * Este método debe ser llamado desde CartService cuando se añade/modifica/elimina items
-   */
   async resetAbandonedFlag(cartId: string): Promise<void> {
     await this.cartRepository.update(cartId, {
       abandonedNotificationSent: false,
@@ -124,9 +102,6 @@ export class AbandonedCartService {
     });
   }
 
-  /**
-   * Método manual para enviar email de carrito abandonado (para testing)
-   */
   async sendAbandonedCartEmailManual(cartId: string): Promise<void> {
     const cart = await this.cartRepository.findOne({
       where: { id: cartId },

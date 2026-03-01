@@ -51,7 +51,12 @@ export class MailService {
   }
 
   private async getStripoTemplateHtml(templateName: string, context: Record<string, any>): Promise<string> {
-    const templatePath = path.resolve(process.cwd(), 'dist', 'modules', 'mail', 'templates', templateName);
+    const safeName = path.basename(templateName);
+    if (safeName !== templateName || templateName.includes('..')) {
+      throw new InternalServerErrorException(`Invalid template name: ${templateName}`);
+    }
+
+    const templatePath = path.resolve(process.cwd(), 'dist', 'modules', 'mail', 'templates', safeName);
 
     let templateSource: string;
     try {
@@ -547,13 +552,26 @@ export class MailService {
 
   // ==================== NEWSLETTER METHODS ====================
 
-  /**
-   * Embeds a 1x1 tracking pixel into the newsletter HTML before </body>
-   */
   private embedTrackingPixel(html: string, trackingId?: string): string {
     if (!trackingId) return html;
     const pixelUrl = `${this.backendUrl}/newsletter/track/open/${trackingId}`;
     return html.replace('</body>', `<img src="${pixelUrl}" width="1" height="1" alt="" style="display:none" /></body>`);
+  }
+
+  private wrapLinksForTracking(html: string, trackingId?: string): string {
+    if (!trackingId) return html;
+    const trackClickBase = `${this.backendUrl}/newsletter/track/click/${trackingId}`;
+    return html.replace(/<a\s([^>]*?)href="([^"]+)"([^>]*?)>/gi, (match, before, href: string, after) => {
+      if (
+        href.startsWith('mailto:') ||
+        href.includes('/newsletter/unsubscribe') ||
+        href.includes('/newsletter/track/')
+      ) {
+        return match;
+      }
+      const trackedHref = `${trackClickBase}?url=${encodeURIComponent(href)}`;
+      return `<a ${before}href="${trackedHref}"${after}>`;
+    });
   }
 
   async sendNewsletterWelcome(
@@ -564,7 +582,8 @@ export class MailService {
   ): Promise<void> {
     const subject = '🤖 ¡Tu newsletter de bienvenida!';
     const rawHtml = buildWelcomeNewsletterHtml(userName, this.frontendUrl, unsubscribeUrl);
-    const html = this.embedTrackingPixel(rawHtml, trackingId);
+    const withPixel = this.embedTrackingPixel(rawHtml, trackingId);
+    const html = this.wrapLinksForTracking(withPixel, trackingId);
 
     try {
       const emailFrom = `"${this.configService.get('EMAIL_FROM_NAME')}" <${this.configService.get('EMAIL_FROM')}>`;
@@ -589,7 +608,8 @@ export class MailService {
   ): Promise<void> {
     const subject = '💻 Tu newsletter mensual - WAT';
     const rawHtml = buildMonthlyNewsletterHtml(userName, this.frontendUrl, unsubscribeUrl);
-    const html = this.embedTrackingPixel(rawHtml, trackingId);
+    const withPixel = this.embedTrackingPixel(rawHtml, trackingId);
+    const html = this.wrapLinksForTracking(withPixel, trackingId);
 
     try {
       const emailFrom = `"${this.configService.get('EMAIL_FROM_NAME')}" <${this.configService.get('EMAIL_FROM')}>`;
@@ -624,7 +644,8 @@ export class MailService {
       discountCode,
       unsubscribeUrl,
     );
-    const html = this.embedTrackingPixel(rawHtml, trackingId);
+    const withPixel = this.embedTrackingPixel(rawHtml, trackingId);
+    const html = this.wrapLinksForTracking(withPixel, trackingId);
 
     try {
       const emailFrom = `"${this.configService.get('EMAIL_FROM_NAME')}" <${this.configService.get('EMAIL_FROM')}>`;
@@ -675,7 +696,8 @@ export class MailService {
       },
       unsubscribeUrl,
     );
-    const html = this.embedTrackingPixel(rawHtml, trackingId);
+    const withPixel = this.embedTrackingPixel(rawHtml, trackingId);
+    const html = this.wrapLinksForTracking(withPixel, trackingId);
 
     try {
       const emailFrom = `"${this.configService.get('EMAIL_FROM_NAME')}" <${this.configService.get('EMAIL_FROM')}>`;

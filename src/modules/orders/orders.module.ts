@@ -11,17 +11,17 @@ import { Users } from '../users/entities/users.entity';
 import { Cart } from '../cart/entities/cart.entity';
 import { CartItem } from '../cart/entities/cart.item.entity';
 import { CartModule } from '../cart/cart.module';
-import { ProductsModule } from '../products/products.module';
-import { OrderItem } from './entities/order.item';
+import { OrderItem } from './entities/order.item.entity';
 import { MailModule } from '../mail/mail.module';
+import { DiscountsModule } from '../discounts/discounts.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Order, OrderDetail, OrderItem, Users, Product, ProductVariant, Cart, CartItem]),
     forwardRef(() => AuthsModule),
     forwardRef(() => CartModule),
-    forwardRef(() => ProductsModule),
     MailModule,
+    DiscountsModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

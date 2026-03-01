@@ -81,6 +81,29 @@ export interface IResponseCartSummary {
   hasItems: boolean;
 }
 
+export interface ICartDiscountPreviewItem {
+  productId: string;
+  quantity: number;
+  originalUnitPrice: number;
+  discountAmount: number;
+  discountSource: string | null;
+  discountCode: string | null;
+  finalUnitPrice: number;
+  subtotal: number;
+}
+
+export interface ICartDiscountPreview {
+  subtotalOriginal: number;
+  subtotalWithDiscount: number;
+  totalDiscount: number;
+  tax: number;
+  shipping: number;
+  total: number;
+  promoValid: boolean;
+  promoErrors: string[];
+  items: ICartDiscountPreviewItem[];
+}
+
 export interface IAddToCart {
   productId: string;
   quantity: number;

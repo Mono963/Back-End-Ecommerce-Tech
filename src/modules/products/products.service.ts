@@ -6,14 +6,22 @@ import { ProductVariant } from './entities/products_variant.entity';
 import { CategoriesService } from '../category/category.service';
 import { ProductsSearchQueryDto } from './dto/PaginationQueryDto';
 import { paginate } from 'src/common/pagination/paginate';
-import { CreateProductDto, CreateVariantDto, ResponseProductDto, UpdateProductDto } from './dto/products.Dto';
 import { mapToProductDto } from './validate/products.validate';
 import { PRODUCTS_SEED } from 'src/seeds/products.data';
 import { N8nService } from '../N8N/n8n.service';
 import { AiSearchResponse } from '../N8N/interface/n8n.interface';
-import { IAiProduct, IAutocompleteResult, IHybridSearchStreamPayload } from './interface/products.interface';
+import {
+  IAiProduct,
+  IAutocompleteResult,
+  ICreateProduct,
+  ICreateVariant,
+  IHybridSearchStreamPayload,
+  IProductResponse,
+  IUpdateProduct,
+} from './interface/products.interface';
 import { EMPTY, Observable } from 'rxjs';
 import { IPaginatedResult } from '../../common/pagination';
+import { DiscountsService } from '../discounts/discounts.service';
 
 @Injectable()
 export class ProductsService {
@@ -32,9 +40,23 @@ export class ProductsService {
     private readonly dataSource: DataSource,
 
     private readonly n8nService: N8nService,
+
+    @Inject(forwardRef(() => DiscountsService))
+    private readonly discountsService: DiscountsService,
   ) {}
 
-  async getProducts(searchQuery: ProductsSearchQueryDto): Promise<IPaginatedResult<ResponseProductDto>> {
+  private async mapProductsWithDiscounts(products: Product[]): Promise<IProductResponse[]> {
+    const productIds = products.map((p) => p.id);
+    const discountMap = await this.discountsService.getActiveDiscountsForProducts(productIds);
+    return products.map((p) => mapToProductDto(p, discountMap.get(p.id)));
+  }
+
+  private async mapProductWithDiscount(product: Product): Promise<IProductResponse> {
+    const discount = await this.discountsService.getActiveProductDiscount(product.id);
+    return mapToProductDto(product, discount);
+  }
+
+  async getProducts(searchQuery: ProductsSearchQueryDto): Promise<IPaginatedResult<IProductResponse>> {
     const { name, basePrice, minPrice, maxPrice, brand, categoryId, color, featured, ...pagination } = searchQuery;
 
     const hasFilters: boolean = Boolean(
@@ -56,7 +78,7 @@ export class ProductsService {
       });
 
       return {
-        items: result.items.map(mapToProductDto),
+        items: await this.mapProductsWithDiscounts(result.items),
         total: result.total,
         pages: result.pages,
       };
@@ -131,13 +153,13 @@ export class ProductsService {
     const pages = Math.ceil(total / pagination.limit);
 
     return {
-      items: items.map(mapToProductDto),
+      items: await this.mapProductsWithDiscounts(items),
       total,
       pages,
     };
   }
 
-  async getProductById(id: string): Promise<ResponseProductDto> {
+  async getProductById(id: string): Promise<IProductResponse> {
     const product = await this.productRepo.findOne({
       where: { id, isActive: true },
       relations: ['category', 'files', 'variants', 'reviews'],
@@ -147,10 +169,10 @@ export class ProductsService {
       throw new NotFoundException(`Product with id ${id} not found`);
     }
 
-    return mapToProductDto(product);
+    return await this.mapProductWithDiscount(product);
   }
 
-  async createProduct(dto: CreateProductDto): Promise<ResponseProductDto> {
+  async createProduct(dto: ICreateProduct): Promise<IProductResponse> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -209,7 +231,7 @@ export class ProductsService {
       await queryRunner.commitTransaction();
 
       const fullProduct = await this.getProductWithRelations(savedProduct.id);
-      return mapToProductDto(fullProduct);
+      return await this.mapProductWithDiscount(fullProduct);
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -218,7 +240,7 @@ export class ProductsService {
     }
   }
 
-  async updateProduct(id: string, dto: UpdateProductDto): Promise<ResponseProductDto> {
+  async updateProduct(id: string, dto: IUpdateProduct): Promise<IProductResponse> {
     const product = await this.productRepo.findOne({
       where: { id },
       relations: ['category', 'variants'],
@@ -283,7 +305,7 @@ export class ProductsService {
     };
   }
 
-  async addVariantToProduct(productId: string, variantDto: CreateVariantDto): Promise<ProductVariant> {
+  async addVariantToProduct(productId: string, variantDto: ICreateVariant): Promise<ProductVariant> {
     const product = await this.productRepo.findOne({
       where: { id: productId },
       relations: ['variants'],
@@ -310,7 +332,7 @@ export class ProductsService {
     return await this.variantRepo.save(variant);
   }
 
-  async updateVariant(variantId: string, updateData: Partial<CreateVariantDto>): Promise<ProductVariant> {
+  async updateVariant(variantId: string, updateData: Partial<ICreateVariant>): Promise<ProductVariant> {
     const variant = await this.variantRepo.findOne({
       where: { id: variantId },
       relations: ['product', 'product.variants'],
@@ -324,7 +346,7 @@ export class ProductsService {
       const checkDto = {
         type: updateData.type ?? variant.type,
         name: updateData.name ?? variant.name,
-      } as CreateVariantDto;
+      } as ICreateVariant;
 
       const otherVariants = variant.product.variants.filter((v) => v.id !== variantId);
       variant.product.variants = otherVariants;
@@ -425,7 +447,7 @@ export class ProductsService {
     return Math.min(...selectedVariants.map((v) => v.stock));
   }
 
-  async getFeaturedProducts(limit: number = 10): Promise<ResponseProductDto[]> {
+  async getFeaturedProducts(limit: number = 10): Promise<IProductResponse[]> {
     const products = await this.productRepo.find({
       where: {
         featured: true,
@@ -436,10 +458,10 @@ export class ProductsService {
       order: { createdAt: 'DESC' },
     });
 
-    return products.map(mapToProductDto);
+    return await this.mapProductsWithDiscounts(products);
   }
 
-  async getProductsByBrand(brand: string): Promise<ResponseProductDto[]> {
+  async getProductsByBrand(brand: string): Promise<IProductResponse[]> {
     const products = await this.productRepo.find({
       where: {
         brand: ILike(`%${brand}%`),
@@ -449,7 +471,7 @@ export class ProductsService {
       order: { name: 'ASC' },
     });
 
-    return products.map(mapToProductDto);
+    return await this.mapProductsWithDiscounts(products);
   }
 
   private async getProductWithRelations(id: string): Promise<Product> {
@@ -465,7 +487,7 @@ export class ProductsService {
     return product;
   }
 
-  private validateVariants(variants: CreateVariantDto[]): void {
+  private validateVariants(variants: ICreateVariant[]): void {
     const variantMap = new Map<string, Set<string>>();
 
     for (const variant of variants) {
@@ -484,7 +506,7 @@ export class ProductsService {
     }
   }
 
-  private validateUniqueVariant(product: Product, variantDto: CreateVariantDto): void {
+  private validateUniqueVariant(product: Product, variantDto: ICreateVariant): void {
     const existingVariant = product.variants?.find((v) => v.type === variantDto.type && v.name === variantDto.name);
 
     if (existingVariant) {
@@ -596,7 +618,7 @@ export class ProductsService {
     };
   }
 
-  async getProductsByCategory(categoryId: string): Promise<ResponseProductDto[]> {
+  async getProductsByCategory(categoryId: string): Promise<IProductResponse[]> {
     const category = await this.categoriesService.getByIdCategory(categoryId);
 
     if (!category) {
@@ -612,10 +634,10 @@ export class ProductsService {
       order: { createdAt: 'DESC' },
     });
 
-    return products.map(mapToProductDto);
+    return await this.mapProductsWithDiscounts(products);
   }
 
-  async searchProducts(query: string, limit: number = 10): Promise<ResponseProductDto[]> {
+  async searchProducts(query: string, limit: number = 10): Promise<IProductResponse[]> {
     if (!query?.trim()) return [];
 
     const searchTerm = `%${query.trim().toLowerCase()}%`;
@@ -636,7 +658,7 @@ export class ProductsService {
       .take(limit)
       .getMany();
 
-    return products.map(mapToProductDto);
+    return await this.mapProductsWithDiscounts(products);
   }
 
   async autocomplete(query: string, limit: number = 8): Promise<IAutocompleteResult[]> {
@@ -745,7 +767,7 @@ export class ProductsService {
     });
   }
 
-  async getRelatedProducts(productId: string, limit: number = 6): Promise<ResponseProductDto[]> {
+  async getRelatedProducts(productId: string, limit: number = 6): Promise<IProductResponse[]> {
     const product = await this.productRepo.findOne({
       where: { id: productId },
       relations: ['category'],
@@ -774,6 +796,6 @@ export class ProductsService {
       .take(limit)
       .getMany();
 
-    return relatedProducts.map(mapToProductDto);
+    return await this.mapProductsWithDiscounts(relatedProducts);
   }
 }

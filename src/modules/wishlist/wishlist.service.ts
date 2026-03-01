@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Wishlist } from './entities/wishlist.entity';
 import { WishlistItem } from './entities/wishlist-item.entity';
 import { Product } from '../products/entities/products.entity';
-import { WishlistResponseDto, WishlistSummaryDto, WishlistItemResponseDto } from './dto/wishlist.dto';
+import { IWishlistItemResponse, IWishlistResponse, IWishlistSummary } from './interface/wishlist.interface';
 
 @Injectable()
 export class WishlistService {
@@ -21,9 +21,6 @@ export class WishlistService {
     private readonly productRepo: Repository<Product>,
   ) {}
 
-  /**
-   * Get or create user wishlist
-   */
   private async getOrCreateWishlist(userId: string): Promise<Wishlist> {
     let wishlist = await this.wishlistRepo.findOne({
       where: { user_id: userId },
@@ -39,19 +36,13 @@ export class WishlistService {
     return wishlist;
   }
 
-  /**
-   * Get full user wishlist
-   */
-  async getWishlist(userId: string): Promise<WishlistResponseDto> {
+  async getWishlist(userId: string): Promise<IWishlistResponse> {
     const wishlist = await this.getOrCreateWishlist(userId);
 
     return this.mapWishlistToDto(wishlist);
   }
 
-  /**
-   * Get wishlist summary (for navbar)
-   */
-  async getWishlistSummary(userId: string): Promise<WishlistSummaryDto> {
+  async getWishlistSummary(userId: string): Promise<IWishlistSummary> {
     const wishlist = await this.wishlistRepo.findOne({
       where: { user_id: userId },
       relations: ['items'],
@@ -62,7 +53,7 @@ export class WishlistService {
     };
   }
 
-  async addToWishlist(userId: string, productId: string): Promise<WishlistItemResponseDto> {
+  async addToWishlist(userId: string, productId: string): Promise<IWishlistItemResponse> {
     const product = await this.productRepo.findOne({
       where: { id: productId, isActive: true },
       relations: ['category'],
@@ -102,9 +93,6 @@ export class WishlistService {
     return this.mapWishlistItemToDto(itemWithProduct);
   }
 
-  /**
-   * Remove product from wishlist
-   */
   async removeFromWishlist(userId: string, productId: string): Promise<void> {
     const wishlist = await this.wishlistRepo.findOne({
       where: { user_id: userId },
@@ -150,9 +138,6 @@ export class WishlistService {
     this.logger.log(`Wishlist cleared for user ${userId}`);
   }
 
-  /**
-   * Check if a product is in the wishlist
-   */
   async isInWishlist(userId: string, productId: string): Promise<boolean> {
     const wishlist = await this.wishlistRepo.findOne({
       where: { user_id: userId },
@@ -172,10 +157,7 @@ export class WishlistService {
     return !!item;
   }
 
-  /**
-   * Map wishlist to DTO
-   */
-  private mapWishlistToDto(wishlist: Wishlist): WishlistResponseDto {
+  private mapWishlistToDto(wishlist: Wishlist): IWishlistResponse {
     return {
       id: wishlist.id,
       items: wishlist.items?.map((item) => this.mapWishlistItemToDto(item)) || [],
@@ -185,10 +167,7 @@ export class WishlistService {
     };
   }
 
-  /**
-   * Map wishlist item to DTO
-   */
-  private mapWishlistItemToDto(item: WishlistItem): WishlistItemResponseDto {
+  private mapWishlistItemToDto(item: WishlistItem): IWishlistItemResponse {
     return {
       id: item.id,
       addedAt: item.addedAt,

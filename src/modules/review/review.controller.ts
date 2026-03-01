@@ -19,17 +19,12 @@ import { Roles, UserRole } from 'src/decorator/role.decorator';
 import { AuthGuard } from 'src/guards/auth.guards';
 import { RoleGuard } from 'src/guards/auth.guards.role';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
-
-import {
-  CreateReviewDto,
-  PaginatedReviewsAdminDto,
-  ReviewResponseAdminDto,
-  ReviewResponsePublicDto,
-} from './dto/create-review.dto';
 import { AuthRequest } from 'src/common/auths/auth-request.interface';
-import { Rating } from './interface/IReview.interface';
 import { ReviewMapper } from './mappers/review.mapper';
-import { ReviewSearchQueryDto } from './dto/PaginationQueryDto';
+import { PaginatedReviewsAdminDto, ReviewSearchQueryDto } from './dto/PaginationQueryDto';
+import { CreateReviewDto } from './dto/create-review.dto';
+import { ReviewResponseAdminDto, ReviewResponsePublicDto } from './dto/review.response.interface';
+import { Rating } from './enum/review.enum';
 
 @ApiBearerAuth()
 @ApiTags('Reviews')

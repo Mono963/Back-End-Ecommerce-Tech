@@ -8,6 +8,7 @@ import { NewsletterTracking } from './entities/newsletter-tracking.entity';
 import { CampaignType } from './interface/newsletter.interface';
 import { NewsletterQueueService } from './newsletter-queue.service';
 import { randomBytes } from 'crypto';
+import { DiscountsService } from '../discounts/discounts.service';
 
 @Injectable()
 export class NewsletterService {
@@ -21,13 +22,11 @@ export class NewsletterService {
     @InjectRepository(NewsletterTracking)
     private readonly trackingRepository: Repository<NewsletterTracking>,
     private readonly queueService: NewsletterQueueService,
+    private readonly discountsService: DiscountsService,
   ) {
     this.frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
   }
 
-  /**
-   * Subscribe an email to the newsletter and send welcome email.
-   */
   async subscribe(email: string, name?: string): Promise<{ message: string }> {
     const existing = await this.subscriberRepository.findOne({ where: { email } });
 
@@ -36,7 +35,6 @@ export class NewsletterService {
         throw new BadRequestException('Este email ya está suscrito al newsletter.');
       }
 
-      // Reactivate
       const newToken = randomBytes(32).toString('hex');
       await this.subscriberRepository.update(existing.id, {
         isActive: true,
@@ -95,6 +93,13 @@ export class NewsletterService {
     description: string,
     discountCode?: string,
   ): Promise<{ enqueuedCount: number }> {
+    if (discountCode) {
+      await this.discountsService.assertPromoCodeExists(discountCode, {
+        requireActive: true,
+        requireCurrentValidity: true,
+      });
+    }
+
     const promoData = { title, description, discountCode };
 
     const totalProcessed = await this.processSubscribersInBatches(async (subscriber) => {
@@ -158,7 +163,7 @@ export class NewsletterService {
 
     const [total, sent, failed, opened, clicked] = await Promise.all([
       query.getCount(),
-      query.clone().andWhere('tracking.status = :status', { status: 'sent' }).getCount(),
+      query.clone().andWhere('tracking.sent_at IS NOT NULL').getCount(),
       query.clone().andWhere('tracking.status = :status', { status: 'failed' }).getCount(),
       query.clone().andWhere('tracking.opened_at IS NOT NULL').getCount(),
       query.clone().andWhere('tracking.clicked_at IS NOT NULL').getCount(),
@@ -188,15 +193,15 @@ export class NewsletterService {
   }
 
   /**
-   * Track email link click
+   * Track email link click and redirect to original URL
    */
-  async trackClick(trackingId: string): Promise<{ redirectUrl: string }> {
+  async trackClick(trackingId: string, originalUrl?: string): Promise<{ redirectUrl: string }> {
     const tracking = await this.trackingRepository.findOne({
       where: { id: trackingId },
     });
 
     if (!tracking) {
-      return { redirectUrl: this.frontendUrl };
+      return { redirectUrl: this.resolveRedirectUrl(originalUrl) };
     }
 
     if (!tracking.clickedAt) {
@@ -207,7 +212,23 @@ export class NewsletterService {
       this.logger.log(`Newsletter click tracked: ${trackingId}`);
     }
 
-    return { redirectUrl: this.frontendUrl };
+    return { redirectUrl: this.resolveRedirectUrl(originalUrl) };
+  }
+
+  /**
+   * Validates and resolves the redirect URL, falling back to frontendUrl if invalid.
+   */
+  private resolveRedirectUrl(url?: string): string {
+    if (!url) return this.frontendUrl;
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        return url;
+      }
+      return this.frontendUrl;
+    } catch {
+      return this.frontendUrl;
+    }
   }
 
   // ==================== SHARED HELPERS ====================

@@ -16,17 +16,19 @@ import { ProductVariant } from '../products/entities/products_variant.entity';
 import { Users } from '../users/entities/users.entity';
 import { Cart } from '../cart/entities/cart.entity';
 import { CartItem } from '../cart/entities/cart.item.entity';
-import { ProductsService } from '../products/products.service';
-import { IOrderFilters, IOrder, OrderStatus } from './interfaces/orders.interface';
-import { UpdateOrderStatusDto, OrderStatsDto } from './dto/order.Dto';
+import { IOrderFilters, IOrder, IUpdateOrderStatus, IOrderStats } from './interfaces/orders.interface';
 import { CartService } from '../cart/cart.service';
-import { OrderItem } from './entities/order.item';
+import { OrderItem } from './entities/order.item.entity';
 import { IAddress } from '../users/interfaces/user.interface';
 import { MailQueueService } from '../mail/mail-queue_email.service';
 import { UserRole } from '../../decorator/role.decorator';
 import { ResponseOrderMapper } from './mapper/order.mappers';
 import { OrderValidations } from './validates/order.validates';
 import { ConfigService } from '@nestjs/config';
+import { DiscountsService } from '../discounts/discounts.service';
+import { IOrderItemDiscount } from '../discounts/interfaces/discount.interfaces';
+import { OrderStatus } from './enum/order.enum';
+import { roundMoney } from '../../common/utils/money.utils';
 
 @Injectable()
 export class OrdersService {
@@ -57,10 +59,10 @@ export class OrdersService {
     @Inject(forwardRef(() => CartService))
     private readonly cartService: CartService,
 
-    private readonly productsService: ProductsService,
     private readonly dataSource: DataSource,
     private readonly mailQueueService: MailQueueService,
     private readonly configService: ConfigService,
+    private readonly discountsService: DiscountsService,
   ) {}
 
   async getOrderById(id: string, userId?: string): Promise<IOrder> {
@@ -86,7 +88,7 @@ export class OrdersService {
     return ResponseOrderMapper.toDTO(order);
   }
 
-  async createOrderFromCart(userId: string, shippingAddress: IAddress): Promise<IOrder> {
+  async createOrderFromCart(userId: string, shippingAddress: IAddress, promoCode?: string): Promise<IOrder> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -135,28 +137,58 @@ export class OrdersService {
         shippingAddressId = shippingAddress.id;
       }
 
-      await this.verifyStockAvailability(cart.items);
+      if (!shippingAddressSnapshot) {
+        throw new BadRequestException('Shipping address is required to create an order');
+      }
+      let validatedPromoCode = undefined;
+      let eligibleProductIds: string[] | undefined;
+      if (promoCode) {
+        const validation = await this.discountsService.validatePromoCode(promoCode, userId, cart.items);
+        if (!validation.valid) {
+          throw new BadRequestException({
+            message: 'Codigo promocional invalido',
+            errors: validation.errors,
+          });
+        }
+        validatedPromoCode = validation.promoCode;
+        eligibleProductIds = validation.eligibleProductIds;
+      }
 
-      const orderNumber = await this.generateOrderNumber();
+      const itemDiscounts = await this.discountsService.calculateOrderDiscounts(
+        cart.items,
+        validatedPromoCode,
+        eligibleProductIds,
+      );
 
-      const subtotal = cart.items.reduce((sum, item) => sum + Number(item.subtotal), 0);
+      const orderNumber = await this.generateOrderNumber(queryRunner);
 
-      const tax = subtotal * 0.21;
-      const shipping = this.calculateShipping(subtotal);
-      const total = subtotal + tax + shipping;
+      let subtotal = 0;
+      let totalDiscount = 0;
+      for (let i = 0; i < cart.items.length; i++) {
+        const item = cart.items[i];
+        const discount = itemDiscounts[i];
+        const finalUnitPrice = discount.originalUnitPrice - discount.discountAmount;
+        subtotal += finalUnitPrice * item.quantity;
+        totalDiscount += discount.discountAmount * item.quantity;
+      }
+
+      const totals = this.calculateOrderTotals(subtotal);
+      const { tax, shipping, total } = totals;
 
       const orderDetail = await this.createOrderDetail(queryRunner, {
         subtotal,
         tax,
         shipping,
         total,
+        totalDiscount,
+        promoCodeUsed: validatedPromoCode?.code || null,
         shippingAddressId,
         shippingAddressSnapshot,
         shippingAddress: shippingAddress || null,
         items: [],
       });
 
-      const orderItems = await this.createOrderItemsFromCart(queryRunner, cart.items, orderDetail.id);
+      const orderItems = await this.createOrderItemsFromCart(queryRunner, cart.items, orderDetail.id, itemDiscounts);
 
       orderDetail.items = orderItems;
       await queryRunner.manager.save(OrderDetail, orderDetail);
@@ -168,9 +200,8 @@ export class OrdersService {
         orderDetail,
       });
 
-      await this.clearUserCart(cart.user.id);
-
       await queryRunner.commitTransaction();
+      await this.clearUserCart(cart.user.id);
 
       return await this.getOrderById(order.id);
     } catch (error) {
@@ -285,7 +316,7 @@ export class OrdersService {
     };
   }
 
-  async updateOrderStatus(orderId: string, status: OrderStatus, dto: UpdateOrderStatusDto): Promise<IOrder> {
+  async updateOrderStatus(orderId: string, status: OrderStatus, dto: IUpdateOrderStatus): Promise<IOrder> {
     const { trackingNumber, trackingUrl, carrier, estimatedDelivery } = dto;
 
     const order = await this.orderRepo.findOne({
@@ -301,7 +332,6 @@ export class OrdersService {
 
     order.status = status;
 
-    // Guardar datos de tracking cuando se marca como SHIPPED
     if (status === OrderStatus.SHIPPED) {
       order.trackingNumber = trackingNumber || null;
       order.trackingUrl = trackingUrl || null;
@@ -416,16 +446,17 @@ export class OrdersService {
     return await this.getOrderById(orderId);
   }
 
-  private async generateOrderNumber(): Promise<string> {
+  private async generateOrderNumber(queryRunner: QueryRunner): Promise<string> {
     const date = new Date();
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const prefix = `ORD-${year}-${month}`;
 
-    const lastOrder = await this.orderRepo
-      .createQueryBuilder('order')
+    const lastOrder = await queryRunner.manager
+      .createQueryBuilder(Order, 'order')
       .where('order.orderNumber LIKE :prefix', { prefix: `${prefix}%` })
-      .orderBy('order.createdAt', 'DESC')
+      .orderBy('order.orderNumber', 'DESC')
+      .setLock('pessimistic_write')
       .getOne();
 
     let sequence = 1;
@@ -448,7 +479,15 @@ export class OrdersService {
     return 20;
   }
 
-  async getOrderStats(): Promise<OrderStatsDto> {
+  calculateOrderTotals(subtotal: number): { tax: number; shipping: number; total: number } {
+    const tax = roundMoney(subtotal * 0.21);
+    const shipping = this.calculateShipping(subtotal);
+    const total = roundMoney(subtotal + tax + shipping);
+
+    return { tax, shipping, total };
+  }
+
+  async getOrderStats(): Promise<IOrderStats> {
     const totalOrders = await this.orderRepo.count();
     const pendingOrders = await this.orderRepo.count({
       where: { status: OrderStatus.PENDING },
@@ -540,7 +579,6 @@ export class OrdersService {
         price: Number(item.unitPrice),
       })) || [];
 
-    // Determinar el estado de reembolso
     const refundStatus = previousStatus === OrderStatus.PAID ? 'Reembolso en proceso' : null;
 
     void this.mailQueueService.queueOrderCancelledEmail(
@@ -553,7 +591,6 @@ export class OrdersService {
       refundStatus,
     );
 
-    // Si la orden estaba PAGADA, enviar email de reembolso
     if (previousStatus === OrderStatus.PAID) {
       const paymentMethod = order.payment?.paymentMethodId || order.orderDetail?.paymentMethod || 'Mercado Pago';
 
@@ -628,28 +665,18 @@ export class OrdersService {
     }
   }
 
-  private async verifyStockAvailability(cartItems: CartItem[]): Promise<void> {
-    for (const cartItem of cartItems) {
-      const variantIds = cartItem.variants?.map((v) => v.id) || [];
-      const availableStock = await this.productsService.getAvailableStock(cartItem.product.id, variantIds);
-
-      if (availableStock < cartItem.quantity) {
-        throw new BadRequestException(
-          `Insufficient stock for ${cartItem.product.name}. ` +
-            `Available: ${availableStock}, Requested: ${cartItem.quantity}`,
-        );
-      }
-    }
-  }
-
   private async createOrderItemsFromCart(
     queryRunner: QueryRunner,
     cartItems: CartItem[],
     orderDetailId: string,
+    itemDiscounts?: IOrderItemDiscount[],
   ): Promise<OrderItem[]> {
     const orderItems: OrderItem[] = [];
 
-    for (const cartItem of cartItems) {
+    for (let i = 0; i < cartItems.length; i++) {
+      const cartItem = cartItems[i];
+      const discount = itemDiscounts?.[i];
+
       const productSnapshot = {
         name: cartItem.product.name,
         description: cartItem.product.description,
@@ -668,10 +695,19 @@ export class OrdersService {
         })) ||
         null;
 
+      const originalUnitPrice = discount ? discount.originalUnitPrice : Number(cartItem.priceAtAddition);
+      const discountAmount = discount ? discount.discountAmount : 0;
+      const finalUnitPrice = originalUnitPrice - discountAmount;
+      const subtotal = finalUnitPrice * cartItem.quantity;
+
       const orderItem = queryRunner.manager.create(OrderItem, {
         quantity: cartItem.quantity,
-        unitPrice: cartItem.priceAtAddition,
-        subtotal: cartItem.subtotal,
+        unitPrice: finalUnitPrice,
+        subtotal,
+        originalUnitPrice: discount?.discountAmount > 0 ? originalUnitPrice : null,
+        discountAmount,
+        discountSource: discount?.discountSource || null,
+        discountCode: discount?.discountCode || null,
         product: cartItem.product,
         product_id: cartItem.product.id,
         order_detail_id: orderDetailId,
@@ -701,6 +737,8 @@ export class OrdersService {
       tax: number;
       shipping: number;
       total: number;
+      totalDiscount?: number;
+      promoCodeUsed?: string | null;
       shippingAddressId?: string | null;
       shippingAddressSnapshot?: IAddress | null;
       shippingAddress: IAddress | null;
@@ -712,6 +750,8 @@ export class OrdersService {
       tax: data.tax,
       shipping: data.shipping,
       total: data.total,
+      totalDiscount: data.totalDiscount || 0,
+      promoCodeUsed: data.promoCodeUsed || null,
       shippingAddressId: data.shippingAddressId || null,
       shippingAddressSnapshot: data.shippingAddressSnapshot || null,
       paymentMethod: undefined,
@@ -764,12 +804,15 @@ export class OrdersService {
     }
 
     if (!product.hasVariants || variantIds.length === 0) {
-      product.baseStock -= quantity;
-      if (product.baseStock < 0) {
-        throw new BadRequestException(`Insufficient stock for ${product.name}`);
+      if (product.baseStock < quantity) {
+        throw new BadRequestException(
+          `Insufficient stock for ${product.name}. Available: ${product.baseStock}, Requested: ${quantity}`,
+        );
       }
+      product.baseStock -= quantity;
       await queryRunner.manager.save(Product, product);
     } else {
+      const variants: ProductVariant[] = [];
       for (const variantId of variantIds) {
         const variant = await queryRunner.manager.findOne(ProductVariant, {
           where: { id: variantId },
@@ -780,15 +823,20 @@ export class OrdersService {
           throw new NotFoundException(`Variant ${variantId} not found`);
         }
 
-        variant.stock -= quantity;
-        if (variant.stock < 0) {
-          throw new BadRequestException(`Insufficient stock for variant ${variant.name} of ${product.name}`);
+        if (variant.stock < quantity) {
+          throw new BadRequestException(
+            `Insufficient stock for variant ${variant.name} of ${product.name}. Available: ${variant.stock}, Requested: ${quantity}`,
+          );
         }
 
+        variants.push(variant);
+      }
+
+      for (const variant of variants) {
+        variant.stock -= quantity;
         if (variant.stock === 0) {
           variant.isAvailable = false;
         }
-
         await queryRunner.manager.save(ProductVariant, variant);
       }
     }

@@ -1,5 +1,5 @@
 import { ICartResponse } from '../../cart/interfaces/interface.cart';
-import { OrderStatus } from '../../orders/interfaces/orders.interface';
+import { OrderStatus } from '../../orders/enum/order.enum';
 import { Users } from '../entities/users.entity';
 
 export interface IUserResponse {
@@ -25,7 +25,7 @@ export interface IOrderResponse {
 }
 
 export interface IUserResponseWithAdmin extends IUserResponse {
-  password: string;
+  role: string;
 }
 
 export interface ICreateUser {
@@ -78,6 +78,7 @@ export interface IUpdateRole {
 
 export interface IResetPassword {
   token: string;
+  email: string;
   newPassword: string;
   confirmPassword: string;
 }

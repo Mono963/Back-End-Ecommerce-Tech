@@ -1,6 +1,9 @@
 import { Product } from '../entities/products.entity';
 import { ProductVariant } from '../entities/products_variant.entity';
-import { ResponseProductDto, ResponseVariantDto } from '../dto/products.Dto';
+import { ProductDiscount } from '../../discounts/entities/product-discount.entity';
+import { DiscountType } from '../../discounts/enums/discount.enums';
+import { ResponseVariantDto } from '../dto/product.variant.dto';
+import { ResponseProductDto } from '../dto/product.response.dto';
 
 export function mapVariantToDto(variant: ProductVariant): ResponseVariantDto {
   return {
@@ -17,8 +20,8 @@ export function mapVariantToDto(variant: ProductVariant): ResponseVariantDto {
   };
 }
 
-export function mapToProductDto(product: Product): ResponseProductDto {
-  const calculateFinalPrice = (): number => {
+export function mapToProductDto(product: Product, activeDiscount?: ProductDiscount | null): ResponseProductDto {
+  const calculateBaseDisplayPrice = (): number => {
     if (!product.hasVariants || !product.variants?.length) {
       return Number(product.basePrice);
     }
@@ -35,6 +38,51 @@ export function mapToProductDto(product: Product): ResponseProductDto {
     );
 
     return Number(product.basePrice) + Number(cheapestVariant.priceModifier);
+  };
+
+  const calculateDiscountInfo = (
+    originalPrice: number,
+    discount?: ProductDiscount | null,
+  ): {
+    finalPrice: number;
+    hasActiveDiscount: boolean;
+    discountAmount: number;
+    discountPercentage: number | null;
+    discountEndDate: Date | null;
+    originalPrice: number;
+  } => {
+    if (!discount) {
+      return {
+        finalPrice: originalPrice,
+        hasActiveDiscount: false,
+        discountAmount: 0,
+        discountPercentage: null,
+        discountEndDate: null,
+        originalPrice,
+      };
+    }
+
+    let discountAmount: number;
+    let discountPercentage: number | null;
+
+    if (discount.discountType === DiscountType.PERCENTAGE) {
+      discountAmount = Math.round(originalPrice * (Number(discount.value) / 100) * 100) / 100;
+      discountPercentage = Number(discount.value);
+    } else {
+      discountAmount = Math.min(Number(discount.value), originalPrice);
+      discountPercentage = null;
+    }
+
+    const finalPrice = Math.max(0, Math.round((originalPrice - discountAmount) * 100) / 100);
+
+    return {
+      finalPrice,
+      hasActiveDiscount: true,
+      discountAmount,
+      discountPercentage,
+      discountEndDate: discount.endDate || null,
+      originalPrice,
+    };
   };
 
   const calculateTotalStock = (): number => {
@@ -68,6 +116,9 @@ export function mapToProductDto(product: Product): ResponseProductDto {
     return product.variants.sort((a, b) => a.sortOrder - b.sortOrder).map(mapVariantToDto);
   };
 
+  const baseDisplayPrice = calculateBaseDisplayPrice();
+  const discountInfo = calculateDiscountInfo(baseDisplayPrice, activeDiscount);
+
   return {
     id: product.id,
     name: product.name,
@@ -76,7 +127,8 @@ export function mapToProductDto(product: Product): ResponseProductDto {
     model: product.model || undefined,
     basePrice: Number(product.basePrice),
     baseStock: product.baseStock,
-    finalPrice: calculateFinalPrice(),
+    finalPrice: discountInfo.finalPrice,
+    originalPrice: discountInfo.originalPrice,
     totalStock: calculateTotalStock(),
     category_name: product.category?.category_name ?? '',
     imgUrls: getAllImageUrls(),
@@ -85,13 +137,20 @@ export function mapToProductDto(product: Product): ResponseProductDto {
     isActive: product.isActive,
     featured: product.featured,
     variants: getSortedVariants(),
+    hasActiveDiscount: discountInfo.hasActiveDiscount,
+    discountAmount: discountInfo.discountAmount,
+    discountPercentage: discountInfo.discountPercentage,
+    discountEndDate: discountInfo.discountEndDate,
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
   };
 }
 
-export function mapProductListToDto(products: Product[]): ResponseProductDto[] {
-  return products.map(mapToProductDto);
+export function mapProductListToDto(
+  products: Product[],
+  discountMap?: Map<string, ProductDiscount>,
+): ResponseProductDto[] {
+  return products.map((p) => mapToProductDto(p, discountMap?.get(p.id)));
 }
 
 export function getProductStats(product: Product): {

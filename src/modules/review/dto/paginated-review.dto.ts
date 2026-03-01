@@ -1,6 +1,6 @@
 import { ApiExtraModels, ApiProperty, getSchemaPath } from '@nestjs/swagger';
 import { PaginatedResponseDto } from 'src/common/pagination/paginated-response.dto';
-import { ReviewResponseAdminDto } from './create-review.dto';
+import { ReviewResponseAdminDto } from './review.response.interface';
 
 @ApiExtraModels(ReviewResponseAdminDto)
 export class PaginatedUsersDto extends PaginatedResponseDto<ReviewResponseAdminDto> {

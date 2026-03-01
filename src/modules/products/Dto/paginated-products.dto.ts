@@ -1,6 +1,6 @@
 import { ApiExtraModels, ApiProperty, getSchemaPath } from '@nestjs/swagger';
 import { PaginatedResponseDto } from 'src/common/pagination/paginated-response.dto';
-import { ResponseProductDto } from './products.Dto';
+import { ResponseProductDto } from './product.response.dto';
 
 @ApiExtraModels(ResponseProductDto)
 export class PaginatedProductsDto extends PaginatedResponseDto<ResponseProductDto> {

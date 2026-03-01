@@ -4,45 +4,15 @@ import { Queue } from 'bull';
 import { NewsletterSubscriber } from './entities/newsletter-subscriber.entity';
 import { NewsletterCampaign } from './entities/newsletter-campaign.entity';
 import { Product } from '../products/entities/products.entity';
-
-export type NewsletterJobType = 'welcome' | 'monthly' | 'promo' | 'custom';
-
-export interface NewsletterJobData {
-  type: NewsletterJobType;
-  subscriberId: string;
-  email: string;
-  subscriberName: string | null;
-  unsubscribeToken: string;
-  trackingId: string;
-  promoData?: {
-    title: string;
-    description: string;
-    discountCode?: string;
-  };
-  campaignData?: {
-    subject: string;
-    title: string;
-    body: string;
-    discountCode?: string;
-    ctaText: string;
-    ctaUrl: string;
-    featuredProducts: Array<{
-      id: string;
-      name: string;
-      basePrice: number;
-      imgUrls: string[];
-      category?: { id: string; category_name: string };
-    }>;
-  };
-}
+import { INewsletterJobData } from './interface/newsletter.interface';
 
 @Injectable()
 export class NewsletterQueueService {
   private readonly logger = new Logger(NewsletterQueueService.name);
 
-  constructor(@InjectQueue('newsletter') private readonly newsletterQueue: Queue<NewsletterJobData>) {}
+  constructor(@InjectQueue('newsletter') private readonly newsletterQueue: Queue<INewsletterJobData>) {}
 
-  private async addToQueue(data: NewsletterJobData): Promise<void> {
+  private async addToQueue(data: INewsletterJobData): Promise<void> {
     await this.newsletterQueue.add('send', data);
     this.logger.log(`Newsletter "${data.type}" enqueued for: ${data.email}`);
   }

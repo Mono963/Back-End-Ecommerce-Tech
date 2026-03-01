@@ -1,4 +1,5 @@
-import { LaptopSpecs, MouseSpecs, TechVariantType } from 'src/modules/products/interface/products.interface';
+import { LaptopSpecs, MouseSpecs } from 'src/modules/products/interface/products.interface';
+import { TechVariantType } from '../modules/products/enum/product.enum';
 
 interface ProductSeedData {
   name: string;

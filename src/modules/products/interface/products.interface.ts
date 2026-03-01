@@ -1,4 +1,5 @@
 import { IReviewResponsePublic } from '../../review/interface/IReview.interface';
+import { TechVariantType } from '../enum/product.enum';
 
 export interface IProductVariant {
   id: string;
@@ -54,21 +55,6 @@ export interface IProductWhishlist {
   review: IReviewResponsePublic[];
 }
 
-export enum TechVariantType {
-  RAM = 'ram',
-  STORAGE = 'storage',
-  PROCESSOR = 'processor',
-  VRAM = 'vram',
-  COLOR = 'color',
-  CONNECTIVITY = 'connectivity',
-  SCREEN_SIZE = 'screen_size',
-  RESOLUTION = 'resolution',
-  REFRESH_RATE = 'refresh_rate',
-  WARRANTY = 'warranty',
-  CONDITION = 'condition',
-  SWITCH = 'switch',
-}
-
 export type LaptopSpecs = {
   screenSize: string;
   processor: string;
@@ -114,4 +100,71 @@ export interface IHybridSearchStreamPayload {
   source: 'local' | 'ai';
   results: IAutocompleteResult[];
   message?: string;
+}
+
+export interface ICreateVariant {
+  type: TechVariantType;
+  name: string;
+  description?: string;
+  priceModifier: number;
+  stock: number;
+  isAvailable?: boolean;
+  sortOrder?: number;
+}
+
+export interface IProductVariantResponse {
+  id: string;
+  type: TechVariantType;
+  name: string;
+  description?: string;
+  priceModifier: number;
+  stock: number;
+  isAvailable: boolean;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ICreateProduct {
+  name: string;
+  description: string;
+  brand: string;
+  model?: string;
+  basePrice: number;
+  baseStock: number;
+  category_name: string;
+  imgUrls?: string[];
+  featured?: boolean;
+  specifications?: LaptopSpecs | MouseSpecs | Record<string, unknown>;
+  hasVariants?: boolean;
+  variants?: ICreateVariant[];
+}
+export interface IUpdateProduct extends Partial<ICreateProduct> {
+  isActive?: boolean;
+}
+
+export interface IProductResponse {
+  id: string;
+  name: string;
+  description: string;
+  brand: string;
+  model?: string;
+  basePrice: number;
+  baseStock: number;
+  finalPrice: number;
+  originalPrice: number;
+  totalStock: number;
+  category_name: string;
+  imgUrls: string[];
+  specifications?: LaptopSpecs | MouseSpecs | Record<string, unknown>;
+  hasVariants: boolean;
+  isActive: boolean;
+  featured: boolean;
+  variants: IProductVariantResponse[];
+  hasActiveDiscount: boolean;
+  discountAmount: number;
+  discountPercentage: number | null;
+  discountEndDate: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
 }

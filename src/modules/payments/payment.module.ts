@@ -10,6 +10,7 @@ import { MercadoPagoModule } from '../mercadopago/mercadopago.module';
 import { Payment } from './entities/payment.entity';
 import { Order } from '../orders/entities/order.entity';
 import { OrderDetail } from '../orders/entities/order.details.entity';
+import { DiscountsModule } from '../discounts/discounts.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { OrderDetail } from '../orders/entities/order.details.entity';
     forwardRef(() => AuthsModule),
     MailModule,
     forwardRef(() => MercadoPagoModule),
+    DiscountsModule,
   ],
   controllers: [PaymentsController],
   providers: [PaymentsService],

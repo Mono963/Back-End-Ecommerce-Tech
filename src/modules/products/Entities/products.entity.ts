@@ -14,6 +14,7 @@ import {
 } from 'typeorm';
 import { Category } from '../../category/entities/category.entity';
 import { Review } from '../../review/entities/review.entity';
+import { ProductDiscount } from '../../discounts/entities/product-discount.entity';
 
 @Index(['brand'])
 @Index(['isActive', 'featured'])
@@ -100,4 +101,7 @@ export class Product {
 
   @OneToMany(() => Review, (review) => review.product)
   reviews: Review[];
+
+  @OneToMany(() => ProductDiscount, (discount) => discount.product)
+  discounts: ProductDiscount[];
 }

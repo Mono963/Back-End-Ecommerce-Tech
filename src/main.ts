@@ -6,6 +6,7 @@ import compression from 'compression';
 import { AppModule } from './app.module';
 import { WinstonModule } from 'nest-winston';
 import { loggerConfig } from './config/logger.config';
+import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import Redis from 'ioredis';
 
 async function bootstrap(): Promise<void> {
@@ -21,7 +22,7 @@ async function bootstrap(): Promise<void> {
         directives: {
           defaultSrc: ["'self'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+          scriptSrc: ["'self'"],
           imgSrc: ["'self'", 'data:', 'https:'],
         },
       },
@@ -29,7 +30,17 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
+  app.use('/api/docs', (_req: unknown, res: { setHeader: (name: string, value: string) => void }, next: () => void) => {
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data: https:;",
+    );
+    next();
+  });
+
   app.use(compression());
+
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   app.useGlobalPipes(
     new ValidationPipe({

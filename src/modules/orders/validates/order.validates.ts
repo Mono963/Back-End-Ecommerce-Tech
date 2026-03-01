@@ -1,5 +1,5 @@
 import { BadRequestException, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
-import { OrderStatus } from '../interfaces/orders.interface';
+import { OrderStatus } from '../enum/order.enum';
 
 export class OrderValidations {
   private static readonly logger = new Logger(OrderValidations.name);

@@ -5,8 +5,8 @@ import { NewsletterCampaign } from './entities/newsletter-campaign.entity';
 import { Product } from '../products/entities/products.entity';
 import { NewsletterQueueService } from './newsletter-queue.service';
 import { NewsletterService } from './newsletter.service';
-import { CreateCampaignDto, UpdateCampaignDto } from './dto/create-campaign.dto';
-import { CampaignType, CampaignStatus } from './interface/newsletter.interface';
+import { CampaignType, CampaignStatus, ICreateCampaign, IUpdateCampaign } from './interface/newsletter.interface';
+import { DiscountsService } from '../discounts/discounts.service';
 
 @Injectable()
 export class CampaignService {
@@ -19,11 +19,18 @@ export class CampaignService {
     private readonly productRepository: Repository<Product>,
     private readonly queueService: NewsletterQueueService,
     private readonly newsletterService: NewsletterService,
+    private readonly discountsService: DiscountsService,
   ) {}
 
-  async create(dto: CreateCampaignDto, createdBy: string): Promise<NewsletterCampaign> {
+  async create(dto: ICreateCampaign, createdBy: string): Promise<NewsletterCampaign> {
     if (dto.featuredProductIds && dto.featuredProductIds.length > 0) {
       await this.validateProductIds(dto.featuredProductIds);
+    }
+
+    if (dto.discountCode) {
+      await this.discountsService.assertPromoCodeExists(dto.discountCode, {
+        requireActive: true,
+      });
     }
 
     const campaign = this.campaignRepository.create({
@@ -69,11 +76,17 @@ export class CampaignService {
     return campaign;
   }
 
-  async update(id: string, dto: UpdateCampaignDto): Promise<NewsletterCampaign> {
+  async update(id: string, dto: IUpdateCampaign): Promise<NewsletterCampaign> {
     const campaign = await this.findOne(id);
 
     if (dto.featuredProductIds && dto.featuredProductIds.length > 0) {
       await this.validateProductIds(dto.featuredProductIds);
+    }
+
+    if (dto.discountCode) {
+      await this.discountsService.assertPromoCodeExists(dto.discountCode, {
+        requireActive: true,
+      });
     }
 
     Object.assign(campaign, {
@@ -97,6 +110,13 @@ export class CampaignService {
 
     if (campaign.status !== 'active') {
       throw new BadRequestException(`Campaign status must be 'active' to send. Current status: ${campaign.status}`);
+    }
+
+    if (campaign.discountCode) {
+      await this.discountsService.assertPromoCodeExists(campaign.discountCode, {
+        requireActive: true,
+        requireCurrentValidity: true,
+      });
     }
 
     let products: Product[] = [];

@@ -1,11 +1,23 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { AuthRequest } from 'src/common/auths/auth-request.interface';
 import { JwtPayload } from 'src/common/auths/auth.payload';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
+  private readonly jwtSecret: string;
+
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {
+    const secret = this.configService.get<string>('SUPABASE_JWT_SECRET');
+    if (!secret) {
+      throw new Error('SUPABASE_JWT_SECRET is not configured');
+    }
+    this.jwtSecret = secret;
+  }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthRequest>();
@@ -19,7 +31,7 @@ export class AuthGuard implements CanActivate {
 
     try {
       const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
-        secret: process.env.SUPABASE_JWT_SECRET,
+        secret: this.jwtSecret,
       });
 
       request.user = {

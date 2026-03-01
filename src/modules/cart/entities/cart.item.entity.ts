@@ -56,7 +56,7 @@ export class CartItem {
   @JoinColumn({ name: 'product_id' })
   product: Product;
 
-  @ManyToMany(() => ProductVariant)
+  @ManyToMany(() => ProductVariant, (variant) => variant.cartItems)
   @JoinTable({
     name: 'cart_item_variants',
     joinColumn: { name: 'cart_item_id', referencedColumnName: 'id' },

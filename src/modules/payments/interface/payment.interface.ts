@@ -49,35 +49,25 @@ export interface IMercadoPagoError extends Error {
   status?: number;
 }
 
-export enum PaymentStatus {
-  PENDING = 'pending',
-  APPROVED = 'approved',
-  AUTHORIZED = 'authorized',
-  IN_PROCESS = 'in_process',
-  IN_MEDIATION = 'in_mediation',
-  REJECTED = 'rejected',
-  CANCELLED = 'cancelled',
-  REFUNDED = 'refunded',
-  CHARGED_BACK = 'charged_back',
+export interface ICreatePreference {
+  orderId: string;
+  message?: string;
+  currency?: string;
 }
 
-export enum PaymentStatusDetail {
-  ACCREDITED = 'accredited',
+export interface IPreferenceResponse {
+  preferenceId: string;
+  initPoint: string;
+  sandboxInitPoint: string;
+}
 
-  PENDING_CONTINGENCY = 'pending_contingency',
-  PENDING_REVIEW_MANUAL = 'pending_review_manual',
-  PENDING_WAITING_PAYMENT = 'pending_waiting_payment',
-  PENDING_WAITING_TRANSFER = 'pending_waiting_transfer',
-
-  CC_REJECTED_CALL_FOR_AUTHORIZE = 'cc_rejected_call_for_authorize',
-  CC_REJECTED_CARD_DISABLED = 'cc_rejected_card_disabled',
-  CC_REJECTED_INSUFFICIENT_AMOUNT = 'cc_rejected_insufficient_amount',
-  CC_REJECTED_MAX_ATTEMPTS = 'cc_rejected_max_attempts',
-  CC_REJECTED_OTHER_REASON = 'cc_rejected_other_reason',
-
-  REJECTED_BY_REGULATIONS = 'rejected_by_regulations',
-  REJECTED_HIGH_RISK = 'rejected_high_risk',
-  REJECTED_BY_BANK = 'rejected_by_bank',
+export interface IPaymentStatus {
+  id: string | number;
+  status: string;
+  status_detail: string;
+  transaction_amount: number;
+  currency_id: string;
+  date_approved: string;
 }
 
 export interface IPaymentResponse {

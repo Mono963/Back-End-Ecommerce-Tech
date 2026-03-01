@@ -9,11 +9,11 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
-import { TechVariantType } from '../interface/products.interface';
 import { Product } from './products.entity';
 
 import { CartItem } from '../../cart/entities/cart.item.entity';
-import { OrderItem } from '../../orders/entities/order.item';
+import { OrderItem } from '../../orders/entities/order.item.entity';
+import { TechVariantType } from '../enum/product.enum';
 
 @Index(['product_id', 'type'])
 @Index(['isAvailable', 'stock'])

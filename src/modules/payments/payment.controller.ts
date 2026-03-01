@@ -10,17 +10,9 @@ import {
   HttpCode,
   Req,
   Query,
+  Headers,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import {
-  CreatePreferenceDto,
-  PaymentCompletedDto,
-  MyPaymentResponseDto,
-  PaymentResponseDto,
-  PaymentStatusDto,
-  PreferenceResponseDto,
-  WebhookNotificationDto,
-} from '../payments/dto/create-payment.dto';
 import { AuthGuard } from 'src/guards/auth.guards';
 
 import { Roles, UserRole } from 'src/decorator/role.decorator';
@@ -30,13 +22,61 @@ import { IWebhookNotificationInterface } from './interface/payment.interface';
 import { isWebhookNotification } from './validate/payment.validate';
 import { AuthRequest } from 'src/common/auths/auth-request.interface';
 import { SkipThrottle } from '@nestjs/throttler';
+import { CreatePreferenceDto, PreferenceResponseDto } from './dto/payment.preference.dto';
+import { PaymentCompletedDto, PaymentStatusDto } from './dto/payment.status.dto';
+import { WebhookNotificationDto } from './dto/payment.webhook.dto';
+import { MyPaymentResponseDto, PaymentResponseDto } from './dto/payment.response.dto';
+import { ConfigService } from '@nestjs/config';
+import * as crypto from 'crypto';
 
 @ApiTags('Payments')
 @Controller('payments')
 export class PaymentsController {
   private readonly logger = new Logger(PaymentsController.name);
 
-  constructor(private readonly PaymentsService: PaymentsService) {}
+  private readonly webhookSecret: string | undefined;
+
+  constructor(
+    private readonly PaymentsService: PaymentsService,
+    private readonly configService: ConfigService,
+  ) {
+    this.webhookSecret = this.configService.get<string>('MP_WEBHOOK_SECRET');
+  }
+
+  private verifyWebhookSignature(
+    xSignature: string | undefined,
+    xRequestId: string | undefined,
+    dataId: string,
+  ): boolean {
+    if (!this.webhookSecret) {
+      this.logger.warn('MP_WEBHOOK_SECRET not configured - skipping webhook signature verification');
+      return true;
+    }
+
+    if (!xSignature || !xRequestId) {
+      return false;
+    }
+
+    const parts: Record<string, string> = {};
+    for (const part of xSignature.split(',')) {
+      const [key, value] = part.split('=', 2);
+      if (key && value) {
+        parts[key.trim()] = value.trim();
+      }
+    }
+
+    const ts = parts['ts'];
+    const v1 = parts['v1'];
+
+    if (!ts || !v1) {
+      return false;
+    }
+
+    const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
+    const hmac = crypto.createHmac('sha256', this.webhookSecret).update(manifest).digest('hex');
+
+    return crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(v1));
+  }
 
   @Post('create-preference')
   @ApiBearerAuth()
@@ -86,12 +126,19 @@ export class PaymentsController {
   })
   async handleWebhook(
     @Body() body: Record<string, unknown>,
+    @Headers('x-signature') xSignature?: string,
+    @Headers('x-request-id') xRequestId?: string,
     @Query('data.id') queryDataId?: string,
     @Query('type') queryType?: string,
     @Query('id') queryId?: string,
   ): Promise<{ status: string }> {
     const bodyData = body?.data as { id?: string } | undefined;
     const resourceId = bodyData?.id || (body?.id as string) || queryDataId || queryId || '';
+
+    if (!this.verifyWebhookSignature(xSignature, xRequestId, resourceId)) {
+      this.logger.warn('Webhook rejected: invalid or missing signature');
+      return { status: 'invalid_signature' };
+    }
 
     const notification: IWebhookNotificationInterface = {
       type: (body?.type as string) || queryType || '',

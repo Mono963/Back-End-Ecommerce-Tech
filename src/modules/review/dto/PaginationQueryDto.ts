@@ -1,7 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/pagination';
-import { Rating } from '../interface/IReview.interface';
+import { ReviewResponseAdminDto, ReviewResponsePublicDto } from './review.response.interface';
+import { Rating } from '../enum/review.enum';
 
 export class ReviewSearchQueryDto extends PaginationQueryDto {
   @ApiProperty({
@@ -30,4 +31,26 @@ export class ReviewSearchQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   userName?: string;
+}
+
+export class PaginatedReviewsDto {
+  @ApiProperty({ type: [Object] })
+  items: ReviewResponsePublicDto[];
+
+  @ApiProperty({ example: 100, description: 'Total reviews' })
+  total: number;
+
+  @ApiProperty({ example: 10, description: 'Total pages' })
+  pages: number;
+}
+
+export class PaginatedReviewsAdminDto {
+  @ApiProperty({ type: [Object] })
+  items: ReviewResponseAdminDto[];
+
+  @ApiProperty({ example: 100, description: 'Total reviews' })
+  total: number;
+
+  @ApiProperty({ example: 10, description: 'Total pages' })
+  pages: number;
 }

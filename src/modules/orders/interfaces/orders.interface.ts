@@ -1,4 +1,5 @@
 import { IAddress } from '../../users/interfaces/user.interface';
+import { OrderStatus } from '../enum/order.enum';
 
 export interface IProductSnapshot {
   name: string;
@@ -64,6 +65,8 @@ export interface IOrderDetailResponse {
   tax: number;
   shipping: number;
   total: number;
+  totalDiscount: number;
+  promoCodeUsed?: string | null;
   shippingAddress?: IAddress;
   shippingAddressId?: string | null;
   paymentMethod?: string | null;
@@ -82,24 +85,38 @@ export interface IOrderItemResponse {
   quantity: number;
   unitPrice: number;
   subtotal: number;
+  originalUnitPrice?: number | null;
+  discountAmount?: number;
+  discountSource?: string | null;
+  discountCode?: string | null;
   productSnapshot: IProductSnapshot;
   variantsSnapshot?: IVariantSnapshot[] | null;
   createdAt: Date;
 }
 
-export enum OrderStatus {
-  PENDING = 'pending',
-  PAID = 'paid',
-  PROCESSING = 'processing',
-  SHIPPED = 'shipped',
-  DELIVERED = 'delivered',
-  CANCELLED = 'cancelled',
+export interface IUpdateOrderStatus {
+  trackingNumber?: string;
+  trackingUrl?: string;
+  carrier?: string;
+  estimatedDelivery?: string;
 }
 
-export enum OrderStatusadmin {
-  PENDING = 'pending',
-  PAID = 'paid',
-  PROCESSING = 'processing',
-  SHIPPED = 'shipped',
-  DELIVERED = 'delivered',
+export interface IOrdersByStatus {
+  pending: number;
+  paid: number;
+  processing: number;
+  shipped: number;
+  delivered: number;
+}
+
+export interface IRevenue {
+  total: number;
+  monthly: number;
+}
+
+export interface IOrderStats {
+  totalOrders: number;
+  ordersByStatus: IOrdersByStatus;
+  revenue: IRevenue;
+  completionRate: string;
 }

@@ -15,6 +15,8 @@ import { ConfigService } from '@nestjs/config';
 import { MailQueueService } from '../mail/mail-queue_email.service';
 import { IPaginatedResult } from '../../common/pagination/IPaginatedResult';
 import { RolesService } from '../roles/roles.service';
+import * as crypto from 'crypto';
+import * as bcrypt from 'bcrypt';
 import {
   ICreateAddress,
   ICreateUserDb,
@@ -300,38 +302,65 @@ export class UsersService {
   async sendResetPasswordEmail(email: string): Promise<void> {
     const user = await this.usersRepository.findOne({ where: { email } });
     if (!user) {
-      throw new BadRequestException('Invalid credentials');
+      this.logger.warn(`Password reset requested for non-existent email`);
+      return;
     }
 
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = await bcrypt.hash(resetToken, 10);
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    user.passwordResetToken = hashedToken;
+    user.passwordResetExpiresAt = expiresAt;
+    await this.usersRepository.save(user);
+
     const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
-    const resetUrl = `${frontendUrl}/reset-password?token=${encodeURIComponent(email)}`;
+    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
     await this.mailQueueService.queuePasswordResetEmail(user.email, user.name, resetUrl);
   }
 
   async resetPassword(dto: IResetPassword): Promise<void> {
-    const { token, newPassword, confirmPassword } = dto;
+    const { token, newPassword, confirmPassword, email } = dto;
 
     if (newPassword !== confirmPassword) {
       throw new BadRequestException('Passwords do not match');
     }
 
+    if (!email) {
+      throw new BadRequestException('Email is required');
+    }
+
     const user = await this.usersRepository.findOne({
-      where: { email: token },
+      where: { email },
     });
 
-    if (!user) {
-      throw new NotFoundException('User not found');
+    if (!user?.passwordResetToken || !user?.passwordResetExpiresAt) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    if (new Date() > user.passwordResetExpiresAt) {
+      user.passwordResetToken = null;
+      user.passwordResetExpiresAt = null;
+      await this.usersRepository.save(user);
+      throw new BadRequestException('Reset token has expired');
+    }
+
+    const isTokenValid = await bcrypt.compare(token, user.passwordResetToken);
+    if (!isTokenValid) {
+      throw new BadRequestException('Invalid or expired reset token');
     }
 
     const hashedPassword = await AuthValidations.hashPassword(newPassword);
     user.password = hashedPassword;
+    user.passwordResetToken = null;
+    user.passwordResetExpiresAt = null;
     await this.usersRepository.save(user);
 
     await this.mailQueueService.queuePasswordChangedConfirmation(user.email, user.name);
   }
 
-  // ==================== ADDRESS MANAGEMENT ==================================================================================
+  // ==================== ADDRESS MANAGEMENT ===========================
 
   private mapAddressToDto(addr: Address): IAddress {
     return {
@@ -344,16 +373,6 @@ export class UsersService {
       country: addr.country,
       isDefault: addr.isDefault,
     };
-  }
-
-  async getAddresses(): Promise<IAddress[]> {
-    const address = await this.addressRepository.find();
-
-    if (!address) {
-      throw new NotFoundException('No addresses found');
-    }
-
-    return address;
   }
 
   async getByUserAddresses(userId: string): Promise<IAddress[]> {

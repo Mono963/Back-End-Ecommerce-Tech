@@ -51,7 +51,6 @@ export class UserMapper {
     return {
       ...this.toResponse(user),
       role: user.role?.name ?? '',
-      password: user.password,
     };
   }
 

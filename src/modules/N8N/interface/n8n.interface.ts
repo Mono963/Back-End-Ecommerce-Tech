@@ -1,4 +1,4 @@
-import { ResponseProductDto } from '../../products/dto/products.Dto';
+import { ResponseProductDto } from '../../products/dto/product.response.dto';
 
 export interface N8nProductSearchResponse {
   products: ResponseProductDto[];

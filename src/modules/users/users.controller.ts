@@ -14,6 +14,7 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { AuthGuard } from 'src/guards/auth.guards';
@@ -142,6 +143,7 @@ export class UsersController {
   }
 
   @Post('forgot-password')
+  @Throttle({ default: { limit: 3, ttl: 300000 } })
   @ApiOperation({ summary: 'Request password recovery' })
   @ApiBody({ type: ForgotPasswordDto })
   @ApiResponse({
@@ -156,6 +158,7 @@ export class UsersController {
   }
 
   @Post('reset-password')
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
   @ApiOperation({ summary: 'Reset password using email token' })
   @ApiBody({ type: ResetPasswordDto })
   @ApiResponse({

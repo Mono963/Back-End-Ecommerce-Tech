@@ -86,4 +86,10 @@ export class Users {
 
   @Column({ type: 'timestamp', nullable: true })
   newsletterUnsubscribedAt: Date | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  passwordResetToken: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  passwordResetExpiresAt: Date | null;
 }
