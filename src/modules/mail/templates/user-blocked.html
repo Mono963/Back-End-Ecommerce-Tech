@@ -1,210 +1,327 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cuenta Suspendida</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cuenta Suspendida</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <!-- Fuentes institucionales -->
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Bebas+Neue&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Unica+One&display=swap" rel="stylesheet" />
-
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Montserrat', sans-serif;
-      color: #333333;
-      background-color: #ffffff;
-    }
-
-    .container {
-      max-width: 600px;
-      margin: 30px auto;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      background-color: #ffffff;
-    }
-
-  .header {
-      background-color: #f5f5f5;
-      padding: 15px 20px;
-    }
-
-   .header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 600px;
-  margin: 0 auto;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.header img {
-  max-width: 160px;
-  height: auto;
-  display: block;
-  margin: 0;
-}
-
-    .content {
-      padding: 30px 20px;
-    }
-
-    .subtitle {
-      font-family: 'Montserrat', sans-serif;
-      font-size: 26px;
-      color: #dc3545;
-      margin-bottom: 15px;
-      text-align: center;
-    }
-
-    .content p {
-      margin: 10px 0;
-      font-weight: 500;
-      line-height: 1.6;
-      color: #333333;
-    }
-
-    .content strong {
-      color: #4d206c;
-    }
-.social-container {
-      background-color: #f5f5f5;
-      text-align: center;
-      padding: 30px 20px 40px;
-    }
-
-    .social-container p {
-      margin-bottom: 15px;
-      font-weight: 600;
-      color: #642d91;
-    }
-
-    .social-icons {
-      display: inline-flex;
-      justify-content: center;
-      align-items: center;
-      gap: 50px;
-    }
-
-    .social-icon {
-      background-color: #ffffff;
-      padding: 10px;
-      border-radius: 50%;
-      display: inline-block;
-    }
-
-    .social-icon img {
-      width: 28px;
-      height: 28px;
-      display: block;
-    }
-
-
-    .footer {
-      background-color: #f1f1f1;
-      color: #333;
-      text-align: center;
-      padding: 20px;
-      font-size: 14px;
-      border-top: 1px solid #4d206c;
-    }
-
-    .footer a {
-      color: #922f4e;
-      text-decoration: underline;
-      font-weight: 500;
-    }
-
-    @media screen and (max-width: 600px) {
-      .header-table {
-        display: block;
-        text-align: center;
+    <style>
+      body {
+        margin: 0;
+        padding: 30px 10px;
+        background-color: #ffffff;
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        color: #333333;
+        line-height: 1.6;
       }
 
-      .header-text, .header-logo {
-        display: block;
-        text-align: center;
-        padding: 10px 0;
-      }
-
-      .header-logo img {
-        max-width: 140px;
+      .container {
+        max-width: 600px;
         margin: 0 auto;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+      }
+
+      .header {
+        background: #111827;
+        padding: 24px 32px;
+      }
+
+      .header table {
+        width: 100%;
+      }
+
+      .header-text {
+        color: #ffffff;
+        font-family: 'Inter', sans-serif;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+      }
+
+      .header img {
+        max-width: 120px;
+        height: auto;
+        display: block;
       }
 
       .content {
-        padding: 20px;
+        padding: 40px 32px;
+        background-color: #ffffff;
       }
 
-      .subtitle {
-        font-size: 24px;
+      .content h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #ff4444;
+        margin: 0 0 24px 0;
+        text-align: center;
       }
 
-      .social-icons {
-        gap: 20px;
+      .content p {
+        margin: 16px 0;
+        font-size: 16px;
+        font-weight: 400;
+        color: #333333;
       }
 
-      .social-icon img {
-        width: 24px;
-        height: 24px;
+      .content p strong {
+        color: #1a1a2e;
+        font-weight: 600;
       }
-    }
-  </style>
-</head>
-<body>
-   <div class="container">
-    <!-- Encabezado institucional -->
-    <div class="header">
-  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto;">
-  <tr>
-    <!-- Texto a la izquierda -->
-    <td align="left" style="padding: 15px; font-family: 'Unica One', Arial, sans-serif; font-size: 22px; color: #4d206c; letter-spacing: 1px;">
-  ROOTS COOPERATIVA
-</td>
 
+      .content a {
+        color: #0066ff;
+        text-decoration: underline;
+        font-weight: 500;
+      }
 
-    <!-- Logo a la derecha -->
-    <td align="right" style="padding: 15px;">
-      <img src="https://res.cloudinary.com/djzcrrbfb/image/upload/v1753703082/sol_sf2bpt.png" alt="Logo ROOTS COOPERATIVA" style="max-width: 160px; height: auto; display: block;" />
-    </td>
-  </tr>
-</table>
+      .alert-error {
+        background: #ffebee;
+        border-left: 4px solid #ff4444;
+        padding: 16px 20px;
+        border-radius: 0 8px 8px 0;
+        margin: 24px 0;
+      }
 
-    <!-- Contenido principal -->
-    <div class="content">
-      <h1 class="subtitle">🚫 Cuenta Suspendida</h1>
-      <p>Hola <strong>{{userName}}</strong>,</p>
-      <p>Queremos informarte que tu cuenta en <strong>{{appName}}</strong> ha sido <strong>suspendida</strong> debido a incumplimientos de nuestras políticas de uso.</p>
-      <p>📌 Si creés que esta suspensión es un error o deseas obtener más información, por favor <a href="https://frontend-rootscoop.vercel.app/contacto">contactá a nuestro equipo de soporte</a>.</p>
-      <p>🙏 Gracias por tu comprensión.</p>
-      <p>Saludos cordiales,<br>El equipo de <strong>{{appName}}</strong>.</p>
-    </div>
+      @media screen and (max-width: 600px) {
+        .header {
+          padding: 20px 16px;
+        }
 
-    <!-- Redes sociales -->
-    <div class="social-container">
-      <p>Seguinos en nuestras redes:</p>
-      <div class="social-icons">
-        <a href="https://wa.link/b4wyji" target="_blank" class="social-icon">
-          <img src="https://cdn-icons-png.flaticon.com/512/124/124034.png" alt="WhatsApp" />
-        </a>
-        <a href="https://www.instagram.com/roots_cooperativa?igsh=MWx3OTI3NjZidDJ3dg==" target="_blank" class="social-icon">
-          <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" />
-        </a>
-        <a href="http://www.youtube.com/@rootscooperativa561" target="_blank" class="social-icon">
-          <img src="https://cdn-icons-png.flaticon.com/512/1384/1384060.png" alt="YouTube" />
-        </a>
+        .header-text {
+          font-size: 16px;
+        }
+
+        .header img {
+          max-width: 80px;
+        }
+
+        .content {
+          padding: 32px 20px;
+        }
+
+        .content h1 {
+          font-size: 24px;
+        }
+
+        .footer {
+          background: #07090f;
+          color: #ffffff;
+          text-align: center;
+          padding: 32px;
+          font-size: 14px;
+          border-top: 1px solid #10161d;
+        }
+
+        .footer-social a {
+          display: inline-block;
+          margin: 0 8px;
+          color: #ffffff;
+          text-decoration: none;
+          font-size: 20px;
+        }
+
+        .footer-payments span {
+          display: inline-block;
+          background: #374151;
+          color: #ffffff;
+          padding: 6px 12px;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 600;
+          margin: 4px;
+        }
+      }
+
+      /* Tech theme override */
+      body {
+        background: #111827;
+        color: #e5e7eb;
+      }
+
+      .container {
+        border-radius: 16px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+        background: #0f172a;
+      }
+
+      .header {
+        background: radial-gradient(120% 120% at 100% 0%, #1b2a4a 0%, #0f172a 55%, #0b1020 100%);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .header-text {
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+      }
+
+      .content {
+        background: linear-gradient(180deg, #0f172a 0%, #0b1222 100%);
+      }
+
+      .content h1 {
+        color: #60a5fa;
+      }
+
+      .content p {
+        color: #cbd5f5;
+      }
+
+      .content p strong {
+        color: #f8fafc;
+      }
+
+      .btn {
+        background: linear-gradient(135deg, #2563eb, #3b82f6);
+        border-radius: 10px;
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
+      }
+
+      .btn:hover {
+        background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      }
+
+      /* Adaptar alert-error al tema dark */
+      .alert-error {
+        background: rgba(248, 113, 113, 0.15);
+        border-left-color: #f87171;
+      }
+
+      /* Footer (front palette) */
+      .footer {
+        background: #111827;
+        color: #ffffff;
+        text-align: center;
+        padding: 32px;
+        font-size: 14px;
+        border-top: 1px solid #1f2937;
+      }
+
+      .footer-social {
+        margin-bottom: 16px;
+      }
+
+      .footer-social a {
+        display: inline-block;
+        margin: 0 8px;
+        color: #ffffff;
+        text-decoration: none;
+        font-size: 20px;
+      }
+
+      .footer p {
+        margin: 8px 0;
+        color: #9ca3af;
+      }
+
+      .footer a {
+        color: #ffffff;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .footer-payments {
+        margin-top: 16px;
+      }
+
+      .footer-payments span {
+        display: inline-block;
+        background: #374151;
+        color: #ffffff;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        margin: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td align="left" valign="middle" class="header-text">WorldAssemblyTechnology</td>
+            <td align="right" valign="middle">
+              <img
+                src="https://res.cloudinary.com/dub48rf0p/image/upload/v1770006657/WorldAsseblyTechnologyPNGEmail_b6bsll.png"
+                alt="Logo"
+                style="
+                  border-radius: 8px;
+                  filter: drop-shadow(0 0 12px rgba(0, 102, 255, 0.6)) drop-shadow(0 0 25px rgba(0, 102, 255, 0.4))
+                    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+                "
+              />
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="content">
+        <h1>Cuenta Suspendida</h1>
+
+        <p>Hola <strong>{{userName}}</strong>,</p>
+
+        <div class="alert-error">
+          <p style="margin: 0; color: #f87171">
+            Tu cuenta en <strong>{{appName}}</strong> ha sido suspendida debido a incumplimientos de nuestras políticas
+            de uso.
+          </p>
+        </div>
+
+        <p>
+          Si creés que esta suspensión es un error o deseas obtener más información, por favor
+          <a href="{{frontendUrl}}/contacto">contactá a nuestro equipo de soporte</a>.
+        </p>
+
+        <p>Gracias por tu comprensión.<br />El equipo de <strong>{{appName}}</strong>.</p>
+      </div>
+
+      <!-- Footer oscuro estilo tech -->
+      <div class="footer">
+        <div class="footer-social">
+          <p style="color: #9ca3af; margin-bottom: 12px">Seguinos en nuestras redes:</p>
+          <a href="https://web.whatsapp.com" target="_blank" rel="noopener noreferrer">
+            <img src="https://cdn-icons-png.flaticon.com/128/3670/3670051.png" alt="WhatsApp" width="28" height="28" />
+          </a>
+          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer">
+            <img
+              src="https://cdn-icons-png.flaticon.com/128/15707/15707749.png"
+              alt="Instagram"
+              width="28"
+              height="28"
+            />
+          </a>
+          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">
+            <img
+              src="https://cdn-icons-png.flaticon.com/128/15047/15047435.png"
+              alt="Facebook"
+              width="28"
+              height="28"
+            />
+          </a>
+        </div>
+        <p style="color: #ffffff; font-size: 13px">
+          Copyright © 2025 <strong>WorldAssemblyTechnology</strong>. Todos los derechos reservados.
+        </p>
+        <p style="margin-top: 12px">
+          <a href="{{frontendUrl}}">Visitar sitio web</a> ·
+          <a href="{{frontendUrl}}/contacto">Contacto</a>
+        </p>
+        <div class="footer-payments">
+          <span>VISA</span>
+          <span>MC</span>
+          <span>MP</span>
+        </div>
       </div>
     </div>
-
-    <!-- Footer -->
-    <div class="footer">
-      <p>Este correo fue enviado por <strong>{{appName}}</strong>.</p>
-      <p><a href="https://frontend-rootscoop.vercel.app">Visita nuestro sitio web</a></p>
-    </div>
-  </div>
-</body>
+  </body>
 </html>

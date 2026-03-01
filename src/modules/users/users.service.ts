@@ -5,27 +5,33 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { Users } from './Entities/users.entity';
+import { Users } from './entities/users.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { CreateUserDbDto, UpdateUserDbDto } from './Dtos/CreateUserDto';
-import { UserSearchQueryDto } from './Dtos/PaginationQueryDto';
+import { DataSource, Repository } from 'typeorm';
+import { UserSearchQueryDto } from './dtos/PaginationQueryDto';
 import { paginate } from 'src/common/pagination/paginate';
-import { UpdatePasswordDto } from './Dtos/UpdatePasswordDto';
 import { AuthValidations } from '../auths/validate/auth.validate';
-import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
-import { MailService } from '../mail/mail.service';
-import { UpdateRoleDto } from './Dtos/UpdateRoleDto';
-import { ResetPasswordDto } from './Dtos/reset-password.dto';
-import { IPaginatedResult } from './interface/IPaginatedResult';
+import { MailQueueService } from '../mail/mail-queue_email.service';
+import { IPaginatedResult } from '../../common/pagination/IPaginatedResult';
 import { RolesService } from '../roles/roles.service';
-import { CreateAddressDto, UpdateAddressDto } from './Dtos/address.dto';
-import { UserAddress } from './interface/IUserResponseDto';
-import { v4 as uuidv4 } from 'uuid';
-import { Order } from '../orders/Entities/order.entity';
+import * as crypto from 'crypto';
+import * as bcrypt from 'bcrypt';
+import {
+  ICreateAddress,
+  ICreateUserDb,
+  IResetPassword,
+  IUpdateAddress,
+  IUpdatePassword,
+  IUpdateRole,
+  IUpdateUserDb,
+  IAddress,
+  INewCreateAddress,
+} from './interfaces/user.interface';
+import { Order } from '../orders/entities/order.entity';
 import { Wishlist } from '../wishlist/entities/wishlist.entity';
 import { Review } from '../review/entities/review.entity';
+import { Address } from './entities/address.entity';
 
 @Injectable()
 export class UsersService {
@@ -34,6 +40,8 @@ export class UsersService {
   constructor(
     @InjectRepository(Users)
     private readonly usersRepository: Repository<Users>,
+    @InjectRepository(Address)
+    private readonly addressRepository: Repository<Address>,
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
     @InjectRepository(Wishlist)
@@ -41,8 +49,9 @@ export class UsersService {
     @InjectRepository(Review)
     private readonly reviewRepository: Repository<Review>,
     private readonly configService: ConfigService,
-    private readonly mailService: MailService,
+    private readonly mailQueueService: MailQueueService,
     private readonly rolesService: RolesService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async getUsers(searchQuery: UserSearchQueryDto): Promise<IPaginatedResult<Users>> {
@@ -52,8 +61,8 @@ export class UsersService {
       return await paginate(this.usersRepository, pagination, {
         order: { createdAt: 'DESC' },
         withDeleted: true,
-        relations: ['role'],
-        select: ['id', 'name', 'email', 'birthDate', 'phone', 'address', 'username', 'createdAt', 'deletedAt'],
+        relations: ['role', 'addresses'],
+        select: ['id', 'name', 'email', 'birthDate', 'phone', 'username', 'createdAt', 'deletedAt'],
       });
     }
 
@@ -63,17 +72,15 @@ export class UsersService {
       'user.id',
       'user.name',
       'user.email',
-      'user.birthdate',
+      'user.birthDate',
       'user.phone',
-      'user.address',
       'user.username',
       'user.createdAt',
       'user.deletedAt',
     ]);
 
     queryBuilder.leftJoinAndSelect('user.role', 'role');
-    queryBuilder.leftJoinAndSelect('user.orders', 'orders');
-    queryBuilder.leftJoinAndSelect('user.cart', 'cart');
+    queryBuilder.leftJoinAndSelect('user.addresses', 'addresses');
     queryBuilder.where('1 = 1');
 
     if (username) {
@@ -106,38 +113,29 @@ export class UsersService {
   async getUserById(id: string): Promise<Users & { wishlistCount: number }> {
     const user = await this.usersRepository.findOne({
       where: { id },
-      relations: ['orders', 'cart', 'role'],
-      select: [
-        'id',
-        'name',
-        'email',
-        'birthDate',
-        'phone',
-        'address',
-        'addresses',
-        'username',
-        'createdAt',
-        'deletedAt',
-      ],
+      relations: ['cart', 'role', 'addresses'],
     });
 
     if (!user) {
-      throw new NotFoundException(`Usuario con id ${id} no encontrado.`);
+      throw new NotFoundException(`User with id ${id} not found.`);
     }
 
-    // Obtener el contador de wishlist
-    const wishlist = await this.wishlistRepository.findOne({
-      where: { user_id: id },
-      relations: ['items'],
-    });
+    const wishlistCount = await this.dataSource
+      .createQueryBuilder()
+      .select('COUNT(wi.id)', 'count')
+      .from('wishlist_items', 'wi')
+      .innerJoin('wishlists', 'w', 'w.id = wi.wishlist_id')
+      .where('w.user_id = :id', { id })
+      .getRawOne<{ count: string }>();
 
-    // Agregar el contador al objeto user (será usado por el DTO)
-    const userWithWishlist = Object.assign(user, { wishlistCount: wishlist?.items?.length ?? 0 });
+    const userWithWishlist = Object.assign(user, {
+      wishlistCount: parseInt(wishlistCount?.count || '0', 10),
+    });
 
     return userWithWishlist;
   }
 
-  async createUserService(dto: CreateUserDbDto): Promise<Users> {
+  async createUserService(dto: ICreateUserDb): Promise<Users> {
     try {
       const user = this.usersRepository.create(dto);
       return await this.usersRepository.save(user);
@@ -146,16 +144,16 @@ export class UsersService {
         throw error;
       }
       this.logger.error('Error creating user:', error);
-      throw new BadRequestException('Error al crear el usuario');
+      throw new BadRequestException('Failed to create user');
     }
   }
 
-  async updateUserService(id: string, dto: UpdateUserDbDto): Promise<Users> {
+  async updateUserService(id: string, dto: IUpdateUserDb): Promise<Users> {
     const camposRestringidos = ['isAdmin', 'isSuperAdmin'];
 
     for (const campo of camposRestringidos) {
       if (Object.prototype.hasOwnProperty.call(dto, campo)) {
-        delete dto[campo];
+        delete (dto as Record<string, unknown>)[campo];
       }
     }
 
@@ -177,22 +175,20 @@ export class UsersService {
     const result = await this.usersRepository.update({ id }, dto);
 
     if (result.affected === 0) {
-      throw new NotFoundException(`Usuario con id ${id} no encontrado`);
+      throw new NotFoundException(`User with id ${id} not found`);
     }
 
     const updatedUser = await this.usersRepository.findOne({
       where: { id },
-      relations: ['orders', 'cart'], // Actualizado según la entidad
+      relations: ['orders', 'cart'],
     });
 
     if (!updatedUser) {
-      throw new InternalServerErrorException(
-        `Error inesperado: Usuario con id ${id} no encontrado tras la actualización final`,
-      );
+      throw new InternalServerErrorException(`Unexpected error: User with id ${id} not found after final update`);
     }
 
-    this.mailService.sendUserDataChangedNotification(updatedUser.email, updatedUser.name).catch((err: unknown) => {
-      const message = err instanceof Error ? err.message : 'Error desconocido al enviar email de modificación de datos';
+    this.mailQueueService.queueDataChangedNotification(updatedUser.email, updatedUser.name).catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Unknown error while enqueuing data change email';
       const stack = err instanceof Error ? err.stack : undefined;
       this.logger.error(message, stack);
     });
@@ -200,36 +196,30 @@ export class UsersService {
     return updatedUser;
   }
 
-  async changePassword(userId: string, dto: UpdatePasswordDto): Promise<void> {
+  async changePassword(userId: string, dto: IUpdatePassword): Promise<void> {
     const user = await this.usersRepository.findOne({ where: { id: userId } });
 
     if (!user) {
-      throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+      throw new NotFoundException(`User with id ${userId} not found`);
     }
-
-    const isSamePassword = await bcrypt.compare(dto.newPassword, user.password);
-
-    if (isSamePassword) {
-      throw new BadRequestException('La nueva contraseña no puede ser igual a la actual');
-    }
-
-    await AuthValidations.validateNewPasswordIsDifferent(dto.newPassword, user.password);
 
     await AuthValidations.validatePassword(dto.currentPassword, user.password);
+
+    await AuthValidations.validateNewPasswordIsDifferent(dto.newPassword, user.password);
 
     const hashedPassword = await AuthValidations.hashPassword(dto.newPassword);
 
     user.password = hashedPassword;
     await this.usersRepository.save(user);
 
-    this.mailService.sendPasswordChangedConfirmationEmail(user.email, user.name).catch((err: unknown) => {
-      const message = err instanceof Error ? err.message : 'Error sending email';
+    this.mailQueueService.queuePasswordChangedConfirmation(user.email, user.name).catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Error enqueuing email';
       const stack = err instanceof Error ? err.stack : undefined;
       this.logger.error(message, stack);
     });
   }
 
-  async rollChange(userId: string, dto: UpdateRoleDto): Promise<void> {
+  async changeRole(userId: string, dto: IUpdateRole): Promise<void> {
     try {
       const user = await this.usersRepository.findOne({
         where: { id: userId },
@@ -237,7 +227,7 @@ export class UsersService {
       });
 
       if (!user) {
-        throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+        throw new NotFoundException(`User with id ${userId} not found`);
       }
 
       const role = await this.rolesService.findRoleById(dto.roleId);
@@ -245,13 +235,13 @@ export class UsersService {
       user.role = role;
       await this.usersRepository.save(user);
 
-      this.logger.log(`Rol actualizado para usuario ${userId}: ${role.name}`);
+      this.logger.log(`Role updated for user ${userId}: ${role.name}`);
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
       }
       this.logger.error('Error changing user role:', error);
-      throw new InternalServerErrorException('Error al cambiar el rol del usuario');
+      throw new InternalServerErrorException('Error changing user role');
     }
   }
 
@@ -269,11 +259,14 @@ export class UsersService {
         throw new NotFoundException(`User: ${id} not found`);
       }
 
-      await this.mailService.sendAccountDeletedNotification(user.email, user.name);
+      await this.mailQueueService.queueAccountDeletedNotification(user.email, user.name);
 
       return { message: `User ${id} successfully removed.` };
     } catch (error) {
-      this.logger.error('Error: Al eliminar la cuenta intente mas tarde', error);
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      this.logger.error('Error: Failed to delete account, please try again later', error);
       throw new InternalServerErrorException(`Error deleting User ${id}`);
     }
   }
@@ -307,10 +300,7 @@ export class UsersService {
         throw error;
       }
 
-      this.logger.error(
-        `Error interno al restaurar usuario ${id}:`,
-        error instanceof Error ? error.message : String(error),
-      );
+      this.logger.error(`Internal error restoring user ${id}:`, error instanceof Error ? error.message : String(error));
       throw new InternalServerErrorException(`Error restoring User ${id}`);
     }
   }
@@ -318,224 +308,197 @@ export class UsersService {
   async sendResetPasswordEmail(email: string): Promise<void> {
     const user = await this.usersRepository.findOne({ where: { email } });
     if (!user) {
-      throw new BadRequestException('Credenciales inválidas');
+      this.logger.warn(`Password reset requested for non-existent email`);
+      return;
     }
 
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
-    const resetUrl = `${frontendUrl}/reset-password?token=${encodeURIComponent(email)}`;
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = await bcrypt.hash(resetToken, 10);
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
-    await this.mailService.sendPasswordResetEmail(user.email, user.name, resetUrl);
+    user.passwordResetToken = hashedToken;
+    user.passwordResetExpiresAt = expiresAt;
+    await this.usersRepository.save(user);
+
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
+    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+
+    await this.mailQueueService.queuePasswordResetEmail(user.email, user.name, resetUrl);
   }
 
-  async resetPassword(dto: ResetPasswordDto): Promise<void> {
-    const { token, newPassword, confirmPassword } = dto;
+  async resetPassword(dto: IResetPassword): Promise<void> {
+    const { token, newPassword, confirmPassword, email } = dto;
 
     if (newPassword !== confirmPassword) {
-      throw new BadRequestException('Las contraseñas no coinciden');
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    if (!email) {
+      throw new BadRequestException('Email is required');
     }
 
     const user = await this.usersRepository.findOne({
-      where: { email: token },
+      where: { email },
     });
 
-    if (!user) {
-      throw new NotFoundException('Usuario no encontrado');
+    if (!user?.passwordResetToken || !user?.passwordResetExpiresAt) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    if (new Date() > user.passwordResetExpiresAt) {
+      user.passwordResetToken = null;
+      user.passwordResetExpiresAt = null;
+      await this.usersRepository.save(user);
+      throw new BadRequestException('Reset token has expired');
+    }
+
+    const isTokenValid = await bcrypt.compare(token, user.passwordResetToken);
+    if (!isTokenValid) {
+      throw new BadRequestException('Invalid or expired reset token');
     }
 
     const hashedPassword = await AuthValidations.hashPassword(newPassword);
     user.password = hashedPassword;
+    user.passwordResetToken = null;
+    user.passwordResetExpiresAt = null;
     await this.usersRepository.save(user);
 
-    await this.mailService.sendPasswordChangedConfirmationEmail(user.email, user.name);
+    await this.mailQueueService.queuePasswordChangedConfirmation(user.email, user.name);
   }
 
-  // ==================== ADDRESS MANAGEMENT ====================
+  // ==================== ADDRESS MANAGEMENT ===========================
 
-  /**
-   * Obtiene todas las direcciones de un usuario
-   * @param userId - ID del usuario
-   * @returns Array de direcciones del usuario
-   */
-  async getAddresses(userId: string): Promise<UserAddress[]> {
+  private mapAddressToDto(addr: Address): IAddress {
+    return {
+      id: addr.id,
+      label: addr.label,
+      street: addr.street,
+      city: addr.city,
+      province: addr.province,
+      postalCode: addr.postalCode,
+      country: addr.country,
+      isDefault: addr.isDefault,
+    };
+  }
+
+  async getByUserAddresses(userId: string): Promise<IAddress[]> {
+    const addresses = await this.addressRepository.find({
+      where: { user_id: userId },
+    });
+
+    if (addresses.length === 0) {
+      throw new NotFoundException(`El usuario con id ${userId} no tiene direcciones`);
+    }
+
+    return addresses.map((addr) => this.mapAddressToDto(addr));
+  }
+
+  async addAddress(userId: string, dto: ICreateAddress): Promise<IAddress> {
     const user = await this.usersRepository.findOne({
       where: { id: userId },
-      select: ['id', 'addresses'],
+      relations: ['addresses'],
     });
 
     if (!user) {
-      throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+      throw new NotFoundException(`User with id ${userId} not found`);
     }
 
-    return user.addresses || [];
-  }
-
-  /**
-   * Agrega una nueva dirección al usuario
-   * Genera un UUID único y actualiza el array JSONB
-   * Si isDefault es true, desmarca todas las demás direcciones como no-default
-   */
-  async addAddress(userId: string, dto: CreateAddressDto): Promise<UserAddress> {
-    const user = await this.usersRepository.findOne({
-      where: { id: userId },
-      select: ['id', 'addresses'],
-    });
-
-    if (!user) {
-      throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
-    }
-
-    // Generar UUID único para la nueva dirección
-    const newAddress: UserAddress = {
-      id: uuidv4(), // ← Genera UUID en Node.js
+    const newAddressData: INewCreateAddress = {
       label: dto.label,
       street: dto.street,
       city: dto.city,
       province: dto.province,
       postalCode: dto.postalCode,
       country: dto.country || 'Argentina',
+      user_id: user.id,
       isDefault: dto.isDefault ?? false,
     };
 
-    // Si no hay direcciones, esta es la primera y debe ser default
-    const addresses = user.addresses || [];
-    if (addresses.length === 0) {
-      newAddress.isDefault = true;
+    if (!user.addresses || user.addresses.length === 0) {
+      newAddressData.isDefault = true;
     }
 
-    // Si la nueva dirección es default, desmarcar las demás
-    if (newAddress.isDefault) {
-      addresses.forEach((addr) => (addr.isDefault = false));
+    if (newAddressData.isDefault && user.addresses?.length) {
+      await this.addressRepository.update({ user_id: user.id }, { isDefault: false });
     }
 
-    // Agregar la nueva dirección al array
-    user.addresses = [...addresses, newAddress];
+    const savedAddress = await this.addressRepository.save(this.addressRepository.create(newAddressData));
 
-    // Guardar en la base de datos (JSONB se actualiza completamente)
-    await this.usersRepository.save(user);
+    this.logger.log(`Address added for user ${userId}: ${savedAddress.id}`);
 
-    this.logger.log(`Dirección agregada para usuario ${userId}: ${newAddress.id}`);
-
-    return newAddress;
+    return this.mapAddressToDto(savedAddress);
   }
 
-  /**
-   * Actualiza una dirección existente
-   * Busca por addressId en el array JSONB y actualiza los campos
-   */
-  async updateAddress(userId: string, addressId: string, dto: UpdateAddressDto): Promise<UserAddress> {
-    const user = await this.usersRepository.findOne({
-      where: { id: userId },
-      select: ['id', 'addresses'],
+  async updateAddress(userId: string, addressId: string, dto: IUpdateAddress): Promise<IAddress> {
+    const address = await this.addressRepository.findOne({
+      where: {
+        id: addressId,
+        user_id: userId,
+      },
     });
 
-    if (!user) {
-      throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+    if (!address) {
+      throw new NotFoundException(`Address with id ${addressId} not found for user ${userId}`);
     }
 
-    const addresses = user.addresses || [];
-    const addressIndex = addresses.findIndex((addr) => addr.id === addressId);
-
-    if (addressIndex === -1) {
-      throw new NotFoundException(`Dirección con id ${addressId} no encontrada`);
-    }
-
-    // Si se está marcando como default, desmarcar las demás
     if (dto.isDefault === true) {
-      addresses.forEach((addr, idx) => {
-        if (idx !== addressIndex) {
-          addr.isDefault = false;
-        }
-      });
+      await this.addressRepository.update({ user_id: userId }, { isDefault: false });
     }
 
-    // Actualizar los campos de la dirección
-    addresses[addressIndex] = {
-      ...addresses[addressIndex],
-      ...dto,
-    };
+    Object.assign(address, dto);
 
-    user.addresses = addresses;
-    await this.usersRepository.save(user);
+    const updatedAddress = await this.addressRepository.save(address);
 
-    this.logger.log(`Dirección actualizada para usuario ${userId}: ${addressId}`);
+    this.logger.log(`Address updated for user ${userId}: ${addressId}`);
 
-    return addresses[addressIndex];
+    return this.mapAddressToDto(updatedAddress);
   }
 
-  /**
-   * Elimina una dirección del usuario
-   * Si la dirección eliminada era default, marca la primera como default
-   */
   async deleteAddress(userId: string, addressId: string): Promise<{ message: string }> {
-    const user = await this.usersRepository.findOne({
-      where: { id: userId },
-      select: ['id', 'addresses'],
+    const address = await this.addressRepository.findOne({
+      where: { id: addressId, user_id: userId },
     });
-
-    if (!user) {
-      throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+    if (!address) {
+      throw new NotFoundException(`Address with id ${addressId} not found for user ${userId}`);
     }
 
-    const addresses = user.addresses || [];
-    const addressToDelete = addresses.find((addr) => addr.id === addressId);
+    await this.addressRepository.delete(address.id);
 
-    if (!addressToDelete) {
-      throw new NotFoundException(`Dirección con id ${addressId} no encontrada`);
-    }
-
-    // Filtrar la dirección a eliminar
-    const updatedAddresses = addresses.filter((addr) => addr.id !== addressId);
-
-    // Si la dirección eliminada era default y hay más direcciones, marcar la primera como default
-    if (addressToDelete.isDefault && updatedAddresses.length > 0) {
-      updatedAddresses[0].isDefault = true;
-    }
-
-    user.addresses = updatedAddresses;
-    await this.usersRepository.save(user);
-
-    this.logger.log(`Dirección eliminada para usuario ${userId}: ${addressId}`);
-
-    return { message: 'Dirección eliminada exitosamente' };
+    return { message: 'Address deleted successfully' };
   }
 
-  /**
-   * Marca una dirección como predeterminada
-   * Desmarca todas las demás direcciones
-   */
-  async setDefaultAddress(userId: string, addressId: string): Promise<UserAddress> {
-    const user = await this.usersRepository.findOne({
-      where: { id: userId },
-      select: ['id', 'addresses'],
-    });
+  async setDefaultAddress(userId: string, addressId: string): Promise<IAddress> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    if (!user) {
-      throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+    try {
+      const address = await queryRunner.manager.findOne(Address, {
+        where: { id: addressId, user_id: userId },
+      });
+
+      if (!address) {
+        throw new NotFoundException(`Address with id ${addressId} not found for user ${userId}`);
+      }
+
+      await queryRunner.manager.update(Address, { user_id: userId }, { isDefault: false });
+
+      address.isDefault = true;
+      const updatedAddress = await queryRunner.manager.save(Address, address);
+
+      await queryRunner.commitTransaction();
+
+      this.logger.log(`Default address updated for user ${userId}: ${addressId}`);
+
+      return this.mapAddressToDto(updatedAddress);
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
-
-    const addresses = user.addresses || [];
-    const targetAddress = addresses.find((addr) => addr.id === addressId);
-
-    if (!targetAddress) {
-      throw new NotFoundException(`Dirección con id ${addressId} no encontrada`);
-    }
-
-    // Desmarcar todas y marcar solo la seleccionada
-    addresses.forEach((addr) => {
-      addr.isDefault = addr.id === addressId;
-    });
-
-    user.addresses = addresses;
-    await this.usersRepository.save(user);
-
-    this.logger.log(`Dirección predeterminada actualizada para usuario ${userId}: ${addressId}`);
-
-    return targetAddress;
   }
 
-  /**
-   * Obtiene las estadísticas personales del usuario
-   */
   async getUserStats(userId: string): Promise<{
     totalOrders: number;
     totalSpent: number;
@@ -544,44 +507,40 @@ export class UsersService {
   }> {
     const user = await this.usersRepository.findOne({
       where: { id: userId },
+      select: ['id'],
     });
 
     if (!user) {
-      throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+      throw new NotFoundException(`User with id ${userId} not found`);
     }
 
-    // Contar órdenes y calcular total gastado
-    const orders = await this.orderRepository
+    const orderStats = await this.orderRepository
       .createQueryBuilder('order')
-      .leftJoinAndSelect('order.orderDetail', 'orderDetail')
+      .leftJoin('order.orderDetail', 'orderDetail')
+      .select('COUNT(order.id)', 'totalOrders')
+      .addSelect('COALESCE(SUM(orderDetail.total), 0)', 'totalSpent')
       .where('order.user_id = :userId', { userId })
       .andWhere('order.status != :cancelledStatus', { cancelledStatus: 'cancelled' })
-      .getMany();
+      .getRawOne<{ totalOrders: string; totalSpent: string }>();
 
-    const totalOrders = orders.length;
-    const totalSpent = orders.reduce((sum, order) => {
-      return sum + (order.orderDetail?.total || 0);
-    }, 0);
+    const wishlistItemsCount = await this.dataSource
+      .createQueryBuilder()
+      .select('COUNT(wi.id)', 'count')
+      .from('wishlist_items', 'wi')
+      .innerJoin('wishlists', 'w', 'w.id = wi.wishlist_id')
+      .where('w.user_id = :userId', { userId })
+      .getRawOne<{ count: string }>();
 
-    // Contar items en wishlist
-    const wishlist = await this.wishlistRepository.findOne({
-      where: { user_id: userId },
-      relations: ['items'],
-    });
-
-    const wishlistItemsCount = wishlist?.items?.length || 0;
-
-    // Contar reviews
     const reviewsCount = await this.reviewRepository.count({
       where: { user: { id: userId } },
     });
 
-    this.logger.log(`Estadísticas obtenidas para usuario ${userId}`);
+    this.logger.log(`Stats retrieved for user ${userId}`);
 
     return {
-      totalOrders,
-      totalSpent: Math.round(totalSpent * 100) / 100,
-      wishlistItemsCount,
+      totalOrders: parseInt(orderStats?.totalOrders || '0', 10),
+      totalSpent: Math.round(parseFloat(orderStats?.totalSpent || '0') * 100) / 100,
+      wishlistItemsCount: parseInt(wishlistItemsCount?.count || '0', 10),
       reviewsCount,
     };
   }

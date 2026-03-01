@@ -1,0 +1,8 @@
+export const SHIPPING = {
+  FREE_THRESHOLD: 250,
+  REDUCED_THRESHOLD: 100,
+  STANDARD_COST: 20,
+  REDUCED_COST: 10,
+} as const;
+
+export const TAX_RATE = 0.21;

@@ -1,12 +1,12 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Category } from './entities/category.entity';
-import { CreateCategoryDto } from './dto/create-category.dto';
 import { PRODUCTS_SEED } from 'src/seeds/products.data';
 import { CategorySearchQueryDto } from './dto/PaginationQueryDto';
-import { IPaginatedResult } from './interface/IPaginatedResult';
+import { ICreateCategory } from './interface/category.interface';
+import { IPaginatedResult } from '../../common/pagination';
 
 @Injectable()
 export class CategoriesService {
@@ -16,29 +16,29 @@ export class CategoriesService {
   ) {}
 
   async preloadCategories(): Promise<{ message: string }> {
-    const uniqueCategoryNames = new Set<string>();
+    const uniqueCategory_names = new Set<string>();
     const categoriesToInsert: Category[] = [];
 
     for (const cat of PRODUCTS_SEED) {
-      const name = cat.categoryName;
+      const name = cat.category_name;
 
-      if (uniqueCategoryNames.has(name)) continue;
-      uniqueCategoryNames.add(name);
+      if (uniqueCategory_names.has(name)) continue;
+      uniqueCategory_names.add(name);
 
       const exists = await this.findByName(name);
       if (!exists) {
         const newCategory = new Category();
-        newCategory.categoryName = name;
+        newCategory.category_name = name;
         categoriesToInsert.push(newCategory);
       }
     }
 
     if (categoriesToInsert.length > 0) {
       await this.categoryRepo.save(categoriesToInsert);
-      return { message: 'Categorías precargadas correctamente' };
+      return { message: 'Categories seeded successfully' };
     }
 
-    throw new HttpException('Las categorías ya existen', HttpStatus.CONFLICT);
+    throw new HttpException('Categories already exist', HttpStatus.CONFLICT);
   }
 
   async getCategories(query?: CategorySearchQueryDto): Promise<IPaginatedResult<Category>> {
@@ -47,26 +47,19 @@ export class CategoriesService {
     const queryBuilder = this.categoryRepo
       .createQueryBuilder('category')
       .leftJoinAndSelect('category.products', 'products')
-      .leftJoinAndSelect('products.category', 'productCategory')
-      .leftJoinAndSelect('products.variants', 'variants')
-      .leftJoinAndSelect('products.reviews', 'reviews')
-      .leftJoinAndSelect('reviews.user', 'reviewUser');
+      .leftJoinAndSelect('products.category', 'productCategory');
 
-    // Filtro por nombre de categoría
     if (category) {
-      queryBuilder.andWhere('LOWER(category.categoryName) LIKE LOWER(:category)', {
+      queryBuilder.andWhere('LOWER(category.category_name) LIKE LOWER(:category)', {
         category: `%${category}%`,
       });
     }
 
-    // Ordenamiento
     queryBuilder
-      .orderBy('category.categoryName', 'ASC')
+      .orderBy('category.category_name', 'ASC')
       .addOrderBy('products.featured', 'DESC')
-      .addOrderBy('products.createdAt', 'DESC')
-      .addOrderBy('variants.sortOrder', 'ASC');
+      .addOrderBy('products.createdAt', 'DESC');
 
-    // Paginación
     const [categories, total] = await queryBuilder
       .skip((page - 1) * limit)
       .take(limit)
@@ -79,18 +72,18 @@ export class CategoriesService {
     };
   }
 
-  async findByName(categoryName: string): Promise<Category | null> {
-    return await this.categoryRepo.findOneBy({ categoryName });
+  async findByName(category_name: string): Promise<Category | null> {
+    return await this.categoryRepo.findOneBy({ category_name });
   }
 
-  async createCategory(dto: CreateCategoryDto): Promise<Category> {
-    const exists = await this.findByName(dto.categoryName);
+  async createCategory(dto: ICreateCategory): Promise<Category> {
+    const exists = await this.findByName(dto.category_name);
     if (exists) {
-      throw new HttpException(`La categoría "${dto.categoryName}" ya existe`, HttpStatus.CONFLICT);
+      throw new HttpException(`Category "${dto.category_name}" already exists`, HttpStatus.CONFLICT);
     }
 
     const category = this.categoryRepo.create({
-      categoryName: dto.categoryName,
+      category_name: dto.category_name,
     });
     return await this.categoryRepo.save(category);
   }
@@ -98,7 +91,7 @@ export class CategoriesService {
   async getByIdCategory(id: string): Promise<Category> {
     const exist = await this.categoryRepo.findOne({ where: { id }, relations: ['products', 'products.variants'] });
     if (!exist) {
-      throw new Error('La categoria no existe');
+      throw new NotFoundException(`Category with ID ${id} not found`);
     }
     return exist;
   }

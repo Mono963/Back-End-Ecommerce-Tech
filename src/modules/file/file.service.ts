@@ -6,8 +6,8 @@ import { v2 as CloudinaryType } from 'cloudinary';
 
 import { ProductsService } from '../products/products.service';
 import { File } from './entities/file.entity';
-import { CloudinaryUploadResult } from './interface/file.interface';
-import { Product } from '../products/Entities/products.entity';
+import { ICloudinaryUploadResult } from './interface/file.interface';
+import { Product } from '../products/entities/products.entity';
 
 @Injectable()
 export class FileService {
@@ -28,14 +28,14 @@ export class FileService {
 
   async uploadImage(id: string, file: Express.Multer.File): Promise<{ id: string; url: string }> {
     if (!file?.buffer) {
-      this.logger.error('Archivo vacío o no proporcionado');
-      throw new BadRequestException('Archivo inválido');
+      this.logger.error('Empty or missing file');
+      throw new BadRequestException('Invalid file');
     }
 
     const productDto = await this.productService.getProductById(id);
     if (!productDto) {
-      this.logger.warn(`Producto con ID ${id} no encontrado`);
-      throw new NotFoundException(`Producto con ID ${id} no existe`);
+      this.logger.warn(`Product with ID ${id} not found`);
+      throw new NotFoundException(`Product with ID ${id} does not exist`);
     }
 
     const product = await this.productRepo.findOne({
@@ -44,13 +44,13 @@ export class FileService {
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con ID ${id} no existe`);
+      throw new NotFoundException(`Product with ID ${id} does not exist`);
     }
 
-    this.logger.log(`Subiendo imagen para producto: ${product.id}`);
+    this.logger.log(`Uploading image for product: ${product.id}`);
 
     const result = await this.uploadToCloudinary(file);
-    this.logger.log(`Imagen subida correctamente: ${result.secure_url}`);
+    this.logger.log(`Image uploaded successfully: ${result.secure_url}`);
 
     const image = this.fileRepo.create({
       url: result.secure_url,
@@ -70,7 +70,7 @@ export class FileService {
     return { id: image.id, url: image.url };
   }
 
-  private uploadToCloudinary(file: Express.Multer.File): Promise<CloudinaryUploadResult> {
+  private uploadToCloudinary(file: Express.Multer.File): Promise<ICloudinaryUploadResult> {
     return new Promise((resolve, reject) => {
       const stream = this.cloudinary.uploader.upload_stream(
         {
@@ -79,10 +79,10 @@ export class FileService {
         },
         (error, result) => {
           if (error || !result) {
-            this.logger.error('Error al subir imagen a Cloudinary', error);
-            return reject(new Error('Error al subir imagen a Cloudinary'));
+            this.logger.error('Error uploading image to Cloudinary', error);
+            return reject(new Error('Error uploading image to Cloudinary'));
           }
-          resolve(result as CloudinaryUploadResult);
+          resolve(result as ICloudinaryUploadResult);
         },
       );
 
@@ -104,7 +104,7 @@ export class FileService {
     });
 
     if (!image) {
-      throw new NotFoundException(`Imagen con ID ${imageId} no encontrada`);
+      throw new NotFoundException(`Image with ID ${imageId} not found`);
     }
 
     const productId = image.product.id;
@@ -119,6 +119,6 @@ export class FileService {
       imgUrls: remainingFiles.map((f) => f.url),
     });
 
-    return { message: 'Imagen eliminada correctamente' };
+    return { message: 'Image deleted successfully' };
   }
 }

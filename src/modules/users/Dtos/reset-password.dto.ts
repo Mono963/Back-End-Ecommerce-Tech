@@ -1,28 +1,35 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, Matches } from 'class-validator';
+import { IsEmail, IsString, Matches } from 'class-validator';
 
 export class ResetPasswordDto {
   @ApiProperty({
-    example: 'andresdelossantos99@gmail.com',
-    description: 'Token recibido en el email (en este caso, el email del usuario)',
+    example: 'a1b2c3d4e5f6...',
+    description: 'Cryptographic token received by email',
   })
   @IsString()
   token: string;
 
   @ApiProperty({
-    example: 'NuevaPassword123!',
+    example: 'user@example.com',
+    description: 'Email associated with the account',
+  })
+  @IsEmail()
+  email: string;
+
+  @ApiProperty({
+    example: 'NewPassword123!',
     description:
-      'Nueva contraseña. Debe tener una mayúscula, una minúscula, un número y un carácter especial (!@#$%^&*), entre 8 y 15 caracteres.',
+      'New password. Must include an uppercase, a lowercase, a number, and a special character (!@#$%^&*), between 8 and 15 characters.',
   })
   @IsString()
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,15}$/, {
-    message: 'Password inválida.',
+    message: 'Invalid password.',
   })
   newPassword: string;
 
   @ApiProperty({
-    example: 'NuevaPassword123!',
-    description: 'Confirmación de la nueva contraseña',
+    example: 'NewPassword123!',
+    description: 'Confirm the new password',
   })
   @IsString()
   confirmPassword: string;

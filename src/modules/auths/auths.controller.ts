@@ -7,12 +7,13 @@ import { SkipThrottle, Throttle } from '@nestjs/throttler';
 
 import { AuthsService } from './auths.service';
 import { AuthExceptionFilter } from './validate/auth.filter';
-import { AuthResponse, GoogleUser } from './interface/IAuth.interface';
-import { CreateUserDto, LoginUserDto } from '../users/Dtos/CreateUserDto';
-import { ResponseUserDto } from '../users/interface/IUserResponseDto';
+import { AuthResponse } from './interface/IAuth.interface';
+import { CreateUserDto, LoginUserDto } from '../users/dtos/CreateUserDto';
+import { UserResponseDto } from '../users/dtos/user-response.dto';
+import { GoogleUserDto } from './dtos/auth.dto';
 
 interface AuthenticatedRequest extends Request {
-  user: GoogleUser;
+  user: GoogleUserDto;
 }
 
 @ApiTags('Auth')
@@ -30,11 +31,11 @@ export class AuthsController {
     description: 'User signed in successfully',
   })
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @Post('signin/user')
+  @Post('singin/user')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  async signinUser(@Body() credentials: LoginUserDto): Promise<AuthResponse> {
+  async signInUser(@Body() credentials: LoginUserDto): Promise<AuthResponse> {
     const { email, password } = credentials;
-    return await this.authService.singin(email, password);
+    return await this.authService.signIn(email, password);
   }
 
   @ApiOperation({ summary: 'Sign up new user' })
@@ -54,12 +55,8 @@ export class AuthsController {
       forbidNonWhitelisted: true,
     }),
   )
-  @Post('signup')
-  async signup(@Body() newUser: CreateUserDto): Promise<ResponseUserDto> {
-    if (!newUser || typeof newUser !== 'object') {
-      throw new Error('Invalid user data format');
-    }
-
+  @Post('singup')
+  async signUp(@Body() newUser: CreateUserDto): Promise<UserResponseDto> {
     return await this.authService.signup(newUser);
   }
 
@@ -68,7 +65,7 @@ export class AuthsController {
   @UseGuards(PassportAuthGuard('google'))
   @Get('google')
   async googleAuth(): Promise<void> {
-    // PassportAuthGuard maneja esto
+    // Handled by PassportAuthGuard
   }
 
   @ApiOperation({ summary: 'Google OAuth callback handler' })
@@ -77,10 +74,51 @@ export class AuthsController {
   @UseGuards(PassportAuthGuard('google'))
   @Get('google/callback')
   async googleAuthRedirect(@Req() req: AuthenticatedRequest, @Res() res: Response): Promise<void> {
-    const googleUser = req.user;
-    const frontendUrl = this.configService.get<string>('GoogleOAuth.frontendUrl');
+    const redirectUrl = await this.authService.processGoogleCallback(req.user);
+    res.redirect(redirectUrl);
+  }
 
-    const result = await this.authService.googleLogin(googleUser);
-    res.redirect(`${frontendUrl}/auth/callback?token=${result.accessToken}&userId=${result.user.id}`);
+  @ApiOperation({ summary: 'Exchange authorization code for access token' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string', description: 'Authorization code from OAuth redirect' },
+      },
+      required: ['code'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Token exchanged successfully. Access token set in HttpOnly cookie.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid or expired authorization code',
+  })
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Post('exchange-code')
+  async exchangeCode(
+    @Body('code') code: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ userId: string; success: boolean }> {
+    const tokenData = await this.authService.exchangeAuthCode(code);
+    res.cookie('access_token', tokenData.accessToken, this.authService.getCookieOptions());
+    return {
+      userId: tokenData.userId,
+      success: true,
+    };
+  }
+
+  @ApiOperation({ summary: 'Logout user by clearing access token cookie' })
+  @ApiResponse({
+    status: 200,
+    description: 'User logged out successfully',
+  })
+  @SkipThrottle()
+  @Post('logout')
+  logout(@Res({ passthrough: true }) res: Response): { success: boolean } {
+    res.clearCookie('access_token', this.authService.getCookieOptions());
+    return { success: true };
   }
 }

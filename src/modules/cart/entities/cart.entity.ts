@@ -1,3 +1,5 @@
+import { CartItem } from './cart.item.entity';
+import { Users } from '../../users/entities/users.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -9,8 +11,6 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { CartItem } from './cart.item.entity';
-import { Users } from 'src/modules/users/Entities/users.entity';
 
 @Index(['updatedAt'])
 @Index(['user_id'], { unique: true })
@@ -35,9 +35,18 @@ export class Cart {
   @UpdateDateColumn()
   updatedAt: Date;
 
+  @Column({ default: false })
+  abandonedNotificationSent: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastActivityAt: Date;
+
   @ManyToOne(() => Users, (user) => user.cart)
   @JoinColumn({ name: 'user_id' })
   user: Users;
+
+  @Column({ type: 'int', default: 0 })
+  item_count: number;
 
   @OneToMany(() => CartItem, (cartItem) => cartItem.cart, {
     cascade: true,

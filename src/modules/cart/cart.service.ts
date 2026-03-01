@@ -3,30 +3,26 @@ import {
   NotFoundException,
   BadRequestException,
   InternalServerErrorException,
-  Inject,
-  forwardRef,
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In, LessThan, QueryRunner, EntityManager } from 'typeorm';
 import { Cart } from './entities/cart.entity';
-import { Users } from '../users/Entities/users.entity';
-import { Product } from '../products/Entities/products.entity';
-import { ProductVariant } from '../products/Entities/products_variant.entity';
+import { Users } from '../users/entities/users.entity';
+import { Product } from '../products/entities/products.entity';
+import { ProductVariant } from '../products/entities/products_variant.entity';
 import { CartItem } from './entities/cart.item.entity';
-import { AddToCartDTO, UpdateCartItemDTO } from './dto/create-cart.dto';
 import { ProductsService } from '../products/products.service';
-import { OrdersService } from '../orders/orders.service';
 import {
-  ICartItemResponseDTO,
-  ICartResponseDTO,
-  IResponseCartSummaryDTO,
+  IAddToCart,
+  ICartItemResponse,
+  ICartResponse,
+  IResponseCartSummary,
   IStockValidationIssue,
   IStockValidationResult,
+  IUpdateCartItem,
   IVariantValidationResult,
 } from './interfaces/interface.cart';
-import { IShippingAddressDto } from '../orders/interfaces/orders.interface';
-import { ResponseOrderDto } from '../orders/Dto/order.Dto';
 import { ICategory } from '../category/interface/category.interface';
 
 @Injectable()
@@ -51,18 +47,15 @@ export class CartService {
 
     private readonly productsService: ProductsService,
 
-    @Inject(forwardRef(() => OrdersService))
-    private readonly ordersService: OrdersService,
-
     private readonly dataSource: DataSource,
   ) {}
 
-  async getCartById(userId: string): Promise<ICartResponseDTO> {
+  async getCartById(userId: string): Promise<ICartResponse> {
     const cart = await this.getOrCreateCart(userId);
     return this.mapCartToResponse(cart);
   }
 
-  async getCartSummary(userId: string): Promise<IResponseCartSummaryDTO> {
+  async getCartSummary(userId: string): Promise<IResponseCartSummary> {
     const cart = await this.cartRepository.findOne({
       where: { user: { id: userId } },
       relations: ['items'],
@@ -81,7 +74,7 @@ export class CartService {
     };
   }
 
-  async addProductToCart(userId: string, dto: AddToCartDTO): Promise<ICartResponseDTO> {
+  async addProductToCart(userId: string, dto: IAddToCart): Promise<ICartResponse> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -97,11 +90,12 @@ export class CartService {
           where: { id: userId },
         });
         if (!user) {
-          throw new NotFoundException(`Usuario con ID ${userId} no encontrado`);
+          throw new NotFoundException(`User with ID ${userId} not found`);
         }
         cart = queryRunner.manager.create(Cart, {
           user,
           total: 0,
+          item_count: 0,
           items: [],
         });
         await queryRunner.manager.save(cart);
@@ -121,7 +115,7 @@ export class CartService {
       const availableStock = await this.productsService.getAvailableStock(dto.productId, dto.variantIds || []);
 
       if (availableStock < dto.quantity) {
-        throw new BadRequestException(`Stock insuficiente. Disponible: ${availableStock}, Solicitado: ${dto.quantity}`);
+        throw new BadRequestException(`Insufficient stock. Available: ${availableStock}, Requested: ${dto.quantity}`);
       }
 
       let cartItem = this.findExistingCartItem(cart.items, dto.productId, dto.variantIds || []);
@@ -130,7 +124,7 @@ export class CartService {
         const newQuantity = cartItem.quantity + dto.quantity;
         if (availableStock < newQuantity) {
           throw new BadRequestException(
-            `Stock insuficiente. Disponible: ${availableStock}, Total solicitado: ${newQuantity}`,
+            `Insufficient stock. Available: ${availableStock}, Total requested: ${newQuantity}`,
           );
         }
         cartItem.quantity = newQuantity;
@@ -152,7 +146,7 @@ export class CartService {
 
       await queryRunner.manager.save(cartItem);
 
-      await this.recalculateCartTotal(queryRunner, cart);
+      await this.recalculateCartTotals(queryRunner, cart);
 
       await queryRunner.commitTransaction();
       return await this.getCartById(userId);
@@ -161,13 +155,13 @@ export class CartService {
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
         throw error;
       }
-      throw new InternalServerErrorException('No se pudo agregar el producto al carrito');
+      throw new InternalServerErrorException('Could not add product to cart');
     } finally {
       await queryRunner.release();
     }
   }
 
-  async updateCartItemQuantity(userId: string, cartItemId: string, dto: UpdateCartItemDTO): Promise<ICartResponseDTO> {
+  async updateCartItemQuantity(userId: string, cartItemId: string, dto: IUpdateCartItem): Promise<ICartResponse> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -179,39 +173,35 @@ export class CartService {
       });
 
       if (!cart) {
-        throw new NotFoundException(`Carrito no encontrado para el usuario`);
+        throw new NotFoundException('Cart not found for user');
       }
 
       const cartItem = cart.items?.find((item) => item.id === cartItemId);
       if (!cartItem) {
-        throw new NotFoundException(`Item del carrito no encontrado`);
+        throw new NotFoundException('Cart item not found');
       }
 
       if (dto.quantity === 0) {
-        // Eliminar el item directamente sin usar cascade
         await queryRunner.manager.delete(CartItem, { id: cartItemId });
 
-        // Calcular el nuevo total sin el item eliminado
         const remainingItems = cart.items.filter((item) => item.id !== cartItemId);
         const newTotal = parseFloat(remainingItems.reduce((sum, item) => sum + Number(item.subtotal), 0).toFixed(2));
+        const newItemCount = remainingItems.reduce((sum, item) => sum + item.quantity, 0);
 
-        // Actualizar solo el total del carrito
-        await queryRunner.manager.update(Cart, cart.id, { total: newTotal });
+        await queryRunner.manager.update(Cart, cart.id, { total: newTotal, item_count: newItemCount });
       } else {
         const variantIds = cartItem.variants?.map((v) => v.id) || [];
         const availableStock = await this.productsService.getAvailableStock(cartItem.product.id, variantIds);
 
         if (availableStock < dto.quantity) {
-          throw new BadRequestException(
-            `Stock insuficiente. Disponible: ${availableStock}, Solicitado: ${dto.quantity}`,
-          );
+          throw new BadRequestException(`Insufficient stock. Available: ${availableStock}, Requested: ${dto.quantity}`);
         }
 
         cartItem.quantity = dto.quantity;
         cartItem.subtotal = parseFloat((dto.quantity * Number(cartItem.priceAtAddition)).toFixed(2));
         await queryRunner.manager.save(cartItem);
 
-        await this.recalculateCartTotal(queryRunner, cart);
+        await this.recalculateCartTotals(queryRunner, cart);
       }
 
       await queryRunner.commitTransaction();
@@ -221,13 +211,13 @@ export class CartService {
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
         throw error;
       }
-      throw new InternalServerErrorException('No se pudo actualizar el item del carrito');
+      throw new InternalServerErrorException('Could not update cart item');
     } finally {
       await queryRunner.release();
     }
   }
 
-  async removeCartItem(userId: string, cartItemId: string): Promise<{ message: string; cart: ICartResponseDTO }> {
+  async removeCartItem(userId: string, cartItemId: string): Promise<{ message: string; cart: ICartResponse }> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -239,29 +229,27 @@ export class CartService {
       });
 
       if (!cart) {
-        throw new NotFoundException(`Carrito no encontrado para el usuario`);
+        throw new NotFoundException('Cart not found for user');
       }
 
       const cartItem = cart.items?.find((item) => item.id === cartItemId);
       if (!cartItem) {
-        throw new NotFoundException(`Item del carrito no encontrado`);
+        throw new NotFoundException('Cart item not found');
       }
 
-      // Eliminar el item directamente de la base de datos
       await queryRunner.manager.delete(CartItem, { id: cartItemId });
 
-      // Calcular el nuevo total sin el item eliminado
       const remainingItems = cart.items.filter((item) => item.id !== cartItemId);
       const newTotal = parseFloat(remainingItems.reduce((sum, item) => sum + Number(item.subtotal), 0).toFixed(2));
+      const newItemCount = remainingItems.reduce((sum, item) => sum + item.quantity, 0);
 
-      // Actualizar solo el total del carrito sin usar cascade
-      await queryRunner.manager.update(Cart, cart.id, { total: newTotal });
+      await queryRunner.manager.update(Cart, cart.id, { total: newTotal, item_count: newItemCount });
 
       await queryRunner.commitTransaction();
 
       const updatedCart = await this.getCartById(userId);
       return {
-        message: 'Item eliminado del carrito exitosamente',
+        message: 'Cart item removed successfully',
         cart: updatedCart,
       };
     } catch (error) {
@@ -269,7 +257,7 @@ export class CartService {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new InternalServerErrorException('No se pudo eliminar el item del carrito');
+      throw new InternalServerErrorException('Could not remove cart item');
     } finally {
       await queryRunner.release();
     }
@@ -287,36 +275,30 @@ export class CartService {
       });
 
       if (!cart) {
-        throw new NotFoundException(`Carrito no encontrado para el usuario`);
+        throw new NotFoundException('Cart not found for user');
       }
 
       if (cart.items && cart.items.length > 0) {
-        // Eliminar todos los items directamente sin usar cascade
         await queryRunner.manager.delete(CartItem, { cart_id: cart.id });
       }
 
-      // Actualizar solo el total del carrito sin usar save con cascade
-      await queryRunner.manager.update(Cart, cart.id, { total: 0 });
+      await queryRunner.manager.update(Cart, cart.id, { total: 0, item_count: 0 });
 
       await queryRunner.commitTransaction();
 
-      this.logger.log(`Carrito del usuario ${userId} vaciado exitosamente.`);
-      return { message: 'Carrito vaciado exitosamente' };
+      this.logger.log(`User ${userId} cart cleared successfully.`);
+      return { message: 'Cart cleared successfully' };
     } catch (error) {
       await queryRunner.rollbackTransaction();
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new InternalServerErrorException('No se pudo vaciar el carrito');
+      throw new InternalServerErrorException('Could not clear cart');
     } finally {
       await queryRunner.release();
     }
   }
 
-  /**
-   * Selecciona una dirección del usuario para el checkout
-   * Valida que la dirección exista en user.addresses antes de guardarla
-   */
   async selectAddressForCheckout(userId: string, addressId: string): Promise<{ message: string }> {
     const cart = await this.cartRepository.findOne({
       where: { user: { id: userId } },
@@ -324,39 +306,29 @@ export class CartService {
     });
 
     if (!cart) {
-      throw new NotFoundException(`Carrito no encontrado para el usuario`);
+      throw new NotFoundException('Cart not found for user');
     }
 
-    // Validar que el usuario tenga esa dirección
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      select: ['id', 'addresses'],
+      relations: ['addresses'],
     });
 
     if (!user) {
-      throw new NotFoundException(`Usuario con id ${userId} no encontrado`);
+      throw new NotFoundException(`User with id ${userId} not found`);
     }
 
-    const addressExists = user.addresses?.some((addr) => addr.id === addressId);
-
-    if (!addressExists) {
-      throw new BadRequestException(
-        `La dirección con id ${addressId} no existe en las direcciones guardadas del usuario`,
-      );
+    if (!user.addresses?.find((a) => a.id === addressId)) {
+      throw new BadRequestException(`Address with id ${addressId} does not exist in the user's saved addresses`);
     }
-
-    // Guardar el addressId seleccionado en el carrito
     cart.selectedAddressId = addressId;
     await this.cartRepository.save(cart);
 
-    this.logger.log(`Dirección ${addressId} seleccionada para carrito del usuario ${userId}`);
+    this.logger.log(`Address ${addressId} selected for user ${userId} cart`);
 
-    return { message: 'Dirección seleccionada exitosamente para el checkout' };
+    return { message: 'Address selected successfully for checkout' };
   }
 
-  /**
-   * Obtiene la dirección seleccionada actual del carrito
-   */
   async getSelectedAddress(userId: string): Promise<{ selectedAddressId: string | null }> {
     const cart = await this.cartRepository.findOne({
       where: { user: { id: userId } },
@@ -364,7 +336,7 @@ export class CartService {
     });
 
     if (!cart) {
-      throw new NotFoundException(`Carrito no encontrado para el usuario`);
+      throw new NotFoundException('Cart not found for user');
     }
 
     return { selectedAddressId: cart.selectedAddressId };
@@ -374,17 +346,28 @@ export class CartService {
     const cart = await this.getOrCreateCart(userId);
     const issues: IStockValidationIssue[] = [];
 
+    if (cart.items.length === 0) {
+      return { valid: true, issues: [] };
+    }
+
+    const productIds = cart.items.map((item) => item.product.id);
+
+    const products = await this.productRepository.find({
+      where: { id: In(productIds) },
+      relations: ['variants'],
+    });
+
+    const productMap = new Map(products.map((p) => [p.id, p]));
+
     for (const item of cart.items) {
-      const currentProduct = await this.productRepository.findOne({
-        where: { id: item.product.id },
-      });
+      const currentProduct = productMap.get(item.product.id);
 
       if (!currentProduct?.isActive) {
         issues.push({
           itemId: item.id,
           productId: item.product.id,
           productName: item.product.name,
-          issue: 'Producto no disponible',
+          issue: 'Product not available',
           requested: item.quantity,
           available: 0,
         });
@@ -392,14 +375,19 @@ export class CartService {
       }
 
       const variantIds = item.variants?.map((v) => v.id) || [];
-      const availableStock = await this.productsService.getAvailableStock(item.product.id, variantIds);
+      let availableStock = currentProduct.baseStock;
+
+      if (variantIds.length > 0 && currentProduct.variants) {
+        const matchingVariants = currentProduct.variants.filter((v) => variantIds.includes(v.id));
+        availableStock = matchingVariants.length > 0 ? Math.min(...matchingVariants.map((v) => v.stock)) : 0;
+      }
 
       if (availableStock < item.quantity) {
         issues.push({
           itemId: item.id,
           productId: item.product.id,
           productName: item.product.name,
-          issue: 'Stock insuficiente',
+          issue: 'Insufficient stock',
           requested: item.quantity,
           available: availableStock,
         });
@@ -410,19 +398,6 @@ export class CartService {
       valid: issues.length === 0,
       issues,
     };
-  }
-
-  async createOrderFromCartCheckout(userId: string, shippingAddress: IShippingAddressDto): Promise<ResponseOrderDto> {
-    const stockValidation = await this.validateCartStock(userId);
-
-    if (!stockValidation.valid) {
-      throw new BadRequestException({
-        message: 'Algunos productos en el carrito no están disponibles',
-        issues: stockValidation.issues,
-      });
-    }
-
-    return await this.ordersService.createOrderFromCart(userId, shippingAddress);
   }
 
   async cleanupAbandonedCarts(daysOld: number = 30): Promise<{
@@ -450,6 +425,7 @@ export class CartService {
         if (cart.items.length > 0) {
           await queryRunner.manager.remove(cart.items);
           cart.total = 0;
+          cart.item_count = 0;
           await queryRunner.manager.save(cart);
           cleanedCount++;
         }
@@ -458,19 +434,19 @@ export class CartService {
       await queryRunner.commitTransaction();
 
       return {
-        message: `Carritos abandonados limpiados exitosamente`,
+        message: 'Abandoned carts cleaned successfully',
         cleaned: cleanedCount,
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      this.logger.error('Error limpiando carritos abandonados:', error);
-      throw new InternalServerErrorException('Error al limpiar carritos abandonados');
+      this.logger.error('Error cleaning abandoned carts:', error);
+      throw new InternalServerErrorException('Error cleaning abandoned carts');
     } finally {
       await queryRunner.release();
     }
   }
 
-  private async getOrCreateCart(userId: string): Promise<Cart> {
+  async getOrCreateCart(userId: string): Promise<Cart> {
     let cart = await this.cartRepository.findOne({
       where: { user: { id: userId } },
       relations: ['user', 'items', 'items.product', 'items.product.category', 'items.variants'],
@@ -479,11 +455,12 @@ export class CartService {
     if (!cart) {
       const user = await this.userRepository.findOne({ where: { id: userId } });
       if (!user) {
-        throw new NotFoundException(`Usuario con ID ${userId} no encontrado`);
+        throw new NotFoundException(`User with ID ${userId} not found`);
       }
       cart = this.cartRepository.create({
         user,
         total: 0,
+        item_count: 0,
         items: [],
       });
       await this.cartRepository.save(cart);
@@ -492,9 +469,6 @@ export class CartService {
     return cart;
   }
 
-  /**
-   * Valida y obtiene un producto
-   */
   private async validateAndGetProduct(queryRunner: QueryRunner, productId: string): Promise<Product> {
     const product = await queryRunner.manager.findOne(Product, {
       where: { id: productId },
@@ -502,19 +476,16 @@ export class CartService {
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con ID ${productId} no encontrado`);
+      throw new NotFoundException(`Product with ID ${productId} not found`);
     }
 
     if (!product.isActive) {
-      throw new BadRequestException('El producto no está disponible');
+      throw new BadRequestException('Product is not available');
     }
 
     return product;
   }
 
-  /**
-   * Valida y obtiene variantes - LÓGICA MEJORADA
-   */
   private async validateAndGetVariants(
     queryRunner: QueryRunner,
     productId: string,
@@ -529,19 +500,15 @@ export class CartService {
       priceModifier: number;
     }> = [];
 
-    // ✅ Caso 1: No se enviaron variantes
     if (!variantIds || variantIds.length === 0) {
       if (hasVariants) {
-        // Si el producto tiene variantes pero no se seleccionaron, es un error
-        throw new BadRequestException('Este producto requiere seleccionar variantes');
+        throw new BadRequestException('This product requires selecting variants');
       }
-      // Si no tiene variantes, está bien no enviar ninguna
       return { selectedVariants: [], variantsSnapshot: [] };
     }
 
-    // ✅ Caso 2: Se enviaron variantes
     if (!hasVariants) {
-      throw new BadRequestException('Este producto no acepta variantes');
+      throw new BadRequestException('This product does not accept variants');
     }
 
     selectedVariants = await queryRunner.manager.find(ProductVariant, {
@@ -553,16 +520,12 @@ export class CartService {
     });
 
     if (selectedVariants.length !== variantIds.length) {
-      throw new BadRequestException('Una o más variantes no son válidas o no están disponibles');
+      throw new BadRequestException('One or more variants are invalid or unavailable');
     }
-
-    // Validar que no hay variantes duplicadas del mismo tipo
     const typesSet = new Set(selectedVariants.map((v) => v.type));
     if (typesSet.size !== selectedVariants.length) {
-      throw new BadRequestException('No se pueden seleccionar múltiples variantes del mismo tipo');
+      throw new BadRequestException('Multiple variants of the same type cannot be selected');
     }
-
-    // Crear snapshot de variantes
     variantsSnapshot = selectedVariants.map((v) => ({
       id: v.id,
       type: v.type,
@@ -573,22 +536,16 @@ export class CartService {
     return { selectedVariants, variantsSnapshot };
   }
 
-  /**
-   * Busca un item existente en el carrito con el mismo producto y variantes - LÓGICA CORREGIDA
-   */
   private findExistingCartItem(items: CartItem[], productId: string, variantIds: string[]): CartItem | undefined {
     return items?.find((item) => {
       if (item.product.id !== productId) return false;
 
       const itemVariantIds = item.variants?.map((v) => v.id) || [];
 
-      // ✅ Ambos arrays deben tener la misma longitud
       if (itemVariantIds.length !== variantIds.length) return false;
 
-      // ✅ Si ambos están vacíos, coinciden
       if (itemVariantIds.length === 0 && variantIds.length === 0) return true;
 
-      // ✅ Comparar arrays ordenados
       const sortedItemIds = [...itemVariantIds].sort();
       const sortedNewIds = [...variantIds].sort();
 
@@ -596,23 +553,24 @@ export class CartService {
     });
   }
 
-  private async recalculateCartTotal(queryRunner: QueryRunner | EntityManager, cart: Cart): Promise<void> {
+  private async recalculateCartTotals(queryRunner: QueryRunner | EntityManager, cart: Cart): Promise<void> {
     cart.total = parseFloat(cart.items.reduce((sum, item) => sum + Number(item.subtotal), 0).toFixed(2));
+    cart.item_count = this.calculateItemCount(cart.items);
 
     if ('manager' in queryRunner) {
-      // Es un QueryRunner
       await queryRunner.manager.save(cart);
     } else {
-      // Es un EntityManager
       await queryRunner.save(cart);
     }
   }
 
-  /**
-   * Mapea el carrito a DTO de respuesta
-   */
-  private mapCartToResponse(cart: Cart): ICartResponseDTO {
-    const items: ICartItemResponseDTO[] =
+  private calculateItemCount(items: CartItem[] | undefined): number {
+    if (!items || items.length === 0) return 0;
+    return items.reduce((sum, item) => sum + item.quantity, 0);
+  }
+
+  private mapCartToResponse(cart: Cart): ICartResponse {
+    const items: ICartItemResponse[] =
       cart.items?.map((item) => ({
         id: item.id,
         quantity: item.quantity,
@@ -643,7 +601,7 @@ export class CartService {
           category: item.product.category
             ? {
                 id: item.product.category.id,
-                name: (item.product.category as ICategory).categoryName || 'Sin nombre',
+                category_name: (item.product.category as ICategory).category_name || 'Unnamed',
               }
             : null,
         },

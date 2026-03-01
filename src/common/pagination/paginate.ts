@@ -1,4 +1,4 @@
-import { IPaginatedResult } from 'src/modules/users/interface/IPaginatedResult';
+import { IPaginatedResult } from './IPaginatedResult';
 import { Repository, FindManyOptions, ObjectLiteral } from 'typeorm';
 
 export async function paginate<Entity extends ObjectLiteral>(

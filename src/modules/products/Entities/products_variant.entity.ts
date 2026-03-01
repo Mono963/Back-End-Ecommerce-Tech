@@ -10,9 +10,10 @@ import {
   Index,
 } from 'typeorm';
 import { Product } from './products.entity';
+
 import { CartItem } from '../../cart/entities/cart.item.entity';
-import { OrderItem } from 'src/modules/orders/Entities/order.item';
-import { TechVariantType } from '../interface/products.interface';
+import { OrderItem } from '../../orders/entities/order.item.entity';
+import { TechVariantType } from '../enum/product.enum';
 
 @Index(['product_id', 'type'])
 @Index(['isAvailable', 'stock'])

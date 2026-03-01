@@ -14,26 +14,22 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { AuthGuard } from 'src/guards/auth.guards';
 import { RoleGuard } from 'src/guards/auth.guards.role';
 import { Roles, UserRole } from 'src/decorator/role.decorator';
-import { PaginatedUsersDto } from './Dtos/paginated-users.dto';
-import { UserSearchQueryDto } from './Dtos/PaginationQueryDto';
-import {
-  AuthenticatedRequest,
-  IUserResponseDto,
-  ResponseUserDto,
-  ResponseUserWithAdminDto,
-  UserAddress,
-} from './interface/IUserResponseDto';
-import { UpdatePasswordDto } from './Dtos/UpdatePasswordDto';
-import { UpdateRoleDto } from './Dtos/UpdateRoleDto';
-import { UpdateUserDbDto } from './Dtos/CreateUserDto';
-import { ForgotPasswordDto } from './Dtos/forgot-password.dto';
-import { ResetPasswordDto } from './Dtos/reset-password.dto';
-import { CreateAddressDto, UpdateAddressDto } from './Dtos/address.dto';
+import { PaginatedUsersDto } from './dtos/paginated-users.dto';
+import { UserSearchQueryDto } from './dtos/PaginationQueryDto';
+import { AuthRequest } from 'src/common/auths/auth-request.interface';
+import { UpdateRoleDto, UserResponseDto, UserResponseWithAdminDto } from './dtos/user-response.dto';
+import { UserMapper } from './mappers/user.mapper';
+import { UpdatePasswordDto } from './dtos/UpdatePasswordDto';
+import { UpdateUserDbDto } from './dtos/CreateUserDto';
+import { ForgotPasswordDto } from './dtos/forgot-password.dto';
+import { ResetPasswordDto } from './dtos/reset-password.dto';
+import { CreateAddressDto, UpdateAddressDto, UserAddressDto } from './dtos/address.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -64,39 +60,36 @@ export class UsersController {
   @Get()
   async getUsers(@Query() searchQuery: UserSearchQueryDto): Promise<PaginatedUsersDto> {
     const { items, ...meta } = await this.usersService.getUsers(searchQuery);
-    return { ...meta, items: ResponseUserWithAdminDto.toDTOList(items) };
+    return { ...meta, items: UserMapper.toAdminResponseList(items) as UserResponseWithAdminDto[] };
   }
 
   @Patch('password')
   @ApiOperation({ summary: 'Update password' })
   @UseGuards(AuthGuard)
-  async changeOwnPassword(
-    @Req() req: AuthenticatedRequest,
-    @Body() dto: UpdatePasswordDto,
-  ): Promise<{ message: string }> {
+  async changeOwnPassword(@Req() req: AuthRequest, @Body() dto: UpdatePasswordDto): Promise<{ message: string }> {
     await this.usersService.changePassword(req.user.sub, dto);
-    return { message: 'Contraseña actualizada correctamente' };
+    return { message: 'Password updated successfully' };
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Retrieve user by ID' })
   @ApiParam({ name: 'id', type: String })
-  @ApiResponse({ status: 200, description: 'OK', type: ResponseUserDto })
+  @ApiResponse({ status: 200, description: 'OK', type: UserResponseDto })
   @UseGuards(AuthGuard)
-  async getUserById(@Param('id', ParseUUIDPipe) id: string): Promise<ResponseUserDto> {
-    return ResponseUserDto.toDTO(await this.usersService.getUserById(id));
+  async getUserById(@Param('id', ParseUUIDPipe) id: string): Promise<UserResponseDto> {
+    return UserMapper.toResponse(await this.usersService.getUserById(id)) as UserResponseDto;
   }
 
-  @Patch('roles/:id') // Corregido el endpoint
+  @Patch('roles/:id')
   @ApiOperation({ summary: 'Role change by ID' })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.SUPER_ADMIN)
-  async rollChange(
+  async changeRole(
     @Param('id', ParseUUIDPipe) userId: string,
     @Body() dto: UpdateRoleDto,
   ): Promise<{ message: string }> {
-    await this.usersService.rollChange(userId, dto);
-    return { message: 'Los roles se actualizaron correctamente' };
+    await this.usersService.changeRole(userId, dto);
+    return { message: 'Roles updated successfully' };
   }
 
   @Put('update/user')
@@ -104,9 +97,9 @@ export class UsersController {
   @ApiBody({ type: UpdateUserDbDto })
   @UseGuards(AuthGuard)
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  async updateUser(@Req() req: AuthenticatedRequest, @Body() updateData: UpdateUserDbDto): Promise<IUserResponseDto> {
+  async updateUser(@Req() req: AuthRequest, @Body() updateData: UpdateUserDbDto): Promise<UserResponseDto> {
     const user = await this.usersService.updateUserService(req.user.sub, updateData);
-    return ResponseUserDto.toDTO(user);
+    return UserMapper.toResponse(user) as UserResponseDto;
   }
 
   @ApiBearerAuth()
@@ -126,7 +119,7 @@ export class UsersController {
   })
   @UseGuards(AuthGuard)
   @Delete(':id')
-  async remove(@Param('id') id: string): Promise<{ message: string }> {
+  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<{ message: string }> {
     return await this.usersService.deleteUser(id);
   }
 
@@ -142,14 +135,15 @@ export class UsersController {
   @ApiResponse({
     status: 200,
     description: 'User successfully restored',
-    type: ResponseUserDto,
+    type: UserResponseDto,
   })
-  async restoreUser(@Param('id', ParseUUIDPipe) id: string): Promise<ResponseUserDto> {
+  async restoreUser(@Param('id', ParseUUIDPipe) id: string): Promise<UserResponseDto> {
     const user = await this.usersService.restoreUser(id);
-    return ResponseUserDto.toDTO(user);
+    return UserMapper.toResponse(user) as UserResponseDto;
   }
 
   @Post('forgot-password')
+  @Throttle({ default: { limit: 3, ttl: 300000 } })
   @ApiOperation({ summary: 'Request password recovery' })
   @ApiBody({ type: ForgotPasswordDto })
   @ApiResponse({
@@ -164,6 +158,7 @@ export class UsersController {
   }
 
   @Post('reset-password')
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
   @ApiOperation({ summary: 'Reset password using email token' })
   @ApiBody({ type: ResetPasswordDto })
   @ApiResponse({
@@ -175,36 +170,50 @@ export class UsersController {
     return { message: 'Password reset successfully' };
   }
 
-  // ==================== ADDRESS ENDPOINTS ====================
+  @Get('stats/me')
+  @ApiOperation({
+    summary: 'Get personal user statistics',
+    description:
+      'Returns statistics of the authenticated user: total orders, total spent, products on wishlist and reviews',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully Obtained Statistics',
+    schema: {
+      type: 'object',
+      properties: {
+        totalOrders: { type: 'number', example: 15 },
+        totalSpent: { type: 'number', example: 5499.99 },
+        wishlistItemsCount: { type: 'number', example: 8 },
+        reviewsCount: { type: 'number', example: 12 },
+      },
+    },
+  })
+  @UseGuards(AuthGuard)
+  async getMyStats(@Req() req: AuthRequest): Promise<{
+    totalOrders: number;
+    totalSpent: number;
+    wishlistItemsCount: number;
+    reviewsCount: number;
+  }> {
+    return await this.usersService.getUserStats(req.user.sub);
+  }
+
+  // ==================== ADDRESS MANAGEMENT ==================================================================================
 
   @Get('addresses/my-addresses')
   @ApiOperation({ summary: 'Get all addresses for the authenticated user' })
   @ApiResponse({
     status: 200,
     description: 'List of user addresses',
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-          label: { type: 'string' },
-          street: { type: 'string' },
-          city: { type: 'string' },
-          province: { type: 'string' },
-          postalCode: { type: 'string' },
-          country: { type: 'string' },
-          isDefault: { type: 'boolean' },
-        },
-      },
-    },
   })
-  @UseGuards(AuthGuard)
-  async getMyAddresses(@Req() req: AuthenticatedRequest): Promise<UserAddress[]> {
-    return await this.usersService.getAddresses(req.user.sub);
+  @UseGuards(AuthGuard, RoleGuard)
+  @Roles(UserRole.CLIENT, UserRole.ADMIN)
+  async getMyAddresses(@Req() req: AuthRequest): Promise<UserAddressDto[]> {
+    return await this.usersService.getByUserAddresses(req.user.sub);
   }
 
-  @Post('addresses')
+  @Post('addresses/add')
   @ApiOperation({ summary: 'Add a new address for the authenticated user' })
   @ApiBody({ type: CreateAddressDto })
   @ApiResponse({
@@ -226,7 +235,7 @@ export class UsersController {
   })
   @UseGuards(AuthGuard)
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  async addAddress(@Req() req: AuthenticatedRequest, @Body() dto: CreateAddressDto): Promise<UserAddress> {
+  async addAddress(@Req() req: AuthRequest, @Body() dto: CreateAddressDto): Promise<UserAddressDto> {
     return await this.usersService.addAddress(req.user.sub, dto);
   }
 
@@ -258,10 +267,10 @@ export class UsersController {
   @UseGuards(AuthGuard)
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   async updateAddress(
-    @Req() req: AuthenticatedRequest,
+    @Req() req: AuthRequest,
     @Param('addressId', ParseUUIDPipe) addressId: string,
     @Body() dto: UpdateAddressDto,
-  ): Promise<UserAddress> {
+  ): Promise<UserAddressDto> {
     return await this.usersService.updateAddress(req.user.sub, addressId, dto);
   }
 
@@ -278,7 +287,7 @@ export class UsersController {
   })
   @UseGuards(AuthGuard)
   async deleteAddress(
-    @Req() req: AuthenticatedRequest,
+    @Req() req: AuthRequest,
     @Param('addressId', ParseUUIDPipe) addressId: string,
   ): Promise<{ message: string }> {
     return await this.usersService.deleteAddress(req.user.sub, addressId);
@@ -310,37 +319,9 @@ export class UsersController {
   })
   @UseGuards(AuthGuard)
   async setDefaultAddress(
-    @Req() req: AuthenticatedRequest,
+    @Req() req: AuthRequest,
     @Param('addressId', ParseUUIDPipe) addressId: string,
-  ): Promise<UserAddress> {
+  ): Promise<UserAddressDto> {
     return await this.usersService.setDefaultAddress(req.user.sub, addressId);
-  }
-
-  @Get('stats/me')
-  @ApiOperation({
-    summary: 'Obtener estadísticas personales del usuario',
-    description: 'Retorna estadísticas del usuario autenticado: total de órdenes, total gastado, productos en wishlist',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Estadísticas obtenidas exitosamente',
-    schema: {
-      type: 'object',
-      properties: {
-        totalOrders: { type: 'number', example: 15 },
-        totalSpent: { type: 'number', example: 5499.99 },
-        wishlistItemsCount: { type: 'number', example: 8 },
-        reviewsCount: { type: 'number', example: 12 },
-      },
-    },
-  })
-  @UseGuards(AuthGuard)
-  async getMyStats(@Req() req: AuthenticatedRequest): Promise<{
-    totalOrders: number;
-    totalSpent: number;
-    wishlistItemsCount: number;
-    reviewsCount: number;
-  }> {
-    return await this.usersService.getUserStats(req.user.sub);
   }
 }

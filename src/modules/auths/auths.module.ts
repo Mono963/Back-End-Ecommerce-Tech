@@ -11,9 +11,10 @@ import { GoogleStrategy } from './strategies/google.strategy';
 import google0authConfig from 'src/config/google-0auth.config';
 import { MailModule } from '../mail/mail.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Users } from '../users/Entities/users.entity';
+
 import { RolesModule } from '../roles/roles.module';
 import { Role } from '../roles/entities/role.entity';
+import { Users } from '../users/entities/users.entity';
 
 @Module({
   imports: [

@@ -1,19 +1,26 @@
-import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
-import { Users } from '../users/Entities/users.entity';
-import { AuthResponse, GoogleUser } from './interface/IAuth.interface';
-import { CreateUserDto } from '../users/Dtos/CreateUserDto';
-import { ResponseUserDto } from '../users/interface/IUserResponseDto';
+import { Users } from '../users/entities/users.entity';
+import { AuthCodeData, AuthResponse, GoogleUser } from './interface/IAuth.interface';
+import { UserMapper } from '../users/mappers/user.mapper';
 import { AuthValidations } from './validate/auth.validate';
 import { Role } from '../roles/entities/role.entity';
+import { ICreateUser, IUserResponse } from '../users/interfaces/user.interface';
+import { MailQueueService } from '../mail/mail-queue_email.service';
 
 @Injectable()
 export class AuthsService {
   private readonly logger = new Logger(AuthsService.name);
+
+  private static readonly AUTH_CODE_PREFIX = 'auth:code:';
+  private static readonly AUTH_CODE_TTL = 30000;
 
   constructor(
     @InjectRepository(Users)
@@ -22,9 +29,12 @@ export class AuthsService {
     @InjectRepository(Role)
     private readonly roleRepository: Repository<Role>,
     private readonly configService: ConfigService,
+    private readonly mailQueue: MailQueueService,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
   ) {}
 
-  async singin(email: string, password: string): Promise<AuthResponse> {
+  async signIn(email: string, password: string): Promise<AuthResponse> {
     AuthValidations.validateCredentials(email, password);
 
     const user = await this.usersRepository.findOne({
@@ -33,18 +43,20 @@ export class AuthsService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Credenciales inválidas');
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     AuthValidations.validateUserHasPassword(user);
     await AuthValidations.validatePassword(password, user.password);
 
-    this.logger.log(`Usuario ${email} ha iniciado sesión exitosamente`);
+    this.logger.log(`User ${email} signed in successfully`);
+
+    void this.mailQueue.queueLoginNotification(user.email, user.name);
 
     return this.generateAuthResponse(user);
   }
 
-  async signup(data: CreateUserDto): Promise<ResponseUserDto> {
+  async signup(data: ICreateUser): Promise<IUserResponse> {
     const { password, confirmPassword, ...userData } = data;
 
     AuthValidations.validatePasswordMatch(password, confirmPassword);
@@ -69,7 +81,7 @@ export class AuthsService {
       if (!clientRole) {
         clientRole = await this.roleRepository.save({
           name: 'CLIENT',
-          description: 'Cliente que reserva propiedades',
+          description: 'Client who books properties',
           permissions: {
             bookings: ['create', 'read'],
             reviews: ['create', 'read'],
@@ -87,9 +99,13 @@ export class AuthsService {
 
       const savedUser = await this.usersRepository.save(newUser);
 
-      this.logger.log(`Usuario registrado exitosamente: ${savedUser.email}`);
+      this.logger.log(`User registered successfully: ${savedUser.email}`);
 
-      return ResponseUserDto.toDTO(savedUser);
+      if (savedUser) {
+        void this.mailQueue.queueWelcomeEmail(savedUser.email, savedUser.name);
+      }
+
+      return UserMapper.toResponse(savedUser);
     } catch (error) {
       AuthValidations.handleSignupError(error);
     }
@@ -114,12 +130,19 @@ export class AuthsService {
     }
 
     if (isNewUser) {
-      this.logger.log(`Nuevo usuario creado via Google OAuth: ${googleUser.email}`);
+      this.logger.log(`New user created via Google OAuth: ${googleUser.email}`);
     } else {
-      this.logger.log(`Usuario existente autenticado via Google OAuth: ${googleUser.email}`);
+      this.logger.log(`Existing user authenticated via Google OAuth: ${googleUser.email}`);
     }
 
     return this.generateAuthResponse(authenticatedUser);
+  }
+
+  async processGoogleCallback(googleUser: GoogleUser): Promise<string> {
+    const result = await this.googleLogin(googleUser);
+    const authCode = await this.generateAuthCode(result.user.id, result.accessToken);
+    const frontendUrl = this.configService.get<string>('GoogleOAuth.frontendUrl');
+    return `${frontendUrl}/auth/callback?code=${authCode}`;
   }
 
   private async createUserFromGoogleProfile(googleUser: GoogleUser): Promise<Users> {
@@ -133,7 +156,7 @@ export class AuthsService {
     if (!clientRole) {
       clientRole = await this.roleRepository.save({
         name: 'CLIENT',
-        description: 'Cliente que reserva propiedades',
+        description: 'Client who books properties',
         permissions: {
           bookings: ['create', 'read'],
           reviews: ['create', 'read'],
@@ -148,12 +171,12 @@ export class AuthsService {
       username,
       password: randomPassword,
       phone: '+10000000000',
-      role: clientRole, // ✅ Asignar rol
+      role: clientRole,
     });
 
     const savedUser = await this.usersRepository.save(createdUser);
 
-    this.logger.log(`Usuario creado via Google OAuth: ${googleUser.email}`);
+    this.logger.log(`User created via Google OAuth: ${googleUser.email}`);
 
     return savedUser;
   }
@@ -163,7 +186,7 @@ export class AuthsService {
       sub: entity.id,
       email: entity.email,
       name: entity.name,
-      role: entity.role?.name || 'CLIENT', // ✅ ROL desde la entidad
+      role: entity.role?.name || 'CLIENT',
       permissions: entity.role?.permissions || {},
     };
 
@@ -188,5 +211,54 @@ export class AuthsService {
     if (!googleUser?.email) {
       throw new BadRequestException('Email required for authentication with Google');
     }
+  }
+
+  async generateAuthCode(userId: string, accessToken: string): Promise<string> {
+    const code = randomUUID();
+    const data: AuthCodeData = {
+      token: accessToken,
+      userId,
+      expiresAt: Date.now() + AuthsService.AUTH_CODE_TTL,
+    };
+
+    await this.cacheManager.set(`${AuthsService.AUTH_CODE_PREFIX}${code}`, data, AuthsService.AUTH_CODE_TTL);
+
+    this.logger.log(`Authorization code generated for user: ${userId}`);
+
+    return code;
+  }
+
+  async exchangeAuthCode(code: string): Promise<{ accessToken: string; userId: string }> {
+    const cacheKey = `${AuthsService.AUTH_CODE_PREFIX}${code}`;
+    const data = await this.cacheManager.get<AuthCodeData>(cacheKey);
+
+    if (!data) {
+      this.logger.warn(`Exchange attempt with invalid code: ${code}`);
+      throw new UnauthorizedException('Invalid authorization code');
+    }
+
+    if (Date.now() > data.expiresAt) {
+      await this.cacheManager.del(cacheKey);
+      this.logger.warn(`Exchange attempt with expired code: ${code}`);
+      throw new UnauthorizedException('Authorization code expired');
+    }
+
+    await this.cacheManager.del(cacheKey);
+
+    this.logger.log(`Authorization code exchanged successfully for user: ${data.userId}`);
+
+    return {
+      accessToken: data.token,
+      userId: data.userId,
+    };
+  }
+
+  getCookieOptions(): { httpOnly: boolean; secure: boolean; sameSite: 'strict'; maxAge: number } {
+    return {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict' as const,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    };
   }
 }

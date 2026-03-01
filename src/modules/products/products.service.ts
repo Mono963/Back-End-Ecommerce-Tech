@@ -1,15 +1,27 @@
 import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, DataSource, ILike } from 'typeorm';
-import { Product } from './Entities/products.entity';
-import { ProductVariant } from './Entities/products_variant.entity';
+import { Product } from './entities/products.entity';
+import { ProductVariant } from './entities/products_variant.entity';
 import { CategoriesService } from '../category/category.service';
-import { ProductsSearchQueryDto } from './Dto/PaginationQueryDto';
+import { ProductsSearchQueryDto } from './dto/PaginationQueryDto';
 import { paginate } from 'src/common/pagination/paginate';
-import { IPaginatedResultProducts } from './interface/IPaginatedResult';
-import { CreateProductDto, CreateVariantDto, ResponseProductDto, UpdateProductDto } from './Dto/products.Dto';
-import { mapToProductDto } from './Dto/products.validate';
+import { mapToProductDto } from './validate/products.validate';
 import { PRODUCTS_SEED } from 'src/seeds/products.data';
+import { N8nService } from '../N8N/n8n.service';
+import { AiSearchResponse } from '../N8N/interface/n8n.interface';
+import {
+  IAiProduct,
+  IAutocompleteResult,
+  ICreateProduct,
+  ICreateVariant,
+  IHybridSearchStreamPayload,
+  IProductResponse,
+  IUpdateProduct,
+} from './interface/products.interface';
+import { EMPTY, Observable } from 'rxjs';
+import { IPaginatedResult } from '../../common/pagination';
+import { DiscountsService } from '../discounts/discounts.service';
 
 @Injectable()
 export class ProductsService {
@@ -26,14 +38,30 @@ export class ProductsService {
     private readonly categoriesService: CategoriesService,
 
     private readonly dataSource: DataSource,
+
+    private readonly n8nService: N8nService,
+
+    @Inject(forwardRef(() => DiscountsService))
+    private readonly discountsService: DiscountsService,
   ) {}
 
-  async getProducts(searchQuery: ProductsSearchQueryDto): Promise<IPaginatedResultProducts<ResponseProductDto>> {
-    const { name, price, minPrice, maxPrice, brand, categoryId, color, featured, ...pagination } = searchQuery;
+  private async mapProductsWithDiscounts(products: Product[]): Promise<IProductResponse[]> {
+    const productIds = products.map((p) => p.id);
+    const discountMap = await this.discountsService.getActiveDiscountsForProducts(productIds);
+    return products.map((p) => mapToProductDto(p, discountMap.get(p.id)));
+  }
+
+  private async mapProductWithDiscount(product: Product): Promise<IProductResponse> {
+    const discount = await this.discountsService.getActiveProductDiscount(product.id);
+    return mapToProductDto(product, discount);
+  }
+
+  async getProducts(searchQuery: ProductsSearchQueryDto): Promise<IPaginatedResult<IProductResponse>> {
+    const { name, basePrice, minPrice, maxPrice, brand, categoryId, color, featured, ...pagination } = searchQuery;
 
     const hasFilters: boolean = Boolean(
       name ||
-        price ||
+        basePrice ||
         minPrice !== undefined ||
         maxPrice !== undefined ||
         brand ||
@@ -50,7 +78,7 @@ export class ProductsService {
       });
 
       return {
-        items: result.items.map(mapToProductDto),
+        items: await this.mapProductsWithDiscounts(result.items),
         total: result.total,
         pages: result.pages,
       };
@@ -91,6 +119,10 @@ export class ProductsService {
       );
     }
 
+    if (basePrice && (minPrice !== undefined || maxPrice !== undefined)) {
+      throw new BadRequestException('Cannot use basePrice with minPrice/maxPrice. Use one or the other.');
+    }
+
     if (minPrice !== undefined && maxPrice !== undefined) {
       queryBuilder.andWhere('product.basePrice BETWEEN :minPriceRange AND :maxPriceRange', {
         minPriceRange: Number(minPrice),
@@ -100,14 +132,14 @@ export class ProductsService {
       queryBuilder.andWhere('product.basePrice >= :minPriceRange', { minPriceRange: Number(minPrice) });
     } else if (maxPrice !== undefined) {
       queryBuilder.andWhere('product.basePrice <= :maxPriceRange', { maxPriceRange: Number(maxPrice) });
-    } else if (price) {
+    } else if (basePrice) {
       queryBuilder.andWhere(
-        '(product.basePrice BETWEEN :minPrice AND :maxPrice OR ' +
+        '(product.basePrice BETWEEN :basePriceMin AND :basePriceMax OR ' +
           'EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = product.id AND ' +
-          '(product.basePrice + pv.priceModifier) BETWEEN :minPrice AND :maxPrice))',
+          '(product.basePrice + pv.priceModifier) BETWEEN :basePriceMin AND :basePriceMax))',
         {
-          minPrice: price * 0.9,
-          maxPrice: price * 1.1,
+          basePriceMin: basePrice * 0.9,
+          basePriceMax: basePrice * 1.1,
         },
       );
     }
@@ -121,34 +153,34 @@ export class ProductsService {
     const pages = Math.ceil(total / pagination.limit);
 
     return {
-      items: items.map(mapToProductDto),
+      items: await this.mapProductsWithDiscounts(items),
       total,
       pages,
     };
   }
 
-  async getProductById(id: string): Promise<ResponseProductDto> {
+  async getProductById(id: string): Promise<IProductResponse> {
     const product = await this.productRepo.findOne({
       where: { id, isActive: true },
       relations: ['category', 'files', 'variants', 'reviews'],
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con id ${id} no encontrado`);
+      throw new NotFoundException(`Product with id ${id} not found`);
     }
 
-    return mapToProductDto(product);
+    return await this.mapProductWithDiscount(product);
   }
 
-  async createProduct(dto: CreateProductDto): Promise<ResponseProductDto> {
+  async createProduct(dto: ICreateProduct): Promise<IProductResponse> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      const category = await this.categoriesService.findByName(dto.categoryName);
+      const category = await this.categoriesService.findByName(dto.category_name);
       if (!category) {
-        throw new NotFoundException(`Categoría '${dto.categoryName}' no encontrada`);
+        throw new NotFoundException(`Category '${dto.category_name}' not found`);
       }
 
       const existingProduct = await queryRunner.manager.findOne(Product, {
@@ -156,7 +188,7 @@ export class ProductsService {
       });
 
       if (existingProduct) {
-        throw new BadRequestException(`Ya existe un producto con el nombre '${dto.name}'`);
+        throw new BadRequestException(`A product with the name '${dto.name}' already exists`);
       }
 
       if (dto.variants && dto.variants.length > 0) {
@@ -199,7 +231,7 @@ export class ProductsService {
       await queryRunner.commitTransaction();
 
       const fullProduct = await this.getProductWithRelations(savedProduct.id);
-      return mapToProductDto(fullProduct);
+      return await this.mapProductWithDiscount(fullProduct);
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -208,14 +240,14 @@ export class ProductsService {
     }
   }
 
-  async updateProduct(id: string, dto: UpdateProductDto): Promise<ResponseProductDto> {
+  async updateProduct(id: string, dto: IUpdateProduct): Promise<IProductResponse> {
     const product = await this.productRepo.findOne({
       where: { id },
       relations: ['category', 'variants'],
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con id ${id} no encontrado`);
+      throw new NotFoundException(`Product with id ${id} not found`);
     }
 
     if (dto.name && dto.name !== product.name) {
@@ -224,14 +256,14 @@ export class ProductsService {
       });
 
       if (existingProduct) {
-        throw new BadRequestException(`Ya existe un producto con el nombre '${dto.name}'`);
+        throw new BadRequestException(`A product with the name '${dto.name}' already exists`);
       }
     }
 
-    if (dto.categoryName) {
-      const category = await this.categoriesService.findByName(dto.categoryName);
+    if (dto.category_name) {
+      const category = await this.categoriesService.findByName(dto.category_name);
       if (!category) {
-        throw new NotFoundException(`Categoría '${dto.categoryName}' no encontrada`);
+        throw new NotFoundException(`Category '${dto.category_name}' not found`);
       }
       product.category = category;
     }
@@ -261,7 +293,7 @@ export class ProductsService {
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con id ${id} no encontrado`);
+      throw new NotFoundException(`Product with id ${id} not found`);
     }
 
     product.isActive = false;
@@ -269,18 +301,18 @@ export class ProductsService {
 
     return {
       id,
-      message: 'Producto desactivado correctamente',
+      message: 'Product deactivated successfully',
     };
   }
 
-  async addVariantToProduct(productId: string, variantDto: CreateVariantDto): Promise<ProductVariant> {
+  async addVariantToProduct(productId: string, variantDto: ICreateVariant): Promise<ProductVariant> {
     const product = await this.productRepo.findOne({
       where: { id: productId },
       relations: ['variants'],
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con id ${productId} no encontrado`);
+      throw new NotFoundException(`Product with id ${productId} not found`);
     }
 
     this.validateUniqueVariant(product, variantDto);
@@ -300,21 +332,21 @@ export class ProductsService {
     return await this.variantRepo.save(variant);
   }
 
-  async updateVariant(variantId: string, updateData: Partial<CreateVariantDto>): Promise<ProductVariant> {
+  async updateVariant(variantId: string, updateData: Partial<ICreateVariant>): Promise<ProductVariant> {
     const variant = await this.variantRepo.findOne({
       where: { id: variantId },
       relations: ['product', 'product.variants'],
     });
 
     if (!variant) {
-      throw new NotFoundException(`Variante con id ${variantId} no encontrada`);
+      throw new NotFoundException(`Variant with id ${variantId} not found`);
     }
 
     if (updateData.type || updateData.name) {
       const checkDto = {
         type: updateData.type ?? variant.type,
         name: updateData.name ?? variant.name,
-      } as CreateVariantDto;
+      } as ICreateVariant;
 
       const otherVariants = variant.product.variants.filter((v) => v.id !== variantId);
       variant.product.variants = otherVariants;
@@ -333,7 +365,7 @@ export class ProductsService {
     });
 
     if (!variant) {
-      throw new NotFoundException(`Variante con id ${variantId} no encontrada`);
+      throw new NotFoundException(`Variant with id ${variantId} not found`);
     }
 
     await this.variantRepo.remove(variant);
@@ -349,7 +381,7 @@ export class ProductsService {
 
     return {
       id: variantId,
-      message: 'Variante eliminada correctamente',
+      message: 'Variant deleted successfully',
     };
   }
 
@@ -360,7 +392,7 @@ export class ProductsService {
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con id ${productId} no encontrado`);
+      throw new NotFoundException(`Product with id ${productId} not found`);
     }
 
     let totalPrice = Number(product.basePrice);
@@ -374,12 +406,12 @@ export class ProductsService {
       });
 
       if (variants.length !== variantIds.length) {
-        throw new BadRequestException('Una o más variantes no pertenecen a este producto');
+        throw new BadRequestException('One or more variants do not belong to this product');
       }
 
       const typesSet = new Set(variants.map((v) => v.type));
       if (typesSet.size !== variants.length) {
-        throw new BadRequestException('No se pueden seleccionar múltiples variantes del mismo tipo');
+        throw new BadRequestException('Multiple variants of the same type cannot be selected');
       }
 
       totalPrice += variants.reduce((sum, variant) => sum + Number(variant.priceModifier), 0);
@@ -395,7 +427,7 @@ export class ProductsService {
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con id ${productId} no encontrado`);
+      throw new NotFoundException(`Product with id ${productId} not found`);
     }
 
     if (!product.hasVariants || !product.variants || product.variants.length === 0) {
@@ -409,13 +441,13 @@ export class ProductsService {
     const selectedVariants = product.variants.filter((v) => variantIds.includes(v.id) && v.isAvailable);
 
     if (selectedVariants.length !== variantIds.length) {
-      throw new BadRequestException('Una o más variantes no están disponibles');
+      throw new BadRequestException('One or more variants are not available');
     }
 
     return Math.min(...selectedVariants.map((v) => v.stock));
   }
 
-  async getFeaturedProducts(limit: number = 10): Promise<ResponseProductDto[]> {
+  async getFeaturedProducts(limit: number = 10): Promise<IProductResponse[]> {
     const products = await this.productRepo.find({
       where: {
         featured: true,
@@ -426,10 +458,10 @@ export class ProductsService {
       order: { createdAt: 'DESC' },
     });
 
-    return products.map(mapToProductDto);
+    return await this.mapProductsWithDiscounts(products);
   }
 
-  async getProductsByBrand(brand: string): Promise<ResponseProductDto[]> {
+  async getProductsByBrand(brand: string): Promise<IProductResponse[]> {
     const products = await this.productRepo.find({
       where: {
         brand: ILike(`%${brand}%`),
@@ -439,7 +471,7 @@ export class ProductsService {
       order: { name: 'ASC' },
     });
 
-    return products.map(mapToProductDto);
+    return await this.mapProductsWithDiscounts(products);
   }
 
   private async getProductWithRelations(id: string): Promise<Product> {
@@ -449,13 +481,13 @@ export class ProductsService {
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con id ${id} no encontrado`);
+      throw new NotFoundException(`Product with id ${id} not found`);
     }
 
     return product;
   }
 
-  private validateVariants(variants: CreateVariantDto[]): void {
+  private validateVariants(variants: ICreateVariant[]): void {
     const variantMap = new Map<string, Set<string>>();
 
     for (const variant of variants) {
@@ -463,21 +495,23 @@ export class ProductsService {
         variantMap.set(variant.type, new Set());
       }
 
-      const namesForType = variantMap.get(variant.type)!;
-      if (namesForType.has(variant.name)) {
-        throw new BadRequestException(`Variante duplicada: tipo '${variant.type}' con nombre '${variant.name}'`);
+      const namesForType = variantMap.get(variant.type);
+      if (namesForType?.has(variant.name)) {
+        throw new BadRequestException(`Duplicate variant: type '${variant.type}' with name '${variant.name}'`);
+      } else {
+        variantMap.set(variant.type, variantMap.get(variant.type)?.add(variant.name) || new Set([variant.name]));
       }
 
       namesForType.add(variant.name);
     }
   }
 
-  private validateUniqueVariant(product: Product, variantDto: CreateVariantDto): void {
+  private validateUniqueVariant(product: Product, variantDto: ICreateVariant): void {
     const existingVariant = product.variants?.find((v) => v.type === variantDto.type && v.name === variantDto.name);
 
     if (existingVariant) {
       throw new BadRequestException(
-        `Ya existe una variante de tipo '${variantDto.type}' con nombre '${variantDto.name}'`,
+        `A variant of type '${variantDto.type}' with name '${variantDto.name}' already exists`,
       );
     }
   }
@@ -488,14 +522,14 @@ export class ProductsService {
     const categoriasSeeder = await this.categoriesService.getCategories();
     if (!categoriasSeeder || categoriasSeeder.items.length === 0) {
       return {
-        message: 'No hay categorías. Primero precarga las categorías.',
+        message: 'No categories found. Seed categories first.',
         total: 0,
       };
     }
 
     if (!PRODUCTS_SEED || PRODUCTS_SEED.length === 0) {
       return {
-        message: 'No hay datos para precargar',
+        message: 'No seed data available',
         total: 0,
       };
     }
@@ -507,11 +541,11 @@ export class ProductsService {
       };
     }
 
-    const invalidProducts = PRODUCTS_SEED.filter((p) => !p.categoryName || p.categoryName.trim() === '');
+    const invalidProducts = PRODUCTS_SEED.filter((p) => !p.category_name || p.category_name.trim() === '');
 
     if (invalidProducts.length > 0) {
       return {
-        message: 'Todos los productos deben tener un nombre de categoría válido',
+        message: 'All products must have a valid category name',
         total: 0,
       };
     }
@@ -520,13 +554,13 @@ export class ProductsService {
       try {
         const existing = await this.productRepo.findOneBy({ name: seedData.name });
         if (existing) {
-          this.logger.log(`Producto ${seedData.name} ya existe, omitiendo...`);
+          this.logger.log(`Product ${seedData.name} already exists, skipping...`);
           continue;
         }
 
-        const category = await this.categoriesService.findByName(seedData.categoryName);
+        const category = await this.categoriesService.findByName(seedData.category_name);
         if (!category) {
-          this.logger.log(`Categoría ${seedData.categoryName} no encontrada para ${seedData.name}`);
+          this.logger.log(`Category ${seedData.category_name} not found for ${seedData.name}`);
           continue;
         }
 
@@ -567,28 +601,28 @@ export class ProductsService {
           savedProduct.hasVariants = true;
           await this.productRepo.save(savedProduct);
 
-          this.logger.log(`Producto ${seedData.name} creado con ${variants.length} variantes`);
+          this.logger.log(`Product ${seedData.name} created with ${variants.length} variants`);
         } else {
-          this.logger.log(`Producto ${seedData.name} creado sin variantes`);
+          this.logger.log(`Product ${seedData.name} created without variants`);
         }
 
         created.push(savedProduct);
       } catch (error) {
-        this.logger.error(`Error creando producto ${seedData.name}:`, error);
+        this.logger.error(`Error creating product ${seedData.name}:`, error);
       }
     }
 
     return {
-      message: `Productos precargados correctamente. Creados: ${created.length}/${PRODUCTS_SEED.length}`,
+      message: `Products seeded successfully. Created: ${created.length}/${PRODUCTS_SEED.length}`,
       total: created.length,
     };
   }
 
-  async getProductsByCategory(categoryId: string): Promise<ResponseProductDto[]> {
+  async getProductsByCategory(categoryId: string): Promise<IProductResponse[]> {
     const category = await this.categoriesService.getByIdCategory(categoryId);
 
     if (!category) {
-      throw new NotFoundException(`Categoría con ID ${categoryId} no encontrada`);
+      throw new NotFoundException(`Category with ID ${categoryId} not found`);
     }
 
     const products = await this.productRepo.find({
@@ -600,15 +634,13 @@ export class ProductsService {
       order: { createdAt: 'DESC' },
     });
 
-    return products.map(mapToProductDto);
+    return await this.mapProductsWithDiscounts(products);
   }
 
-  async searchProducts(query: string, limit: number = 10): Promise<ResponseProductDto[]> {
-    if (!query || query.trim().length < 2) {
-      return [];
-    }
+  async searchProducts(query: string, limit: number = 10): Promise<IProductResponse[]> {
+    if (!query?.trim()) return [];
 
-    const searchTerm = `%${query.trim()}%`;
+    const searchTerm = `%${query.trim().toLowerCase()}%`;
 
     const products = await this.productRepo
       .createQueryBuilder('product')
@@ -618,7 +650,7 @@ export class ProductsService {
       .leftJoinAndSelect('product.reviews', 'reviews')
       .where('product.isActive = :isActive', { isActive: true })
       .andWhere(
-        '(LOWER(product.name) LIKE LOWER(:searchTerm) OR LOWER(product.brand) LIKE LOWER(:searchTerm) OR LOWER(product.description) LIKE LOWER(:searchTerm))',
+        '(LOWER(product.name) LIKE :searchTerm OR LOWER(product.brand) LIKE :searchTerm OR LOWER(product.description) LIKE :searchTerm)',
         { searchTerm },
       )
       .orderBy('product.featured', 'DESC')
@@ -626,17 +658,123 @@ export class ProductsService {
       .take(limit)
       .getMany();
 
-    return products.map(mapToProductDto);
+    return await this.mapProductsWithDiscounts(products);
   }
 
-  async getRelatedProducts(productId: string, limit: number = 6): Promise<ResponseProductDto[]> {
+  async autocomplete(query: string, limit: number = 8): Promise<IAutocompleteResult[]> {
+    if (!query || query.trim().length < 1) return [];
+
+    const likeTerm = `%${query.trim().toLowerCase()}%`;
+    const startsWith = query.trim().toLowerCase();
+
+    const products = await this.productRepo
+      .createQueryBuilder('product')
+      .leftJoin('product.category', 'category')
+      .select([
+        'product.id',
+        'product.name',
+        'product.brand',
+        'product.basePrice',
+        'product.imgUrls',
+        'product.featured',
+        'category.category_name',
+      ])
+      .where('product.isActive = :isActive', { isActive: true })
+      .andWhere(
+        '(LOWER(product.name) LIKE :likeTerm OR LOWER(product.brand) LIKE :likeTerm OR LOWER(product.description) LIKE :likeTerm)',
+        { likeTerm },
+      )
+      .take(limit)
+      .getMany();
+
+    const sorted = products.sort((a, b) => {
+      const aStarts = a.name.toLowerCase().startsWith(startsWith) ? 0 : 1;
+      const bStarts = b.name.toLowerCase().startsWith(startsWith) ? 0 : 1;
+      if (aStarts !== bStarts) return aStarts - bStarts;
+      return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
+    });
+
+    return sorted.map((p) => ({
+      id: p.id,
+      name: p.name,
+      brand: p.brand,
+      basePrice: Number(p.basePrice),
+      image: p.imgUrls?.[0] || null,
+      category: p.category?.category_name || null,
+    }));
+  }
+
+  async aiSearch(query: string): Promise<AiSearchResponse> {
+    if (!query?.trim() || query.trim().length < 3) {
+      return { products: [], message: 'Query is too short' };
+    }
+
+    try {
+      if (!this.n8nService.isEnabled) {
+        return { products: await this.searchProducts(query, 10) };
+      }
+      return await this.n8nService.productSearch(query.trim());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(`AI search failed: ${message}`);
+      return { products: await this.searchProducts(query, 10), fallback: true };
+    }
+  }
+
+  hybridSearchStream(query: string): Observable<{ data: IHybridSearchStreamPayload }> {
+    if (!query || query.trim().length < 2) {
+      return EMPTY;
+    }
+    return new Observable<{ data: IHybridSearchStreamPayload }>((subscriber) => {
+      this.autocomplete(query, 8)
+        .then((localResults) => {
+          subscriber.next({
+            data: {
+              source: 'local',
+              results: localResults,
+            },
+          });
+        })
+        .catch(() => {
+          // Ignorar errores locales
+        });
+
+      this.n8nService
+        .productSearch(query)
+        .then((aiResponse) => {
+          const aiResults: IAutocompleteResult[] = (aiResponse.products as IAiProduct[]).map((p) => ({
+            id: p.id,
+            name: p.name,
+            brand: p.brand,
+            basePrice: Number(p.basePrice),
+            image: p.imgUrls?.[0] || null,
+            category: p.category_name || null,
+          }));
+
+          subscriber.next({
+            data: {
+              source: 'ai',
+              results: aiResults,
+              message: aiResponse.message,
+            },
+          });
+
+          subscriber.complete();
+        })
+        .catch(() => {
+          subscriber.complete();
+        });
+    });
+  }
+
+  async getRelatedProducts(productId: string, limit: number = 6): Promise<IProductResponse[]> {
     const product = await this.productRepo.findOne({
       where: { id: productId },
       relations: ['category'],
     });
 
     if (!product) {
-      throw new NotFoundException(`Producto con ID ${productId} no encontrado`);
+      throw new NotFoundException(`Product with ID ${productId} not found`);
     }
 
     const relatedProducts = await this.productRepo
@@ -658,6 +796,6 @@ export class ProductsService {
       .take(limit)
       .getMany();
 
-    return relatedProducts.map(mapToProductDto);
+    return await this.mapProductsWithDiscounts(relatedProducts);
   }
 }

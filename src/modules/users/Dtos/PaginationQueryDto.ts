@@ -1,31 +1,6 @@
-import { IsEmail, IsInt, IsOptional, IsPositive, IsString, Max } from 'class-validator';
-import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-
-export class PaginationQueryDto {
-  @ApiProperty({
-    example: 10,
-    required: false,
-    description: 'The number of items to return per page',
-  })
-  @IsOptional()
-  @IsPositive()
-  @IsInt()
-  @Type(() => Number)
-  @Max(100)
-  limit = 10;
-
-  @ApiProperty({
-    example: 1,
-    required: false,
-    description: 'The page number to retrive',
-  })
-  @IsOptional()
-  @IsPositive()
-  @IsInt()
-  @Type(() => Number)
-  page = 1;
-}
+import { IsOptional, IsString } from 'class-validator';
+import { PaginationQueryDto } from '../../../common/pagination';
 
 export class UserSearchQueryDto extends PaginationQueryDto {
   @ApiProperty({
@@ -40,9 +15,9 @@ export class UserSearchQueryDto extends PaginationQueryDto {
   @ApiProperty({
     example: 'john@example.com',
     required: false,
-    description: 'Email to search for users',
+    description: 'Email or partial email to search for users',
   })
   @IsOptional()
-  @IsEmail({}, { message: 'email must be a valid email address' })
+  @IsString()
   email?: string;
 }

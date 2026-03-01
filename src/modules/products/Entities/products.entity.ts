@@ -1,3 +1,5 @@
+import { ProductVariant } from './products_variant.entity';
+import { File } from '../../file/entities/file.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -11,9 +13,9 @@ import {
   Index,
 } from 'typeorm';
 import { Category } from '../../category/entities/category.entity';
-import { File } from '../../file/entities/file.entity';
-import { ProductVariant } from './products_variant.entity';
-import { Review } from 'src/modules/review/entities/review.entity';
+import { Review } from '../../review/entities/review.entity';
+import { ProductDiscount } from '../../discounts/entities/product-discount.entity';
+
 @Index(['brand'])
 @Index(['isActive', 'featured'])
 @Index(['name', 'description'], { fulltext: true })
@@ -92,10 +94,14 @@ export class Product {
   })
   files: File[];
 
+  @Index('idx_products_category')
   @ManyToOne(() => Category, (category) => category.products)
   @JoinColumn({ name: 'category_id' })
   category: Category;
 
   @OneToMany(() => Review, (review) => review.product)
   reviews: Review[];
+
+  @OneToMany(() => ProductDiscount, (discount) => discount.product)
+  discounts: ProductDiscount[];
 }
