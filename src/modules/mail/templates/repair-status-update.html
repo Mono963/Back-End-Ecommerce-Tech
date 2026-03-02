@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Actualización de Reparación</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <style>
+      body {
+        margin: 0;
+        padding: 30px 10px;
+        background-color: #ffffff;
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        color: #333333;
+        line-height: 1.6;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+      }
+
+      .header {
+        background: #111827;
+        padding: 24px 32px;
+      }
+
+      .header table {
+        width: 100%;
+      }
+
+      .header-text {
+        color: #ffffff;
+        font-family: 'Inter', sans-serif;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+      }
+
+      .header img {
+        max-width: 120px;
+        height: auto;
+        display: block;
+      }
+
+      .content {
+        padding: 40px 32px;
+        background-color: #ffffff;
+      }
+
+      .content h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #0066ff;
+        margin: 0 0 24px 0;
+      }
+
+      .content p {
+        margin: 16px 0;
+        font-size: 16px;
+        font-weight: 400;
+        color: #333333;
+      }
+
+      .content p strong {
+        color: #1a1a2e;
+        font-weight: 600;
+      }
+
+      .info-card {
+        background: #f5f5f5;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 24px 0;
+      }
+
+      .info-card p {
+        margin: 8px 0;
+        font-size: 14px;
+      }
+
+      .info-card strong {
+        color: #0066ff;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 6px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        background: #1e40af;
+        color: #dbeafe;
+      }
+
+      .notes-box {
+        background: #fff;
+        border: 1px solid #e8e8e8;
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 12px;
+        font-style: italic;
+      }
+
+      .btn {
+        display: inline-block;
+        margin: 24px 0;
+        background: #0066ff;
+        color: #ffffff !important;
+        padding: 14px 32px;
+        border-radius: 8px;
+        text-decoration: none !important;
+        font-weight: 600;
+        font-size: 16px;
+        box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);
+      }
+
+      @media screen and (max-width: 600px) {
+        .header {
+          padding: 20px 16px;
+        }
+
+        .header-text {
+          font-size: 16px;
+        }
+
+        .header img {
+          max-width: 80px;
+        }
+
+        .content {
+          padding: 32px 20px;
+        }
+
+        .content h1 {
+          font-size: 24px;
+        }
+
+        .btn {
+          padding: 12px 24px;
+          font-size: 15px;
+        }
+      }
+
+      /* Tech theme override */
+      body {
+        background: #111827;
+        color: #e5e7eb;
+      }
+
+      .container {
+        border-radius: 16px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+        background: #0f172a;
+      }
+
+      .header {
+        background: radial-gradient(120% 120% at 100% 0%, #1b2a4a 0%, #0f172a 55%, #0b1020 100%);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .header-text {
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+      }
+
+      .content {
+        background: linear-gradient(180deg, #0f172a 0%, #0b1222 100%);
+      }
+
+      .content h1 {
+        color: #60a5fa;
+      }
+
+      .content p {
+        color: #cbd5f5;
+      }
+
+      .content p strong {
+        color: #f8fafc;
+      }
+
+      .btn {
+        background: linear-gradient(135deg, #2563eb, #3b82f6);
+        border-radius: 10px;
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
+      }
+
+      .btn:hover {
+        background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      }
+
+      .info-card {
+        background: #1e293b;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .info-card p {
+        color: #cbd5e1;
+      }
+
+      .notes-box {
+        background: #0f172a;
+        border-color: #374151;
+        color: #cbd5e1;
+      }
+
+      .footer {
+        background: #111827;
+        color: #ffffff;
+        text-align: center;
+        padding: 32px;
+        font-size: 14px;
+        border-top: 1px solid #1f2937;
+      }
+
+      .footer-social {
+        margin-bottom: 16px;
+      }
+
+      .footer-social a {
+        display: inline-block;
+        margin: 0 8px;
+        color: #ffffff;
+        text-decoration: none;
+        font-size: 20px;
+      }
+
+      .footer p {
+        margin: 8px 0;
+        color: #9ca3af;
+      }
+
+      .footer a {
+        color: #ffffff;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .footer-payments {
+        margin-top: 16px;
+      }
+
+      .footer-payments span {
+        display: inline-block;
+        background: #374151;
+        color: #ffffff;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        margin: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td align="left" valign="middle" class="header-text">WorldAssemblyTechnology</td>
+            <td align="right" valign="middle">
+              <img
+                src="https://res.cloudinary.com/dub48rf0p/image/upload/v1770006657/WorldAsseblyTechnologyPNGEmail_b6bsll.png"
+                alt="Logo"
+                style="
+                  border-radius: 8px;
+                  filter: drop-shadow(0 0 12px rgba(0, 102, 255, 0.6)) drop-shadow(0 0 25px rgba(0, 102, 255, 0.4))
+                    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+                "
+              />
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="content">
+        <h1>Actualización de tu reparación</h1>
+        <p>Hola <strong>{{fullName}}</strong>, tu reparación ha sido actualizada.</p>
+
+        <div class="info-card">
+          <p>ID de reparación: <strong>{{repairId}}</strong></p>
+          <p>Nuevo estado: <span class="status-badge">{{statusLabel}}</span></p>
+          {{#if adminNotes}}
+          <p style="margin-top: 16px">Notas del técnico:</p>
+          <div class="notes-box">{{adminNotes}}</div>
+          {{/if}}
+        </div>
+
+        <p>Si tenés alguna consulta, no dudes en contactarnos.</p>
+
+        <p>Saludos cordiales,<br />El equipo de <strong>{{appName}}</strong>.</p>
+
+        <div style="text-align: center">
+          <a href="{{supportLink}}" class="btn">Contactar soporte</a>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="footer-social">
+          <p style="color: #9ca3af; margin-bottom: 12px">Seguinos en nuestras redes:</p>
+          <a href="https://web.whatsapp.com" target="_blank" rel="noopener noreferrer">
+            <img src="https://cdn-icons-png.flaticon.com/128/3670/3670051.png" alt="WhatsApp" width="28" height="28" />
+          </a>
+          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer">
+            <img
+              src="https://cdn-icons-png.flaticon.com/128/15707/15707749.png"
+              alt="Instagram"
+              width="28"
+              height="28"
+            />
+          </a>
+          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">
+            <img
+              src="https://cdn-icons-png.flaticon.com/128/15047/15047435.png"
+              alt="Facebook"
+              width="28"
+              height="28"
+            />
+          </a>
+        </div>
+        <p style="color: #ffffff; font-size: 13px">
+          Copyright © 2025 <strong>WorldAssemblyTechnology</strong>. Todos los derechos reservados.
+        </p>
+        <p style="margin-top: 12px">
+          <a href="{{frontendUrl}}">Visitar sitio web</a> ·
+          <a href="{{frontendUrl}}/contacto">Contacto</a>
+        </p>
+        <div class="footer-payments">
+          <span>VISA</span>
+          <span>MC</span>
+          <span>MP</span>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

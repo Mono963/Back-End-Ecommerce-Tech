@@ -550,6 +550,111 @@ export class MailService {
     await this.sendMail(email, subject, textAlt, 'review-request.html', context);
   }
 
+  // ==================== REPARACIONES ====================
+
+  async sendRepairConfirmation(
+    email: string,
+    fullName: string,
+    repairId: string,
+    deviceType: string,
+    brand: string,
+    model: string,
+    issueDescription: string,
+  ): Promise<void> {
+    const subject = 'Solicitud de reparación recibida - WorldAssemblyTechnology';
+    const textAlt =
+      `Hola ${fullName},\n\n` +
+      `Recibimos tu solicitud de reparación correctamente.\n` +
+      `ID de reparación: ${repairId}\n` +
+      `Dispositivo: ${brand} ${model} (${deviceType})\n` +
+      `Problema: ${issueDescription}\n\n` +
+      `Te mantendremos informado sobre el estado de tu reparación.\n\n` +
+      `Saludos,\nEl equipo de WorldAssemblyTechnology.`;
+
+    const context = {
+      fullName,
+      repairId,
+      deviceType,
+      brand,
+      model,
+      issueDescription,
+      appName: 'WorldAssemblyTechnology',
+    };
+
+    await this.sendMail(email, subject, textAlt, 'repair-confirmation.html', context);
+  }
+
+  async sendRepairNotificationToAdmin(
+    fullName: string,
+    email: string,
+    phone: string,
+    deviceType: string,
+    brand: string,
+    model: string,
+    issueDescription: string,
+    urgency: string,
+  ): Promise<void> {
+    const subject = 'Nueva solicitud de reparación';
+    const textAlt =
+      `Nueva solicitud de reparación:\n\n` +
+      `Cliente: ${fullName}\n` +
+      `Email: ${email}\n` +
+      `Teléfono: ${phone}\n` +
+      `Dispositivo: ${brand} ${model} (${deviceType})\n` +
+      `Problema: ${issueDescription}\n` +
+      `Urgencia: ${urgency}`;
+
+    const context = {
+      fullName,
+      email,
+      phone,
+      deviceType,
+      brand,
+      model,
+      issueDescription,
+      urgency,
+      appName: 'WorldAssemblyTechnology',
+    };
+
+    await this.sendMail(this.adminEmail, subject, textAlt, 'repair-admin.html', context);
+  }
+
+  async sendRepairStatusUpdate(
+    email: string,
+    fullName: string,
+    repairId: string,
+    status: string,
+    adminNotes?: string,
+  ): Promise<void> {
+    const statusLabels: Record<string, string> = {
+      pending: 'Pendiente',
+      reviewing: 'En revisión',
+      in_progress: 'En progreso',
+      completed: 'Completada',
+      cancelled: 'Cancelada',
+    };
+
+    const statusLabel = statusLabels[status] || status;
+    const subject = `Actualización de tu reparación - ${statusLabel}`;
+    const textAlt =
+      `Hola ${fullName},\n\n` +
+      `Tu reparación (ID: ${repairId}) ha sido actualizada.\n` +
+      `Nuevo estado: ${statusLabel}\n` +
+      `${adminNotes ? `Notas: ${adminNotes}\n` : ''}` +
+      `\nSaludos,\nEl equipo de WorldAssemblyTechnology.`;
+
+    const context = {
+      fullName,
+      repairId,
+      status,
+      statusLabel,
+      adminNotes,
+      appName: 'WorldAssemblyTechnology',
+    };
+
+    await this.sendMail(email, subject, textAlt, 'repair-status-update.html', context);
+  }
+
   // ==================== NEWSLETTER METHODS ====================
 
   private embedTrackingPixel(html: string, trackingId?: string): string {
