@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiExtraModels, ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import { IsNotEmpty, IsUUID } from 'class-validator';
 import { OrderStatus } from '../../orders/enum/order.enum';
@@ -41,6 +41,7 @@ export class UserAddressResponseDto {
   isDefault: boolean;
 }
 
+@ApiExtraModels(UserAddressResponseDto)
 export class UserResponseDto {
   @ApiProperty({ description: 'User ID' })
   id: string;

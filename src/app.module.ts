@@ -32,6 +32,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { NewsletterModule } from './modules/newsLetters/newsletter.module';
 import { DiscountsModule } from './modules/discounts/discounts.module';
 import { HealthModule } from './modules/health/health.module';
+import { RepairsModule } from './modules/repairs/repairs.module';
 
 @Module({
   imports: [
@@ -84,6 +85,7 @@ import { HealthModule } from './modules/health/health.module';
     NewsletterModule,
     DiscountsModule,
     HealthModule,
+    RepairsModule,
   ],
   controllers: [AppController],
   providers: [
