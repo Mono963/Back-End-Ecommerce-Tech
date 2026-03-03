@@ -16,6 +16,7 @@ export const cacheConfig = async (configService: ConfigService): Promise<CacheMo
   }
 
   const parsed = redisUrl ? new URL(redisUrl) : null;
+  const useTls = redisUrl?.startsWith('rediss://') ?? false;
 
   return {
     ttl: 60_000,
@@ -24,6 +25,7 @@ export const cacheConfig = async (configService: ConfigService): Promise<CacheMo
       socket: {
         host: parsed?.hostname ?? host ?? 'localhost',
         port: parsed?.port ? Number(parsed.port) : (port ?? 6379),
+        tls: useTls,
       },
       password: parsed?.password ?? password,
     }),

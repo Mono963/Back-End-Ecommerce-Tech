@@ -8,12 +8,14 @@ export const getBullConfig = (configService: ConfigService): BullModuleOptions =
   const password = configService.get<string>('REDIS_PASSWORD');
 
   const parsed = redisUrl ? new URL(redisUrl) : null;
+  const useTls = redisUrl?.startsWith('rediss://') ?? false;
 
   return {
     redis: {
       host: parsed?.hostname ?? host,
       port: parsed?.port ? Number(parsed.port) : (port ?? 6379),
       password: parsed?.password ?? password,
+      tls: useTls ? {} : undefined,
     },
     defaultJobOptions: {
       removeOnComplete: true,

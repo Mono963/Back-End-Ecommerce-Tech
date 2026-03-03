@@ -101,7 +101,6 @@ async function bootstrap(): Promise<void> {
 
     try {
       await redis.ping();
-      logger.log(`Redis connected on ${redisUrl ?? `${redisHost}:${redisPort}`}`);
     } catch {
       logger.warn(`Redis not available on ${redisUrl ?? `${redisHost}:${redisPort}`}`);
     } finally {
