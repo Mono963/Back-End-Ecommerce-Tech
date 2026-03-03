@@ -22,7 +22,10 @@ export type MailJobType =
   | 'order-cancelled'
   | 'refund-processed'
   | 'abandoned-cart'
-  | 'review-request';
+  | 'review-request'
+  | 'repair-confirmation'
+  | 'repair-admin'
+  | 'repair-status-update';
 
 export interface MailJobData {
   type: MailJobType;
@@ -289,6 +292,64 @@ export class MailQueueService {
       cartTotal,
       cartUrl,
       discountCode,
+    });
+  }
+
+  // ==================== REPARACIONES ====================
+
+  async queueRepairConfirmation(
+    email: string,
+    fullName: string,
+    repairId: string,
+    deviceType: string,
+    brand: string,
+    model: string,
+    issueDescription: string,
+  ): Promise<void> {
+    await this.addToQueue('repair-confirmation', email, {
+      fullName,
+      repairId,
+      deviceType,
+      brand,
+      model,
+      issueDescription,
+    });
+  }
+
+  async queueRepairNotificationToAdmin(
+    fullName: string,
+    email: string,
+    phone: string,
+    deviceType: string,
+    brand: string,
+    model: string,
+    issueDescription: string,
+    urgency: string,
+  ): Promise<void> {
+    await this.addToQueue('repair-admin', this.adminEmail, {
+      fullName,
+      email,
+      phone,
+      deviceType,
+      brand,
+      model,
+      issueDescription,
+      urgency,
+    });
+  }
+
+  async queueRepairStatusUpdate(
+    email: string,
+    fullName: string,
+    repairId: string,
+    status: string,
+    adminNotes?: string | null,
+  ): Promise<void> {
+    await this.addToQueue('repair-status-update', email, {
+      fullName,
+      repairId,
+      status,
+      adminNotes,
     });
   }
 

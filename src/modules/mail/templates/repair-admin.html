@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nueva Solicitud de Reparación</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <style>
+      body {
+        margin: 0;
+        padding: 30px 10px;
+        background-color: #ffffff;
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        color: #333333;
+        line-height: 1.6;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+      }
+
+      .header {
+        background: #111827;
+        padding: 24px 32px;
+      }
+
+      .header table {
+        width: 100%;
+      }
+
+      .header-text {
+        color: #ffffff;
+        font-family: 'Inter', sans-serif;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+      }
+
+      .header img {
+        max-width: 120px;
+        height: auto;
+        display: block;
+      }
+
+      .content {
+        padding: 40px 32px;
+        background-color: #ffffff;
+      }
+
+      .content h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #0066ff;
+        margin: 0 0 24px 0;
+      }
+
+      .content p {
+        margin: 12px 0;
+        font-size: 16px;
+        font-weight: 400;
+        color: #333333;
+      }
+
+      .content p strong {
+        color: #1a1a2e;
+        font-weight: 600;
+      }
+
+      .info-card {
+        background: #f5f5f5;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 24px 0;
+      }
+
+      .info-card p {
+        margin: 10px 0;
+        font-size: 15px;
+      }
+
+      .info-card .label {
+        color: #808080;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+      }
+
+      .info-card .value {
+        color: #1a1a2e;
+        font-weight: 600;
+      }
+
+      .message-box {
+        background: #fff;
+        border: 1px solid #e8e8e8;
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 16px;
+      }
+
+      .urgency-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 4px;
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .urgency-low {
+        background: #065f46;
+        color: #a7f3d0;
+      }
+
+      .urgency-medium {
+        background: #92400e;
+        color: #fde68a;
+      }
+
+      .urgency-high {
+        background: #991b1b;
+        color: #fecaca;
+      }
+
+      @media screen and (max-width: 600px) {
+        .header {
+          padding: 20px 16px;
+        }
+
+        .header-text {
+          font-size: 16px;
+        }
+
+        .header img {
+          max-width: 80px;
+        }
+
+        .content {
+          padding: 32px 20px;
+        }
+
+        .content h1 {
+          font-size: 24px;
+        }
+      }
+
+      /* Tech theme override */
+      body {
+        background: #111827;
+        color: #e5e7eb;
+      }
+
+      .container {
+        border-radius: 16px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+        background: #0f172a;
+      }
+
+      .header {
+        background: radial-gradient(120% 120% at 100% 0%, #1b2a4a 0%, #0f172a 55%, #0b1020 100%);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .header-text {
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+      }
+
+      .content {
+        background: linear-gradient(180deg, #0f172a 0%, #0b1222 100%);
+      }
+
+      .content h1 {
+        color: #60a5fa;
+      }
+
+      .content p {
+        color: #cbd5f5;
+      }
+
+      .content p strong {
+        color: #f8fafc;
+      }
+
+      .info-card {
+        background: #1e293b;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .info-card .label {
+        color: #9ca3af;
+      }
+
+      .info-card .value {
+        color: #f1f5f9;
+      }
+
+      .message-box {
+        background: #0f172a;
+        border-color: #374151;
+        color: #cbd5e1;
+      }
+
+      .footer {
+        background: #111827;
+        color: #ffffff;
+        text-align: center;
+        padding: 32px;
+        font-size: 14px;
+        border-top: 1px solid #1f2937;
+      }
+
+      .footer-social {
+        margin-bottom: 16px;
+      }
+
+      .footer-social a {
+        display: inline-block;
+        margin: 0 8px;
+        color: #ffffff;
+        text-decoration: none;
+        font-size: 20px;
+      }
+
+      .footer p {
+        margin: 8px 0;
+        color: #9ca3af;
+      }
+
+      .footer a {
+        color: #ffffff;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .footer-payments {
+        margin-top: 16px;
+      }
+
+      .footer-payments span {
+        display: inline-block;
+        background: #374151;
+        color: #ffffff;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        margin: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td align="left" valign="middle" class="header-text">WorldAssemblyTechnology</td>
+            <td align="right" valign="middle">
+              <img
+                src="https://res.cloudinary.com/dub48rf0p/image/upload/v1770006657/WorldAsseblyTechnologyPNGEmail_b6bsll.png"
+                alt="Logo"
+                style="
+                  border-radius: 8px;
+                  filter: drop-shadow(0 0 12px rgba(0, 102, 255, 0.6)) drop-shadow(0 0 25px rgba(0, 102, 255, 0.4))
+                    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+                "
+              />
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="content">
+        <h1>Nueva Solicitud de Reparación</h1>
+
+        <p>Se ha recibido una nueva solicitud de reparación desde el sitio web.</p>
+
+        <div class="info-card">
+          <p class="label">Cliente</p>
+          <p class="value">{{fullName}}</p>
+
+          <p class="label" style="margin-top: 16px">Email</p>
+          <p class="value">{{email}}</p>
+
+          <p class="label" style="margin-top: 16px">Teléfono</p>
+          <p class="value">{{phone}}</p>
+
+          <p class="label" style="margin-top: 16px">Tipo de dispositivo</p>
+          <p class="value">{{deviceType}}</p>
+
+          <p class="label" style="margin-top: 16px">Marca y modelo</p>
+          <p class="value">{{brand}} {{model}}</p>
+
+          <p class="label" style="margin-top: 16px">Urgencia</p>
+          <p>
+            <span class="urgency-badge urgency-{{urgency}}">{{urgency}}</span>
+          </p>
+
+          <p class="label" style="margin-top: 16px">Descripción del problema</p>
+          <div class="message-box">{{issueDescription}}</div>
+        </div>
+
+        <p style="color: #808080; font-size: 14px">
+          Por favor revisá la solicitud y contactá al cliente a la brevedad.
+        </p>
+      </div>
+
+      <div class="footer">
+        <div class="footer-social">
+          <p style="color: #9ca3af; margin-bottom: 12px">Seguinos en nuestras redes:</p>
+          <a href="https://web.whatsapp.com" target="_blank" rel="noopener noreferrer">
+            <img src="https://cdn-icons-png.flaticon.com/128/3670/3670051.png" alt="WhatsApp" width="28" height="28" />
+          </a>
+          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer">
+            <img
+              src="https://cdn-icons-png.flaticon.com/128/15707/15707749.png"
+              alt="Instagram"
+              width="28"
+              height="28"
+            />
+          </a>
+          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">
+            <img
+              src="https://cdn-icons-png.flaticon.com/128/15047/15047435.png"
+              alt="Facebook"
+              width="28"
+              height="28"
+            />
+          </a>
+        </div>
+        <p style="color: #ffffff; font-size: 13px">
+          Copyright © 2025 <strong>WorldAssemblyTechnology</strong>. Todos los derechos reservados.
+        </p>
+        <p style="margin-top: 12px">
+          <a href="{{frontendUrl}}">Acceder al sistema</a> ·
+          <a href="{{frontendUrl}}/contacto">Contacto</a>
+        </p>
+        <div class="footer-payments">
+          <span>VISA</span>
+          <span>MC</span>
+          <span>MP</span>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

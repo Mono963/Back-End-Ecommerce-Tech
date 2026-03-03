@@ -147,6 +147,39 @@ export class MailProcessor {
           d.products as { productName: string; productImage: string | null; reviewUrl: string }[],
           d.reviewUrl as string,
         ),
+
+      // Repairs
+      'repair-confirmation': (to, d) =>
+        this.mailService.sendRepairConfirmation(
+          to,
+          d.fullName as string,
+          d.repairId as string,
+          d.deviceType as string,
+          d.brand as string,
+          d.model as string,
+          d.issueDescription as string,
+        ),
+
+      'repair-admin': (_to, d) =>
+        this.mailService.sendRepairNotificationToAdmin(
+          d.fullName as string,
+          d.email as string,
+          d.phone as string,
+          d.deviceType as string,
+          d.brand as string,
+          d.model as string,
+          d.issueDescription as string,
+          d.urgency as string,
+        ),
+
+      'repair-status-update': (to, d) =>
+        this.mailService.sendRepairStatusUpdate(
+          to,
+          d.fullName as string,
+          d.repairId as string,
+          d.status as string,
+          d.adminNotes as string | undefined,
+        ),
     };
   }
 
