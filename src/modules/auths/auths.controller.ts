@@ -98,13 +98,10 @@ export class AuthsController {
   })
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('exchange-code')
-  async exchangeCode(
-    @Body('code') code: string,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<{ userId: string; success: boolean }> {
+  async exchangeCode(@Body('code') code: string): Promise<{ accessToken: string; userId: string; success: boolean }> {
     const tokenData = await this.authService.exchangeAuthCode(code);
-    res.cookie('access_token', tokenData.accessToken, this.authService.getCookieOptions());
     return {
+      accessToken: tokenData.accessToken,
       userId: tokenData.userId,
       success: true,
     };
