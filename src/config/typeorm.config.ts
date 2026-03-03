@@ -17,7 +17,7 @@ const config = {
   autoLoadEntities: true,
   synchronize: false,
   logging: isProduction ? ['error'] : ['error', 'warn', 'info'],
-  ssl: isProduction ? { rejectUnauthorized: true } : { rejectUnauthorized: false },
+  ssl: { rejectUnauthorized: false },
   extra: {
     max: isProduction ? 20 : 10,
     min: isProduction ? 5 : 2,
