@@ -22,7 +22,7 @@ class EnvironmentVariables {
   @IsString() GOOGLE_CLIENT_ID: string;
   @IsString() GOOGLE_CLIENT_SECRET: string;
   @IsString() GOOGLE_CALLBACK_URL: string;
-  @IsString() FRONTEND_CLOUD_URL: string;
+  @IsString() FRONTEND_URL: string;
 
   @IsString() CLOUDINARY_CLOUD_NAME: string;
   @IsString() CLOUDINARY_API_KEY: string;
@@ -79,10 +79,6 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   N8N_ENABLED?: string;
-
-  @IsOptional()
-  @IsString()
-  FRONTEND_URL?: string;
 
   @IsOptional()
   @IsString()
