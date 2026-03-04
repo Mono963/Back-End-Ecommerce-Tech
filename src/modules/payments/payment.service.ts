@@ -108,10 +108,15 @@ export class PaymentsService implements IPaymentService {
     await queryRunner.startTransaction();
 
     try {
+      await queryRunner.manager
+        .createQueryBuilder(Order, 'order')
+        .setLock('pessimistic_write')
+        .where('order.id = :id', { id: orderId })
+        .getOne();
+
       const order = await queryRunner.manager.findOne(Order, {
         where: { id: orderId },
         relations: ['user', 'orderDetail', 'orderDetail.items'],
-        lock: { mode: 'pessimistic_write' },
       });
 
       if (!order) {
