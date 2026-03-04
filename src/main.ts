@@ -56,12 +56,13 @@ async function bootstrap(): Promise<void> {
     'http://127.0.0.1:3000',
     'http://localhost:5173',
   ];
+  const prodOrigins = [process.env.FRONTEND_URL, process.env.BACKEND_URL].filter(Boolean);
   const isProduction = process.env.NODE_ENV === 'production';
   const corsOrigins = process.env.CORS_ORIGINS
     ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
     : isProduction
-      ? []
-      : devOrigins;
+      ? prodOrigins
+      : [...devOrigins, ...prodOrigins];
 
   app.enableCors({
     origin: corsOrigins,
