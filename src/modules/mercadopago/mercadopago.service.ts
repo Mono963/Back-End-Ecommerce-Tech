@@ -101,9 +101,9 @@ export class MercadoPagoService {
         email: user.email,
       },
       back_urls: {
-        success: `${frontendUrl}/orders/success`,
-        failure: `${frontendUrl}/orders/failure`,
-        pending: `${frontendUrl}/orders/pending`,
+        success: `${frontendUrl}/payments/success`,
+        failure: `${frontendUrl}/payments/failure`,
+        pending: `${frontendUrl}/payments/pending`,
       },
       ...(isProduction && { auto_return: 'approved' }),
       notification_url: `${backendUrl}/payments/webhook`,
