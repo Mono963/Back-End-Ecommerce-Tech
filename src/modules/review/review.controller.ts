@@ -12,13 +12,15 @@ import {
   Req,
   Query,
   UseInterceptors,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { CacheInterceptor } from '@nestjs/cache-manager';
 import { ReviewService } from './review.service';
 import { Roles, UserRole } from 'src/decorator/role.decorator';
 import { AuthGuard } from 'src/guards/auth.guards';
 import { RoleGuard } from 'src/guards/auth.guards.role';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthRequest } from 'src/common/auths/auth-request.interface';
 import { ReviewMapper } from './mappers/review.mapper';
 import { PaginatedReviewsAdminDto, ReviewSearchQueryDto } from './dto/PaginationQueryDto';
@@ -116,13 +118,17 @@ export class ReviewController {
     summary: 'Get public reviews for a product',
     description: 'Returns all visible reviews for a product (No authentication, without isVisible)',
   })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Max reviews to return', example: 20 })
   @ApiResponse({
     status: 200,
     description: 'Product reviews retrieved',
     type: [Object],
   })
-  async getProductReviewsPublic(@Param('productId') productId: string): Promise<ReviewResponsePublicDto[]> {
-    return await this.reviewService.findByProductPublic(productId);
+  async getProductReviewsPublic(
+    @Param('productId') productId: string,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ): Promise<ReviewResponsePublicDto[]> {
+    return await this.reviewService.findByProductPublic(productId, limit);
   }
 
   @Get('can-review/:productId')
@@ -155,14 +161,18 @@ export class ReviewController {
     summary: 'Get all reviews for a product (Admin)',
     description: 'Returns all reviews for a product INCLUDING isVisible (Admin only)',
   })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Max reviews to return', example: 50 })
   @ApiResponse({
     status: 200,
     description: 'Product reviews retrieved (includes isVisible)',
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
-  async getProductReviews(@Param('productId') productId: string): Promise<ReviewResponsePublicDto[]> {
-    return await this.reviewService.findByProduct(productId);
+  async getProductReviews(
+    @Param('productId') productId: string,
+    @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
+  ): Promise<ReviewResponsePublicDto[]> {
+    return await this.reviewService.findByProduct(productId, limit);
   }
 
   @Patch(':id/visibility')

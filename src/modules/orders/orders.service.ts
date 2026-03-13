@@ -419,10 +419,10 @@ export class OrdersService {
 
     const revenueResult = await this.orderDetailRepo
       .createQueryBuilder('detail')
-      .leftJoin('detail.order', 'order')
+      .leftJoin('detail.order', 'ord')
       .select('COALESCE(SUM(detail.total), 0)', 'total')
-      .addSelect(`COALESCE(SUM(CASE WHEN order."createdAt" >= :date THEN detail.total ELSE 0 END), 0)`, 'monthly')
-      .where('order.status != :status', { status: OrderStatus.CANCELLED })
+      .addSelect(`COALESCE(SUM(CASE WHEN ord."createdAt" >= :date THEN detail.total ELSE 0 END), 0)`, 'monthly')
+      .where('ord.status != :status', { status: OrderStatus.CANCELLED })
       .setParameter('date', currentMonth)
       .getRawOne<{ total: string; monthly: string }>();
 

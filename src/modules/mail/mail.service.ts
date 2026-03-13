@@ -655,6 +655,95 @@ export class MailService {
     await this.sendMail(email, subject, textAlt, 'repair-status-update.html', context);
   }
 
+  // ==================== REEMBOLSOS ====================
+
+  async sendRefundRequestConfirmation(
+    email: string,
+    userName: string,
+    orderNumber: string,
+    reason: string,
+    description: string,
+    refundId: string,
+  ): Promise<void> {
+    const subject = 'Solicitud de reembolso recibida - WorldAssemblyTechnology';
+    const textAlt =
+      `Hola ${userName},\n\n` +
+      `Recibimos tu solicitud de reembolso para la orden #${orderNumber}.\n` +
+      `Motivo: ${reason}\n` +
+      `ID de solicitud: ${refundId}\n\n` +
+      `Te mantendremos informado.\n\n` +
+      `Saludos,\nEl equipo de WorldAssemblyTechnology.`;
+
+    const context = {
+      userName,
+      orderNumber,
+      reason,
+      description,
+      refundId,
+      appName: 'WorldAssemblyTechnology',
+    };
+
+    await this.sendMail(email, subject, textAlt, 'refund-request-confirmation.html', context);
+  }
+
+  async sendRefundRequestNotificationToAdmin(
+    userName: string,
+    userEmail: string,
+    orderNumber: string,
+    reason: string,
+    description: string,
+    refundId: string,
+    orderTotal: number,
+  ): Promise<void> {
+    const subject = 'Nueva solicitud de reembolso';
+    const textAlt =
+      `Nueva solicitud de reembolso:\n\n` +
+      `Cliente: ${userName}\n` +
+      `Email: ${userEmail}\n` +
+      `Orden: #${orderNumber}\n` +
+      `Motivo: ${reason}\n` +
+      `Descripción: ${description}\n` +
+      `Monto de orden: $${orderTotal}`;
+
+    const context = {
+      userName,
+      userEmail,
+      orderNumber,
+      reason,
+      description,
+      refundId,
+      orderTotal,
+      appName: 'WorldAssemblyTechnology',
+    };
+
+    await this.sendMail(this.adminEmail, subject, textAlt, 'refund-request-admin.html', context);
+  }
+
+  async sendRefundRejectedEmail(
+    email: string,
+    userName: string,
+    orderNumber: string,
+    adminResponse: string,
+    refundId: string,
+  ): Promise<void> {
+    const subject = 'Solicitud de reembolso rechazada - WorldAssemblyTechnology';
+    const textAlt =
+      `Hola ${userName},\n\n` +
+      `Tu solicitud de reembolso (ID: ${refundId}) para la orden #${orderNumber} ha sido rechazada.\n` +
+      `Motivo: ${adminResponse}\n\n` +
+      `Saludos,\nEl equipo de WorldAssemblyTechnology.`;
+
+    const context = {
+      userName,
+      orderNumber,
+      adminResponse,
+      refundId,
+      appName: 'WorldAssemblyTechnology',
+    };
+
+    await this.sendMail(email, subject, textAlt, 'refund-rejected.html', context);
+  }
+
   // ==================== NEWSLETTER METHODS ====================
 
   private embedTrackingPixel(html: string, trackingId?: string): string {
@@ -685,6 +774,7 @@ export class MailService {
     unsubscribeUrl?: string,
     trackingId?: string,
   ): Promise<void> {
+    console.log('UNSUBSCRIBE URL:', unsubscribeUrl);
     const subject = '🤖 ¡Tu newsletter de bienvenida!';
     const rawHtml = buildWelcomeNewsletterHtml(userName, this.frontendUrl, unsubscribeUrl);
     const withPixel = this.embedTrackingPixel(rawHtml, trackingId);

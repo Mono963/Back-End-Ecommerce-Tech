@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Consulta Enviada</title>
+    <title>Solicitud de Reembolso Recibida</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
     <style>
@@ -92,6 +92,31 @@
         color: #0066ff;
       }
 
+      .alert-info {
+        background: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        padding: 16px 20px;
+        border-radius: 0 8px 8px 0;
+        margin: 24px 0;
+        text-align: center;
+      }
+
+      .alert-info p {
+        margin: 0;
+        color: #1565c0;
+        font-weight: 500;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 14px;
+        background: #92400e;
+        color: #fde68a;
+      }
+
       .btn {
         display: inline-block;
         margin: 24px 0;
@@ -129,34 +154,6 @@
         .btn {
           padding: 12px 24px;
           font-size: 15px;
-        }
-
-        .footer {
-          background: #07090f;
-          color: #ffffff;
-          text-align: center;
-          padding: 32px;
-          font-size: 14px;
-          border-top: 1px solid #10161d;
-        }
-
-        .footer-social a {
-          display: inline-block;
-          margin: 0 8px;
-          color: #ffffff;
-          text-decoration: none;
-          font-size: 20px;
-        }
-
-        .footer-payments span {
-          display: inline-block;
-          background: #374151;
-          color: #ffffff;
-          padding: 6px 12px;
-          border-radius: 4px;
-          font-size: 11px;
-          font-weight: 600;
-          margin: 4px;
         }
       }
 
@@ -208,7 +205,6 @@
         background: linear-gradient(135deg, #1d4ed8, #2563eb);
       }
 
-      /* Adaptar cards al tema dark */
       .info-card {
         background: #1e293b;
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -218,7 +214,14 @@
         color: #cbd5e1;
       }
 
-      /* Footer (front palette) */
+      .alert-info {
+        background: rgba(96, 165, 250, 0.15);
+      }
+
+      .alert-info p {
+        color: #60a5fa;
+      }
+
       .footer {
         background: #111827;
         color: #ffffff;
@@ -289,22 +292,35 @@
       </div>
 
       <div class="content">
-        <h1>¡Gracias por contactarnos, {{name}}!</h1>
-        <p>Recibimos tu consulta y en breve alguien de nuestro equipo se pondrá en contacto con vos.</p>
+        <h1>Solicitud de reembolso recibida</h1>
+
+        <div class="alert-info">
+          <p>Tu solicitud está siendo procesada</p>
+        </div>
+
+        <p>Hola <strong>{{userName}}</strong>,</p>
+        <p>
+          Recibimos tu solicitud de reembolso para la orden <strong>#{{orderNumber}}</strong>.
+          Nuestro equipo la revisará y te notificaremos el resultado.
+        </p>
 
         <div class="info-card">
-          <p>Responderemos a: <strong>{{email}}</strong></p>
+          <p>ID de solicitud: <strong>{{refundId}}</strong></p>
+          <p>Orden: <strong>#{{orderNumber}}</strong></p>
           <p>Motivo: <strong>{{reason}}</strong></p>
+          <p>Descripción: <strong>{{description}}</strong></p>
+          <p>Estado: <span class="status-badge">Pendiente de revisión</span></p>
         </div>
+
+        <p>Te enviaremos un email cuando haya novedades sobre tu solicitud.</p>
 
         <p>Saludos cordiales,<br />El equipo de <strong>{{appName}}</strong>.</p>
 
         <div style="text-align: center">
-          <a href="{{frontendUrl}}" class="btn">Volver al sitio</a>
+          <a href="{{frontendUrl}}" class="btn">Volver a la tienda</a>
         </div>
       </div>
 
-      <!-- Footer oscuro estilo tech -->
       <div class="footer">
         <div class="footer-social">
           <p style="color: #9ca3af; margin-bottom: 12px">Seguinos en nuestras redes:</p>
@@ -338,7 +354,6 @@
         <div class="footer-payments">
           <span>VISA</span>
           <span>MC</span>
-
           <span>MP</span>
         </div>
       </div>

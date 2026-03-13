@@ -24,6 +24,13 @@ export class CategoriesController {
   })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({
+    name: 'category',
+    required: false,
+    type: String,
+    description: 'Search by category name (partial, case-insensitive)',
+    example: 'Laptops',
+  })
   @ApiResponse({ status: 200, description: 'OK', type: PaginatedCategoryDto })
   @Get()
   @UseInterceptors(CacheInterceptor)

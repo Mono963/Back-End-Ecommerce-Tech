@@ -20,6 +20,7 @@ import {
 import { OrderStatus } from '../orders/enum/order.enum';
 import { DiscountsService } from '../discounts/discounts.service';
 import { OrderNotificationService } from '../orders/order-notifications.service';
+import { IPaginatedResult } from '../../common/pagination/IPaginatedResult';
 
 @Injectable()
 export class PaymentsService implements IPaymentService {
@@ -244,32 +245,50 @@ export class PaymentsService implements IPaymentService {
     return payment ? this.mapPaymentToResponse(payment) : null;
   }
 
-  async getPaymentsByUserId(userId: string): Promise<IPaymentResponse[]> {
-    const payments = await this.PaymentsRepository.find({
+  async getPaymentsByUserId(
+    userId: string,
+    pagination: { page: number; limit: number } = { page: 1, limit: 20 },
+  ): Promise<IPaginatedResult<IPaymentResponse>> {
+    const [payments, total] = await this.PaymentsRepository.findAndCount({
       where: { user: { id: userId } },
       relations: ['user', 'order'],
       order: { createdAt: 'DESC' },
+      skip: (pagination.page - 1) * pagination.limit,
+      take: pagination.limit,
     });
-    return payments.map((p) => this.mapPaymentToResponse(p));
+    return {
+      items: payments.map((p) => this.mapPaymentToResponse(p)),
+      total,
+      pages: Math.ceil(total / pagination.limit),
+    };
   }
 
-  async getAllOrdersPayment(): Promise<IPaymentCompleted[]> {
-    const order_payments = await this.PaymentsRepository.find({
+  async getAllOrdersPayment(
+    pagination: { page: number; limit: number } = { page: 1, limit: 20 },
+  ): Promise<IPaginatedResult<IPaymentCompleted>> {
+    const [order_payments, total] = await this.PaymentsRepository.findAndCount({
       relations: ['user', 'order'],
+      order: { createdAt: 'DESC' },
+      skip: (pagination.page - 1) * pagination.limit,
+      take: pagination.limit,
     });
-    return order_payments.map((payment) => ({
-      id: payment.id,
-      payment_id: payment.paymentId,
-      user_id: payment.user.id,
-      order_id: payment.order.id,
-      status: payment.status,
-      status_detail: payment.statusDetail,
-      amount: payment.amount,
-      currency_id: payment.currencyId,
-      payment_type_id: payment.paymentTypeId,
-      payment_method_id: payment.paymentMethodId,
-      date_approved: payment.dateApproved,
-      createdAt: payment.createdAt,
-    }));
+    return {
+      items: order_payments.map((payment) => ({
+        id: payment.id,
+        payment_id: payment.paymentId,
+        user_id: payment.user.id,
+        order_id: payment.order.id,
+        status: payment.status,
+        status_detail: payment.statusDetail,
+        amount: payment.amount,
+        currency_id: payment.currencyId,
+        payment_type_id: payment.paymentTypeId,
+        payment_method_id: payment.paymentMethodId,
+        date_approved: payment.dateApproved,
+        createdAt: payment.createdAt,
+      })),
+      total,
+      pages: Math.ceil(total / pagination.limit),
+    };
   }
 }

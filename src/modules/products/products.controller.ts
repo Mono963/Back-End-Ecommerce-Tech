@@ -110,6 +110,27 @@ export class ProductsController {
     description: 'Filter featured products only',
     example: true,
   })
+  @ApiQuery({
+    name: 'variantType',
+    required: false,
+    type: String,
+    description: 'Filter by variant type (use with variantValue). Values: ram, storage, processor, vram, color, connectivity, screen_size, resolution, refresh_rate, warranty, condition, switch',
+    example: 'ram',
+  })
+  @ApiQuery({
+    name: 'variantValue',
+    required: false,
+    type: String,
+    description: 'Filter by variant name/value (use with variantType)',
+    example: '16GB',
+  })
+  @ApiQuery({
+    name: 'inStock',
+    required: false,
+    type: Boolean,
+    description: 'Filter only products with available stock',
+    example: true,
+  })
   @ApiResponse({
     status: 200,
     description: 'Products retrieved successfully',
@@ -156,13 +177,23 @@ export class ProductsController {
     description: 'Brand name',
     example: 'Dell',
   })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Maximum number of products to return',
+    example: 20,
+  })
   @ApiResponse({
     status: 200,
     description: 'Brand products retrieved',
     type: [ResponseProductDto],
   })
-  async getProductsByBrand(@Param('brand') brand: string): Promise<ResponseProductDto[]> {
-    return await this.productsService.getProductsByBrand(brand);
+  async getProductsByBrand(
+    @Param('brand') brand: string,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ): Promise<ResponseProductDto[]> {
+    return await this.productsService.getProductsByBrand(brand, limit);
   }
 
   @Get('category/:categoryId')
@@ -182,18 +213,52 @@ export class ProductsController {
     description: 'Category products retrieved',
     type: [ResponseProductDto],
   })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Maximum number of products to return',
+    example: 20,
+  })
   @ApiResponse({
     status: 404,
     description: 'Category not found',
   })
-  async getProductsByCategory(@Param('categoryId', ParseUUIDPipe) categoryId: string): Promise<ResponseProductDto[]> {
-    return await this.productsService.getProductsByCategory(categoryId);
+  async getProductsByCategory(
+    @Param('categoryId', ParseUUIDPipe) categoryId: string,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ): Promise<ResponseProductDto[]> {
+    return await this.productsService.getProductsByCategory(categoryId, limit);
   }
 
   @Sse('search/hybrid')
   @Throttle({ default: { limit: 240, ttl: 60000 } })
   hybridSearch(@Query('q') query: string): Observable<MessageEvent> {
     return this.productsService.hybridSearchStream(query);
+  }
+
+  @Get(':id/variants-grouped')
+  @UseInterceptors(CacheInterceptor)
+  @ApiOperation({
+    summary: 'Get product variants grouped by type',
+    description: 'Returns all available variants for a product, grouped by variant type (e.g. ram, color, storage)',
+  })
+  @ApiParam({
+    name: 'id',
+    type: 'string',
+    description: 'Product ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Variants grouped by type',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Product not found',
+  })
+  async getVariantsGrouped(@Param('id', ParseUUIDPipe) id: string) {
+    return await this.productsService.getVariantsGroupedByType(id);
   }
 
   @Get(':id/related')
@@ -499,8 +564,8 @@ export class ProductsController {
     @Query('variants') variants?: string,
   ): Promise<{ productId: string; variantIds: string[]; finalPrice: number }> {
     const variantIds = variants ? variants.split(',').filter((id) => id.trim()) : [];
-    const finalPrice = await this.productsService.calculateProductPrice(productId, variantIds);
-    return { productId, variantIds, finalPrice };
+    const priceInfo = await this.productsService.calculateProductPrice(productId, variantIds);
+    return { productId, variantIds, finalPrice: priceInfo.finalPrice };
   }
 
   @Get(':id/stock')

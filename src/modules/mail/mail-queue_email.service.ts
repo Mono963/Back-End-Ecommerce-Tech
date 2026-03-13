@@ -25,7 +25,10 @@ export type MailJobType =
   | 'review-request'
   | 'repair-confirmation'
   | 'repair-admin'
-  | 'repair-status-update';
+  | 'repair-status-update'
+  | 'refund-request-confirmation'
+  | 'refund-request-admin'
+  | 'refund-rejected';
 
 export interface MailJobData {
   type: MailJobType;
@@ -369,6 +372,60 @@ export class MailQueueService {
       orderNumber,
       products,
       reviewUrl,
+    });
+  }
+
+  // ==================== REEMBOLSOS ====================
+
+  async queueRefundRequestConfirmation(
+    email: string,
+    userName: string,
+    orderNumber: string,
+    reason: string,
+    description: string,
+    refundId: string,
+  ): Promise<void> {
+    await this.addToQueue('refund-request-confirmation', email, {
+      userName,
+      orderNumber,
+      reason,
+      description,
+      refundId,
+    });
+  }
+
+  async queueRefundRequestNotificationToAdmin(
+    userName: string,
+    userEmail: string,
+    orderNumber: string,
+    reason: string,
+    description: string,
+    refundId: string,
+    orderTotal: number,
+  ): Promise<void> {
+    await this.addToQueue('refund-request-admin', this.adminEmail, {
+      userName,
+      userEmail,
+      orderNumber,
+      reason,
+      description,
+      refundId,
+      orderTotal,
+    });
+  }
+
+  async queueRefundRejectedEmail(
+    email: string,
+    userName: string,
+    orderNumber: string,
+    adminResponse: string,
+    refundId: string,
+  ): Promise<void> {
+    await this.addToQueue('refund-rejected', email, {
+      userName,
+      orderNumber,
+      adminResponse,
+      refundId,
     });
   }
 }

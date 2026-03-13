@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, DataSource, ILike } from 'typeorm';
 import { Product } from './entities/products.entity';
@@ -57,7 +57,24 @@ export class ProductsService {
   }
 
   async getProducts(searchQuery: ProductsSearchQueryDto): Promise<IPaginatedResult<IProductResponse>> {
-    const { name, basePrice, minPrice, maxPrice, brand, categoryId, color, featured, ...pagination } = searchQuery;
+    const {
+      name, basePrice, minPrice, maxPrice, brand, categoryId, color, featured,
+      ram, storage, processor, vram, screen_size, resolution, refresh_rate, connectivity, condition,
+      inStock,
+      ...pagination
+    } = searchQuery;
+
+    const variantFilters: { type: string; value: string }[] = [];
+    if (color) variantFilters.push({ type: 'color', value: color });
+    if (ram) variantFilters.push({ type: 'ram', value: ram });
+    if (storage) variantFilters.push({ type: 'storage', value: storage });
+    if (processor) variantFilters.push({ type: 'processor', value: processor });
+    if (vram) variantFilters.push({ type: 'vram', value: vram });
+    if (screen_size) variantFilters.push({ type: 'screen_size', value: screen_size });
+    if (resolution) variantFilters.push({ type: 'resolution', value: resolution });
+    if (refresh_rate) variantFilters.push({ type: 'refresh_rate', value: refresh_rate });
+    if (connectivity) variantFilters.push({ type: 'connectivity', value: connectivity });
+    if (condition) variantFilters.push({ type: 'condition', value: condition });
 
     const hasFilters: boolean = Boolean(
       name ||
@@ -66,8 +83,9 @@ export class ProductsService {
         maxPrice !== undefined ||
         brand ||
         categoryId ||
-        color ||
-        featured !== undefined,
+        featured !== undefined ||
+        variantFilters.length > 0 ||
+        inStock !== undefined,
     );
 
     if (!hasFilters) {
@@ -111,11 +129,19 @@ export class ProductsService {
       queryBuilder.andWhere('product.featured = :featured', { featured });
     }
 
-    if (color) {
+    for (const filter of variantFilters) {
+      const paramKey = `variant_${filter.type}`;
       queryBuilder.andWhere(
-        'EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = product.id ' +
-          "AND pv.type = 'color' AND LOWER(pv.name) LIKE LOWER(:colorName))",
-        { colorName: `%${color}%` },
+        `EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = product.id ` +
+          `AND pv.type = :${paramKey}_type AND LOWER(pv.name) LIKE LOWER(:${paramKey}_value))`,
+        { [`${paramKey}_type`]: filter.type, [`${paramKey}_value`]: `%${filter.value}%` },
+      );
+    }
+
+    if (inStock === true) {
+      queryBuilder.andWhere(
+        '((product.hasVariants = false AND product.baseStock > 0) OR ' +
+          '(product.hasVariants = true AND EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = product.id AND pv.is_available = true AND pv.stock > 0)))',
       );
     }
 
@@ -385,7 +411,7 @@ export class ProductsService {
     };
   }
 
-  async calculateProductPrice(productId: string, variantIds: string[] = []): Promise<number> {
+  async getVariantsGroupedByType(productId: string) {
     const product = await this.productRepo.findOne({
       where: { id: productId },
       relations: ['variants'],
@@ -395,7 +421,41 @@ export class ProductsService {
       throw new NotFoundException(`Product with id ${productId} not found`);
     }
 
-    let totalPrice = Number(product.basePrice);
+    const grouped: Record<string, typeof product.variants> = {};
+    for (const variant of product.variants) {
+      if (!grouped[variant.type]) {
+        grouped[variant.type] = [];
+      }
+      grouped[variant.type].push(variant);
+    }
+
+    for (const type of Object.keys(grouped)) {
+      grouped[type].sort((a, b) => a.sortOrder - b.sortOrder);
+    }
+
+    return grouped;
+  }
+
+  async calculateProductPrice(
+    productId: string,
+    variantIds: string[] = [],
+  ): Promise<{
+    originalPrice: number;
+    finalPrice: number;
+    hasActiveDiscount: boolean;
+    discountAmount: number;
+    discountPercentage: number | null;
+  }> {
+    const product = await this.productRepo.findOne({
+      where: { id: productId },
+      relations: ['variants'],
+    });
+
+    if (!product) {
+      throw new NotFoundException(`Product with id ${productId} not found`);
+    }
+
+    let originalPrice = Number(product.basePrice);
 
     if (variantIds.length > 0) {
       const variants = await this.variantRepo.find({
@@ -414,10 +474,41 @@ export class ProductsService {
         throw new BadRequestException('Multiple variants of the same type cannot be selected');
       }
 
-      totalPrice += variants.reduce((sum, variant) => sum + Number(variant.priceModifier), 0);
+      originalPrice += variants.reduce((sum, variant) => sum + Number(variant.priceModifier), 0);
     }
 
-    return totalPrice;
+    const discount = await this.discountsService.getActiveProductDiscount(productId);
+
+    if (!discount) {
+      return {
+        originalPrice,
+        finalPrice: originalPrice,
+        hasActiveDiscount: false,
+        discountAmount: 0,
+        discountPercentage: null,
+      };
+    }
+
+    let discountAmount: number;
+    let discountPercentage: number | null;
+
+    if (discount.discountType === 'percentage') {
+      discountAmount = Math.round(originalPrice * (Number(discount.value) / 100) * 100) / 100;
+      discountPercentage = Number(discount.value);
+    } else {
+      discountAmount = Math.min(Number(discount.value), originalPrice);
+      discountPercentage = null;
+    }
+
+    const finalPrice = Math.max(0, Math.round((originalPrice - discountAmount) * 100) / 100);
+
+    return {
+      originalPrice,
+      finalPrice,
+      hasActiveDiscount: true,
+      discountAmount,
+      discountPercentage,
+    };
   }
 
   async getAvailableStock(productId: string, variantIds: string[] = []): Promise<number> {
@@ -461,7 +552,7 @@ export class ProductsService {
     return await this.mapProductsWithDiscounts(products);
   }
 
-  async getProductsByBrand(brand: string): Promise<IProductResponse[]> {
+  async getProductsByBrand(brand: string, limit: number = 20): Promise<IProductResponse[]> {
     const products = await this.productRepo.find({
       where: {
         brand: ILike(`%${brand}%`),
@@ -469,6 +560,7 @@ export class ProductsService {
       },
       relations: ['category', 'variants', 'files', 'reviews'],
       order: { name: 'ASC' },
+      take: limit,
     });
 
     return await this.mapProductsWithDiscounts(products);
@@ -516,8 +608,10 @@ export class ProductsService {
     }
   }
 
-  async seedProducts(): Promise<{ message: string; total: number }> {
+  async seedProducts(): Promise<{ message: string; total: number; updated?: number }> {
     const created: Product[] = [];
+    let updated = 0;
+    let skipped = 0;
 
     const categoriasSeeder = await this.categoriesService.getCategories();
     if (!categoriasSeeder || categoriasSeeder.items.length === 0) {
@@ -530,13 +624,6 @@ export class ProductsService {
     if (!PRODUCTS_SEED || PRODUCTS_SEED.length === 0) {
       return {
         message: 'No seed data available',
-        total: 0,
-      };
-    }
-
-    if ((await this.productRepo.count()) > 0) {
-      return {
-        message: 'La base de datos ya contiene productos',
         total: 0,
       };
     }
@@ -554,7 +641,19 @@ export class ProductsService {
       try {
         const existing = await this.productRepo.findOneBy({ name: seedData.name });
         if (existing) {
-          this.logger.log(`Product ${seedData.name} already exists, skipping...`);
+          const seedImgs = seedData.imgUrls || [];
+          const currentImgs = existing.imgUrls || [];
+          const imgsChanged = JSON.stringify(seedImgs) !== JSON.stringify(currentImgs);
+
+          if (imgsChanged) {
+            existing.imgUrls = seedImgs;
+            await this.productRepo.save(existing);
+            updated++;
+            this.logger.log(`Product ${seedData.name} images updated.`);
+          } else {
+            skipped++;
+            this.logger.log(`Product ${seedData.name} already up to date, skipping...`);
+          }
           continue;
         }
 
@@ -612,13 +711,21 @@ export class ProductsService {
       }
     }
 
+    if (created.length === 0 && updated === 0) {
+      throw new HttpException(
+        'All products are already seeded and up to date',
+        HttpStatus.CONFLICT,
+      );
+    }
+
     return {
-      message: `Products seeded successfully. Created: ${created.length}/${PRODUCTS_SEED.length}`,
+      message: `Products seeded successfully. Created: ${created.length}, Updated: ${updated}, Skipped: ${skipped}`,
       total: created.length,
+      updated,
     };
   }
 
-  async getProductsByCategory(categoryId: string): Promise<IProductResponse[]> {
+  async getProductsByCategory(categoryId: string, limit: number = 20): Promise<IProductResponse[]> {
     const category = await this.categoriesService.getByIdCategory(categoryId);
 
     if (!category) {
@@ -632,6 +739,7 @@ export class ProductsService {
       },
       relations: ['category', 'files', 'variants', 'reviews'],
       order: { createdAt: 'DESC' },
+      take: limit,
     });
 
     return await this.mapProductsWithDiscounts(products);
