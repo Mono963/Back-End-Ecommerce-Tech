@@ -110,7 +110,8 @@ export class CartService {
         product.hasVariants,
       );
 
-      const unitPrice = await this.productsService.calculateProductPrice(dto.productId, dto.variantIds || []);
+      const priceInfo = await this.productsService.calculateProductPrice(dto.productId, dto.variantIds || []);
+      const unitPrice = priceInfo.finalPrice;
 
       const availableStock = await this.productsService.getAvailableStock(dto.productId, dto.variantIds || []);
 

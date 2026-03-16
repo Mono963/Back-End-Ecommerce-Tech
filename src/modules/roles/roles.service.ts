@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Role } from './entities/role.entity';
 import { DataSource, Repository } from 'typeorm';
 import { seedRoles } from 'src/seeds/role.seed';
+import { iRoleSuperAdmin, IRoleSuperAdminById } from './entities/interface/role.interface';
 
 @Injectable()
 export class RolesService {
@@ -14,7 +15,11 @@ export class RolesService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async findRoleById(roleId: string): Promise<Role> {
+  async findAll(): Promise<iRoleSuperAdmin[]> {
+    return await this.roleRepository.find({ select: ['id', 'name'] });
+  }
+
+  async findRoleById(roleId: string): Promise<IRoleSuperAdminById> {
     const role = await this.roleRepository.findOne({ where: { id: roleId } });
     if (!role) {
       throw new NotFoundException(`Role with id ${roleId} not found`);

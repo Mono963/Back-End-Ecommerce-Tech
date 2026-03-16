@@ -180,6 +180,37 @@ export class MailProcessor {
           d.status as string,
           d.adminNotes as string | undefined,
         ),
+
+      // Refunds
+      'refund-request-confirmation': (to, d) =>
+        this.mailService.sendRefundRequestConfirmation(
+          to,
+          d.userName as string,
+          d.orderNumber as string,
+          d.reason as string,
+          d.description as string,
+          d.refundId as string,
+        ),
+
+      'refund-request-admin': (_to, d) =>
+        this.mailService.sendRefundRequestNotificationToAdmin(
+          d.userName as string,
+          d.userEmail as string,
+          d.orderNumber as string,
+          d.reason as string,
+          d.description as string,
+          d.refundId as string,
+          d.orderTotal as number,
+        ),
+
+      'refund-rejected': (to, d) =>
+        this.mailService.sendRefundRejectedEmail(
+          to,
+          d.userName as string,
+          d.orderNumber as string,
+          d.adminResponse as string,
+          d.refundId as string,
+        ),
     };
   }
 

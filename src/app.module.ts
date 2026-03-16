@@ -33,6 +33,7 @@ import { NewsletterModule } from './modules/newsLetters/newsletter.module';
 import { DiscountsModule } from './modules/discounts/discounts.module';
 import { HealthModule } from './modules/health/health.module';
 import { RepairsModule } from './modules/repairs/repairs.module';
+import { RefundsModule } from './modules/refunds/refunds.module';
 
 @Module({
   imports: [
@@ -86,6 +87,7 @@ import { RepairsModule } from './modules/repairs/repairs.module';
     DiscountsModule,
     HealthModule,
     RepairsModule,
+    RefundsModule,
   ],
   controllers: [AppController],
   providers: [

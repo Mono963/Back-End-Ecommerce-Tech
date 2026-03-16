@@ -120,7 +120,11 @@ export class NewsletterService {
     return { enqueuedCount: totalProcessed };
   }
 
-  async unsubscribe(token: string): Promise<{ email: string }> {
+  async unsubscribe(token: string): Promise<{
+    message: string;
+    email: string;
+    alreadyUnsubscribed: boolean;
+  }> {
     if (!token || token.length < 32) {
       throw new NotFoundException('Token inválido');
     }
@@ -133,18 +137,30 @@ export class NewsletterService {
       throw new NotFoundException('Token inválido o expirado');
     }
 
+    // YA ESTABA DESUSCRIPTO
     if (!subscriber.isActive) {
       this.logger.log(`Subscriber ${subscriber.email} already unsubscribed.`);
-      return { email: subscriber.email };
+
+      return {
+        message: 'Este email ya estaba desuscripto del newsletter.',
+        email: subscriber.email,
+        alreadyUnsubscribed: true,
+      };
     }
 
+    // DESUSCRIBIR
     await this.subscriberRepository.update(subscriber.id, {
       isActive: false,
       unsubscribedAt: new Date(),
     });
 
     this.logger.log(`Subscriber unsubscribed: ${subscriber.email}`);
-    return { email: subscriber.email };
+
+    return {
+      message: 'Te has dado de baja del newsletter exitosamente.',
+      email: subscriber.email,
+      alreadyUnsubscribed: false,
+    };
   }
 
   async getTrackingStats(campaignType?: CampaignType): Promise<{

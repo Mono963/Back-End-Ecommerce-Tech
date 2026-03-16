@@ -12,7 +12,8 @@ import {
   Query,
   Headers,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { PaginationQueryDto } from '../../common/pagination';
 import { AuthGuard } from 'src/guards/auth.guards';
 
 import { Roles, UserRole } from 'src/decorator/role.decorator';
@@ -101,16 +102,17 @@ export class PaymentsController {
 
   @Get()
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get All payments' })
+  @ApiOperation({ summary: 'Get All payments (paginated)' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
   @ApiResponse({
     status: 200,
     description: 'Payment status retrieved successfully',
-    type: PaymentCompletedDto,
   })
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(UserRole.ADMIN)
-  async getAllPaymentStatus(): Promise<PaymentCompletedDto[]> {
-    return await this.PaymentsService.getAllOrdersPayment();
+  async getAllPaymentStatus(@Query() query: PaginationQueryDto) {
+    return await this.PaymentsService.getAllOrdersPayment({ page: query.page, limit: query.limit });
   }
 
   @Post('webhook')
@@ -166,15 +168,16 @@ export class PaymentsController {
 
   @Get('my-payments')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get all payments for the authenticated user' })
+  @ApiOperation({ summary: 'Get all payments for the authenticated user (paginated)' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
   @ApiResponse({
     status: 200,
     description: 'User payments retrieved successfully',
-    type: [PaymentResponseDto],
   })
   @UseGuards(AuthGuard)
-  async getMyPayments(@Req() req: AuthRequest): Promise<MyPaymentResponseDto[]> {
-    return await this.PaymentsService.getPaymentsByUserId(req.user.sub);
+  async getMyPayments(@Req() req: AuthRequest, @Query() query: PaginationQueryDto) {
+    return await this.PaymentsService.getPaymentsByUserId(req.user.sub, { page: query.page, limit: query.limit });
   }
 
   @Get('status/:paymentId')

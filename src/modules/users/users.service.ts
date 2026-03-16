@@ -15,6 +15,7 @@ import { ConfigService } from '@nestjs/config';
 import { MailQueueService } from '../mail/mail-queue_email.service';
 import { IPaginatedResult } from '../../common/pagination/IPaginatedResult';
 import { RolesService } from '../roles/roles.service';
+import { Role } from '../roles/entities/role.entity';
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
 import {
@@ -232,7 +233,7 @@ export class UsersService {
 
       const role = await this.rolesService.findRoleById(dto.roleId);
 
-      user.role = role;
+      user.role = { id: role.id } as Role;
       await this.usersRepository.save(user);
 
       this.logger.log(`Role updated for user ${userId}: ${role.name}`);
@@ -321,7 +322,7 @@ export class UsersService {
     await this.usersRepository.save(user);
 
     const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
-    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+    const resetUrl = `${frontendUrl}/auth/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
     await this.mailQueueService.queuePasswordResetEmail(user.email, user.name, resetUrl);
   }

@@ -166,11 +166,12 @@ export class ReviewService {
     return this.toPublicResponse(review);
   }
 
-  async findByProduct(productId: string): Promise<IReviewResponseAdmin[]> {
+  async findByProduct(productId: string, limit: number = 50): Promise<IReviewResponseAdmin[]> {
     const reviews = await this.reviewRepo.find({
       where: { product: { id: productId } },
       relations: ['user', 'product'],
       order: { createdAt: 'DESC' },
+      take: limit,
     });
     return reviews.map((r) => this.toAdminResponse(r));
   }
@@ -192,7 +193,7 @@ export class ReviewService {
     await this.reviewRepo.delete(id);
   }
 
-  async findByProductPublic(productId: string): Promise<IReviewResponsePublic[]> {
+  async findByProductPublic(productId: string, limit: number = 20): Promise<IReviewResponsePublic[]> {
     const reviews = await this.reviewRepo.find({
       where: {
         product: { id: productId },
@@ -200,6 +201,7 @@ export class ReviewService {
       },
       relations: ['user', 'product'],
       order: { createdAt: 'DESC' },
+      take: limit,
     });
 
     return reviews.map((r) => this.toPublicResponse(r));

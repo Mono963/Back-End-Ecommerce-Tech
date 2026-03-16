@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Consulta Enviada</title>
+    <title>Solicitud de Reembolso Rechazada</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
     <style>
@@ -60,8 +60,9 @@
       .content h1 {
         font-size: 28px;
         font-weight: 700;
-        color: #0066ff;
+        color: #d32f2f;
         margin: 0 0 24px 0;
+        text-align: center;
       }
 
       .content p {
@@ -76,20 +77,98 @@
         font-weight: 600;
       }
 
-      .info-card {
+      .order-id {
+        font-family: 'Courier New', monospace;
+        background: #f5f5f5;
+        padding: 4px 8px;
+        border-radius: 4px;
+        color: #0066ff;
+        font-weight: 600;
+      }
+
+      .alert-error {
+        background: #fbe9e7;
+        border-left: 4px solid #d32f2f;
+        padding: 16px 20px;
+        border-radius: 0 8px 8px 0;
+        margin: 24px 0;
+        text-align: center;
+      }
+
+      .alert-error p {
+        margin: 0;
+        color: #c62828;
+        font-weight: 500;
+      }
+
+      .rejection-card {
+        background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
+        border-radius: 12px;
+        padding: 32px;
+        margin: 24px 0;
+        color: white;
+        text-align: center;
+      }
+
+      .rejection-card .icon {
+        font-size: 48px;
+        margin-bottom: 12px;
+      }
+
+      .rejection-card h3 {
+        margin: 0 0 8px 0;
+        font-size: 14px;
+        font-weight: 500;
+        opacity: 0.9;
+      }
+
+      .rejection-card .refund-id {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        opacity: 0.8;
+        margin-top: 12px;
+      }
+
+      .details-table {
+        width: 100%;
+        margin: 24px 0;
+        border-collapse: collapse;
+      }
+
+      .details-table td {
+        padding: 12px 0;
+        border-bottom: 1px solid #e8e8e8;
+        font-size: 14px;
+      }
+
+      .details-table .label {
+        color: #666;
+      }
+
+      .details-table .value {
+        text-align: right;
+        font-weight: 600;
+        color: #1a1a2e;
+      }
+
+      .admin-response {
         background: #f5f5f5;
         border-radius: 8px;
         padding: 20px;
         margin: 24px 0;
+        border-left: 4px solid #d32f2f;
       }
 
-      .info-card p {
-        margin: 8px 0;
+      .admin-response h3 {
+        margin: 0 0 8px 0;
         font-size: 14px;
+        color: #d32f2f;
+        font-weight: 600;
       }
 
-      .info-card strong {
-        color: #0066ff;
+      .admin-response p {
+        margin: 0;
+        font-size: 14px;
       }
 
       .btn {
@@ -103,6 +182,10 @@
         font-weight: 600;
         font-size: 16px;
         box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);
+      }
+
+      .text-center {
+        text-align: center;
       }
 
       @media screen and (max-width: 600px) {
@@ -126,37 +209,13 @@
           font-size: 24px;
         }
 
+        .rejection-card {
+          padding: 24px 16px;
+        }
+
         .btn {
           padding: 12px 24px;
           font-size: 15px;
-        }
-
-        .footer {
-          background: #07090f;
-          color: #ffffff;
-          text-align: center;
-          padding: 32px;
-          font-size: 14px;
-          border-top: 1px solid #10161d;
-        }
-
-        .footer-social a {
-          display: inline-block;
-          margin: 0 8px;
-          color: #ffffff;
-          text-decoration: none;
-          font-size: 20px;
-        }
-
-        .footer-payments span {
-          display: inline-block;
-          background: #374151;
-          color: #ffffff;
-          padding: 6px 12px;
-          border-radius: 4px;
-          font-size: 11px;
-          font-weight: 600;
-          margin: 4px;
         }
       }
 
@@ -187,7 +246,7 @@
       }
 
       .content h1 {
-        color: #60a5fa;
+        color: #f87171;
       }
 
       .content p {
@@ -208,17 +267,44 @@
         background: linear-gradient(135deg, #1d4ed8, #2563eb);
       }
 
-      /* Adaptar cards al tema dark */
-      .info-card {
+      .order-id {
         background: #1e293b;
-        border: 1px solid rgba(255, 255, 255, 0.1);
       }
 
-      .info-card p {
+      .alert-error {
+        background: rgba(248, 113, 113, 0.15);
+      }
+
+      .alert-error p {
+        color: #f87171;
+      }
+
+      .details-table td {
+        border-bottom-color: #374151;
+      }
+
+      .details-table .label {
+        color: #9ca3af;
+      }
+
+      .details-table .value {
+        color: #f1f5f9;
+      }
+
+      .admin-response {
+        background: #1e293b;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-left: 4px solid #f87171;
+      }
+
+      .admin-response h3 {
+        color: #f87171;
+      }
+
+      .admin-response p {
         color: #cbd5e1;
       }
 
-      /* Footer (front palette) */
       .footer {
         background: #111827;
         color: #ffffff;
@@ -289,22 +375,49 @@
       </div>
 
       <div class="content">
-        <h1>¡Gracias por contactarnos, {{name}}!</h1>
-        <p>Recibimos tu consulta y en breve alguien de nuestro equipo se pondrá en contacto con vos.</p>
+        <h1>Solicitud de Reembolso Rechazada</h1>
 
-        <div class="info-card">
-          <p>Responderemos a: <strong>{{email}}</strong></p>
-          <p>Motivo: <strong>{{reason}}</strong></p>
+        <div class="alert-error">
+          <p>Tu solicitud de reembolso no fue aprobada</p>
+        </div>
+
+        <p>Hola <strong>{{userName}}</strong>,</p>
+        <p>
+          Lamentamos informarte que tu solicitud de reembolso para la orden
+          <span class="order-id">#{{orderNumber}}</span> ha sido rechazada.
+        </p>
+
+        <div class="rejection-card">
+          <div class="icon">&#10060;</div>
+          <h3>Solicitud Rechazada</h3>
+          <div class="refund-id">ID: {{refundId}}</div>
+        </div>
+
+        <table class="details-table">
+          <tr>
+            <td class="label">Orden</td>
+            <td class="value">#{{orderNumber}}</td>
+          </tr>
+          <tr>
+            <td class="label">Estado</td>
+            <td class="value">Rechazada</td>
+          </tr>
+        </table>
+
+        <div class="admin-response">
+          <h3>Motivo del rechazo</h3>
+          <p>{{adminResponse}}</p>
+        </div>
+
+        <p>Si tenés alguna consulta adicional, no dudes en contactarnos.</p>
+
+        <div class="text-center">
+          <a href="{{frontendUrl}}/contact" class="btn">Contactar soporte</a>
         </div>
 
         <p>Saludos cordiales,<br />El equipo de <strong>{{appName}}</strong>.</p>
-
-        <div style="text-align: center">
-          <a href="{{frontendUrl}}" class="btn">Volver al sitio</a>
-        </div>
       </div>
 
-      <!-- Footer oscuro estilo tech -->
       <div class="footer">
         <div class="footer-social">
           <p style="color: #9ca3af; margin-bottom: 12px">Seguinos en nuestras redes:</p>
@@ -338,7 +451,6 @@
         <div class="footer-payments">
           <span>VISA</span>
           <span>MC</span>
-
           <span>MP</span>
         </div>
       </div>

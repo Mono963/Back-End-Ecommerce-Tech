@@ -99,4 +99,142 @@ export class ProductsSearchQueryDto extends PaginationQueryDto {
     return typeof value === 'boolean' ? value : undefined;
   })
   featured?: boolean;
+
+  @ApiProperty({
+    example: '16GB',
+    required: false,
+    description: 'Filter by RAM variant (partial, case-insensitive)',
+    minLength: 1,
+    maxLength: 50,
+  })
+  @IsOptional()
+  @Length(1, 50)
+  @IsString()
+  ram?: string;
+
+  @ApiProperty({
+    example: '512GB SSD',
+    required: false,
+    description: 'Filter by storage variant (partial, case-insensitive)',
+    minLength: 1,
+    maxLength: 50,
+  })
+  @IsOptional()
+  @Length(1, 50)
+  @IsString()
+  storage?: string;
+
+  @ApiProperty({
+    example: 'Intel i7',
+    required: false,
+    description: 'Filter by processor variant (partial, case-insensitive)',
+    minLength: 1,
+    maxLength: 50,
+  })
+  @IsOptional()
+  @Length(1, 50)
+  @IsString()
+  processor?: string;
+
+  @ApiProperty({
+    example: '8GB',
+    required: false,
+    description: 'Filter by VRAM variant (partial, case-insensitive)',
+    minLength: 1,
+    maxLength: 50,
+  })
+  @IsOptional()
+  @Length(1, 50)
+  @IsString()
+  vram?: string;
+
+  @ApiProperty({
+    example: '15.6"',
+    required: false,
+    description: 'Filter by screen size variant (partial, case-insensitive)',
+    minLength: 1,
+    maxLength: 50,
+  })
+  @IsOptional()
+  @Length(1, 50)
+  @IsString()
+  screen_size?: string;
+
+  @ApiProperty({
+    example: '1920x1080',
+    required: false,
+    description: 'Filter by resolution variant (partial, case-insensitive)',
+    minLength: 1,
+    maxLength: 50,
+  })
+  @IsOptional()
+  @Length(1, 50)
+  @IsString()
+  resolution?: string;
+
+  @ApiProperty({
+    example: '144Hz',
+    required: false,
+    description: 'Filter by refresh rate variant (partial, case-insensitive)',
+    minLength: 1,
+    maxLength: 50,
+  })
+  @IsOptional()
+  @Length(1, 50)
+  @IsString()
+  refresh_rate?: string;
+
+  @ApiProperty({
+    example: 'Bluetooth',
+    required: false,
+    description: 'Filter by connectivity variant (partial, case-insensitive)',
+    minLength: 1,
+    maxLength: 50,
+  })
+  @IsOptional()
+  @Length(1, 50)
+  @IsString()
+  connectivity?: string;
+
+  @ApiProperty({
+    example: 'New',
+    required: false,
+    description: 'Filter by condition variant (partial, case-insensitive)',
+    minLength: 1,
+    maxLength: 50,
+  })
+  @IsOptional()
+  @Length(1, 50)
+  @IsString()
+  condition?: string;
+
+  @ApiProperty({
+    example: true,
+    required: false,
+    description: 'Filter only products with available stock',
+    type: Boolean,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return typeof value === 'boolean' ? value : undefined;
+  })
+  inStock?: boolean;
+
+  @ApiProperty({
+    example: true,
+    required: false,
+    description: 'Filter only products with active discounts',
+    type: Boolean,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return typeof value === 'boolean' ? value : undefined;
+  })
+  discounted?: boolean;
 }

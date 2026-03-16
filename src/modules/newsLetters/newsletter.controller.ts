@@ -57,12 +57,10 @@ export class NewsletterController {
   })
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Get('unsubscribe')
-  async unsubscribe(@Query('token') token: string): Promise<{ message: string; email: string }> {
-    const result = await this.newsletterService.unsubscribe(token);
-    return {
-      message: 'Te has dado de baja del newsletter exitosamente.',
-      email: result.email,
-    };
+  async unsubscribe(
+    @Query('token') token: string,
+  ): Promise<{ message: string; email: string; alreadyUnsubscribed: boolean }> {
+    return await this.newsletterService.unsubscribe(token);
   }
 
   @ApiOperation({ summary: 'Track newsletter email open (pixel)' })

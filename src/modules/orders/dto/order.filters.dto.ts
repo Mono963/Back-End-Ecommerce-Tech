@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationQueryDto } from '../../../common/pagination';
 import { OrderStatus } from '../enum/order.enum';
 import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
@@ -43,24 +43,4 @@ export class OrderFiltersDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   userEmail?: string;
-}
-
-export class PaginationResponseDto<T> {
-  @ApiProperty({ type: [Object] })
-  data: T[];
-
-  @ApiProperty({
-    example: {
-      total: 100,
-      page: 1,
-      limit: 10,
-      totalPages: 10,
-    },
-  })
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
 }
