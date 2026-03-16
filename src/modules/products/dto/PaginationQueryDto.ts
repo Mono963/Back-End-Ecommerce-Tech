@@ -222,4 +222,19 @@ export class ProductsSearchQueryDto extends PaginationQueryDto {
     return typeof value === 'boolean' ? value : undefined;
   })
   inStock?: boolean;
+
+  @ApiProperty({
+    example: true,
+    required: false,
+    description: 'Filter only products with active discounts',
+    type: Boolean,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return typeof value === 'boolean' ? value : undefined;
+  })
+  discounted?: boolean;
 }

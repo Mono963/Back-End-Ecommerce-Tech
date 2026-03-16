@@ -60,7 +60,7 @@ export class ProductsService {
     const {
       name, basePrice, minPrice, maxPrice, brand, categoryId, color, featured,
       ram, storage, processor, vram, screen_size, resolution, refresh_rate, connectivity, condition,
-      inStock,
+      inStock, discounted,
       ...pagination
     } = searchQuery;
 
@@ -85,7 +85,8 @@ export class ProductsService {
         categoryId ||
         featured !== undefined ||
         variantFilters.length > 0 ||
-        inStock !== undefined,
+        inStock !== undefined ||
+        discounted !== undefined,
     );
 
     if (!hasFilters) {
@@ -142,6 +143,15 @@ export class ProductsService {
       queryBuilder.andWhere(
         '((product.hasVariants = false AND product.baseStock > 0) OR ' +
           '(product.hasVariants = true AND EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = product.id AND pv.is_available = true AND pv.stock > 0)))',
+      );
+    }
+
+    if (discounted === true) {
+      queryBuilder.andWhere(
+        `EXISTS (SELECT 1 FROM product_discounts pd WHERE pd.product_id = product.id ` +
+          `AND pd.is_active = true ` +
+          `AND (pd.start_date IS NULL OR pd.start_date <= NOW()) ` +
+          `AND (pd.end_date IS NULL OR pd.end_date >= NOW()))`,
       );
     }
 

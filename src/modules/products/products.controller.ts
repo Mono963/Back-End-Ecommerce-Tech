@@ -131,6 +131,13 @@ export class ProductsController {
     description: 'Filter only products with available stock',
     example: true,
   })
+  @ApiQuery({
+    name: 'discounted',
+    required: false,
+    type: Boolean,
+    description: 'Filter only products with active discounts',
+    example: true,
+  })
   @ApiResponse({
     status: 200,
     description: 'Products retrieved successfully',
